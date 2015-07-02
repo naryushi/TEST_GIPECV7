@@ -1,0 +1,329 @@
+OverWrittenBy ugum_trace.dhop
+
+
+Module ugtm_tech.dhop
+
+include gttc000.dhsp
+
+public record A5dd.dhsd mz
+public record ugd_outils.dhsd uge_Sel
+public record ugd_outils.dhsd uge_Trt
+public record gtfdd.dhsd xq g3xq
+
+1 vI 4,0
+
+1 Masque 50="UGEE_TRACE.DHOF"
+
+1 LstTemps L
+
+1 Temps 16
+ 2 TempsD 14
+ 2 TempsC 15.2,0 
+
+1 RepPrec 100
+1 TempsPrec 14
+
+Structure ugs_Temps
+	1 Temps 16
+ 	 2 TempsD 14
+ 	 2 TempsC 15.2,0 
+	1 ValCour 12,2
+endStructure
+
+;*
+;*
+;*
+
+public Procedure Ug_Trace_Barre_Sel(ValCour,ValMax,CouleurBarre,CouleurContour,TypeBarre,ValMin)
+;
+1 ValCour        8,0=0
+1 ValMax         8,0=100
+1 ValMin         8,0=0
+1 CouleurBarre   50 ="EV_CONTRAT"
+1 CouleurContour 50 ="EV_CONTRAT"
+1 TypeBarre      1,0=4 ; <Bafv> 
+beginp
+	;uge_trt.Lib100=val(vI) & " %"
+	uge_Sel.ug_Lib256  ="<hog>"
+	uge_Sel.ug_Lib256 &="<max>" & val(valmax-ValMin) 
+	uge_Sel.ug_Lib256	&="<bafv>" & TypeBarre
+	uge_Sel.ug_Lib256	&="<c>"  & CouleurBarre
+	uge_Sel.ug_Lib256 &="<cc>" & CouleurContour
+	uge_Sel.ug_Lib256 &="<b>"	& val(ValCour-ValMin)
+
+	xmedispv(Masque,4,xme_mode_gosub);Afficher_Selection
+	XmeFlush
+	xmeret
+
+	ug_Trace_Abandon()
+endp
+;*
+public Procedure Ug_Trace_Barre_Trt(ValCour,ValMax,CouleurBarre,CouleurContour,TypeBarre,ValMin)
+;
+1 ValCour        8,0=0
+1 ValMax         8,0=100
+1 ValMin         8,0=0
+1 CouleurBarre   50 ="EV_CONTRAT"
+1 CouleurContour 50 ="EV_CONTRAT"
+1 TypeBarre      1,0=4 ; <Bafv> 
+beginp
+	;uge_trt.Lib100=val(vI) & " %"
+	uge_Trt.ug_Lib256  ="<hog>"
+	uge_Trt.ug_Lib256 &="<max>" & val(valmax-ValMin) 
+	uge_Trt.ug_Lib256	&="<bafv>" & TypeBarre
+	uge_Trt.ug_Lib256	&="<c>"  & CouleurBarre
+	uge_Trt.ug_Lib256 &="<cc>" & CouleurContour
+	uge_Trt.ug_Lib256 &="<b>"	& val(ValCour-ValMin)
+
+	xmedispv(Masque,5,xme_mode_gosub);Afficher_traitement
+	xmeflush
+	xmeret
+
+	ug_Trace_Abandon()
+endp
+
+;*
+function int ug_Asc_Chaine(Chaine)
+; Convertir une chaine en chiffre
+1 Chaine S
+1 RetourT S
+
+1 vI 3,0
+beginf
+	for vI=1 to Length(Chaine)
+		RetourT &=format("<999>",Asc(Mid(Chaine,vI,1))/2)
+	next
+	freturn (Val(Left(RetourT)))
+endf
+
+
+;*
+public Procedure Ug_Trace_Barre_Txt(ValCourT,ValMaxT,CouleurBarre,CouleurContour,TypeBarre,ValMinT)
+;
+1 ValCourT		  S
+1 ValMaxT		  S
+1 ValMinT		  S
+1 ValCour        14,0=0
+1 ValMax         14,0=100
+1 ValMin         14,0=0
+1 CouleurBarre   50 ="EV_CONTRAT"
+1 CouleurContour 50 ="EV_CONTRAT"
+1 TypeBarre      1,0=4 ; <Bafv> 
+beginp
+	;ug_Asc_Chaine
+	;ValMin=ug_Asc_Chaine(ValminT
+	;ValMax=
+
+
+	;uge_trt.Lib100=val(vI) & " %"
+	g3xq.Fic  ="<hog>"
+	g3xq.Fic &="<max>" & val(valmax-ValMin) 
+	g3xq.Fic	&="<bafv>" & TypeBarre
+	g3xq.Fic	&="<c>"  & CouleurBarre
+	g3xq.Fic &="<cc>" & CouleurContour
+	g3xq.Fic &="<b>"	& val(ValCour-ValMin)
+
+	xmedispv(Masque,4,xme_mode_gosub);Afficher_traitement
+	xmeret
+endp
+;*
+;public procedure ug_Trace_Titre_Barre(Titre)
+;	;Changement du titre de la fenêtre de trace
+;	1 Titre A = " "  			;Nouveau titre
+;
+;beginp
+;
+;	xmetitle(Titre)
+;
+;endp
+
+;*
+;public procedure ug_Trace_Debut_Barre(TxtFen,Abandon)
+;	;Initialisation de la trace
+;	1 TxtFen A = " "			;Titre de la fenêtre
+;	1 Abandon B = true		;Affichage du bouton "Abandon"
+;
+;beginp
+;
+;	sethourglasscursor
+;
+;	xmeload(Masque)
+;	xmedisp(Masque,1,xme_mode_gosub)
+;
+;	if Abandon
+;		xmesetattribut("Abandon",an_visibilite,av_visible)
+;	else
+;		xmesetattribut("Abandon",an_visibilite,av_cache)
+;	endif
+;
+;	ug_Trace_Titre_Barre(TxtFen)
+;
+;endp
+
+;*
+;public procedure ug_Trace_Sel_Barre(TxtSel)
+;	;Affichage sélection dans la trace
+;	1 TxtSel 100 = " " 			;Texte Sélection
+;
+;beginp
+;
+;	uge_Sel.lib100 = fstring("B",TxtSel)
+;	xmedispv(Masque,2,xme_mode_gosub)
+;	xmeret
+;
+;endp
+;
+;;*
+;public procedure ug_Trace_Trt_Barre(TxtTrt)
+;	;Affichage traitement dans la trace
+;	1 TxtTrt 100 = " "			;Texte Traitement
+;
+;beginp
+;
+;	uge_Trt.lib100 = fstring("B",TxtTrt)
+;	xmedispv(Masque,3,xme_mode_gosub)
+;	xmeret	
+;
+;endp
+
+;*
+public procedure ug_Trace_Fin_Barre
+	;Fermeture de la fenêtre trace
+
+beginp
+
+	setnormalcursor
+
+	xmeret
+
+endp
+;*
+;*	TRACE TIME
+;*
+
+Public function char Ug_Trace_Debut_Temps(EffaceTps)
+; retour du AAAAMMJJHHMMSSCC (CC centieme de seconde)
+1 EffaceTps 1,0=True
+1 RTemps 20
+Recorddiva ugs_Temps TpsA
+beginf
+	RTemps=Rtime
+	Temps = Mid(RTemps,1,8) & Right(RTemps,8)
+	if EffaceTps=True
+		LstTemps=ug_Liste("ug_Trace_Temps")
+
+		init TpsA=' '
+		TpsA.Temps=TempsD
+		TpsA.ValCour=0
+		ListAddEnd(LstTemps,TpsA)
+	endif
+	
+	Freturn(TempsD)
+endf
+
+;*
+Public function char Ug_Trace_Calcul_Temps(Valcour,Valmax,MinTpsAff) ;,NbElemPremE,NBElemActu,&dcal,&tps,type)
+1 Valcour 8,0					; Valeur en cours		
+1 Valmax 8,0					; Valeur Maxi												 
+1 MinTpsAff 6,0=1				; Temps mini av affichage en miliseconde
+;1 NbElemPremE 12,0 = 20 	; Nombre d'element avant d'afficher la premiére estimation
+;1 NBElemActu 12,0 = 20 		; Actulisé le temps toutes les x lectures               
+
+;1 dcal 30 				; Sav de l'affichage du temps
+1 TNow 16
+ 2 tnowD  14
+ 2 TNowC 15.2,0  ; centieme
+
+1 TFin 16
+ 2 TFinD 14
+
+1 TRes 16
+ 2 TResD 14
+  3 TResA 4,0
+  3 TResM 2,0
+  3 TResJ 2,0
+  3 TResH 2,0
+  3 TResMi 2,0
+  3 TResS 2,0
+
+1 NbSec 16,4
+1 NbSecE 16,4 ;ecoulé
+1 NbSecB 16,4
+1 NbElemRestant 12,0 
+1 NBMin 12,0
+1 NbSecRestant 14,0
+1 NbJour 3,0
+1 NbValMin 3,0=10
+
+
+recorddiva ugs_temps TpsA
+beginf
+	TpsA=' '
+	TpsA.Temps=Ug_Trace_Debut_Temps(false)		
+	TpsA.ValCour=ValCour
+	ListAddEnd(LstTemps,TpsA)
+	if ListCount(LstTemps)>Max(NbValMin,ListCount(LstTemps)*(NbValMin/100))
+		ListFirst(LstTemps,TpsA)
+		ListDeleteAndPrevious(LstTemps)
+	endif
+	ListFirst(LstTemps,TpsA)
+	; calcul de temps lineaire
+	if TempsPrec=' ' or Time(7)>=DHAddSeconds(TempsPrec,MinTpsAff)
+		TNow=Ug_Trace_Debut_Temps(false)
+
+		NbSecE=SecondsBetweenDH(TempsD,TNowD) + ((TNowC-TempsC)/100)
+		NbSec=((ValMax-ValCour)*(NbSecE/ValCour))
+		; 2eme calcul
+		NbSecB= SecondsBetweenDH(TpsA.TempsD,TNowD) +((TNowC-TpsA.TempsC)/100)
+		NbSecB= ((ValMax-TpsA.ValCour)-(ValCour-TpsA.ValCour))*(NbSecB/(ValCour-TpsA.ValCour))
+		
+		TFinD=HHour(Time(7),NbSecondes=Condition((ValMax/5)>ValCour,2,0)+ \
+										; 2 eme Calcul
+										((NBSec+(NbSecB*4))/5)  )
+		
+		NbSecRestant= SecondsBetweenDh(Time(7),TFinD)	
+		NbJour=(NbSecRestant-Modulo(NbSecRestant,(3600/24)))/(3600*24)
+		RepPrec="Temps Restant : " &  Condition(nbJour>0,NbJour & " j ","") & Stime(Right(SecondsToDH(NbSecRestant),6)) & \
+							  " Temps Passé : " & STime(Right(SecondsToDH(NbSecE),6)) & \
+							  " Temps Total : " & STime(Right(SecondsToDH(NbSecE+NbSecRestant),6))
+		TempsPrec=Time(7)
+		
+	endif
+	;
+ 	
+
+	Freturn(RepPrec)
+endf
+
+;*
+;*
+;*
+main
+	
+	;mz.mecle=Masque
+	;xmeload(mz.MeCle)
+	;display " "
+
+
+	;Messagebox(ug_Asc_Chaine("Bonjour"),'')
+
+
+	;opentrace(1,2,3)
+	;Xmedisp(mz.MeCle,1,xme_mode_gosub)
+	;XmeFlush
+	ug_Trace_Debut("Titre")
+	
+	for vI=1 to 97
+		Sleep 100
+		;<cc>trait_simple_noir<c>ligne+
+		Ug_Trace_Barre_Sel(vI,100,CouleurContour="Ligne+")
+	Next	
+	for vI=100 to 1 step -1
+		Sleep 100
+		Ug_Trace_Barre_Sel(vI,100)
+	Next	
+
+	;display("ok")
+	ug_Trace_Fin
+
+	programgoto("xquit")

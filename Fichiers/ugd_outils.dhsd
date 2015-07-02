@@ -1,0 +1,643 @@
+;>xwinobj      dictionnaire
+[Dictionnaire]
+Version=6,20080602100601,ROOT                ,20130128170949,ROOT                
+Nom=ugd_outils.dhsd,outils.dhsd,1
+[CHAMP]
+Version=1,20090728164633,ROOT                ,20090728164633,ROOT                
+Nom=Acces,Acces (clé ou nom de clé),1
+Gel=1
+Nature=30
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20080605192100,ROOT                ,20080605192100,ROOT                
+Nom=ce,Ce,1
+Gel=1
+Nature=1
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20090814160658,ROOT                ,20090814160849,ROOT                
+Nom=cebin,cebin si export table,1
+DateM=FF3FCBBBE81CCA01
+Gel=1
+Nature=3,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,1995 2150000,MJV ,20060907174339,MARIE JO
+Nom=CeNote,=2 si note<> 0,1
+DateM=5A03CE6394D2C601
+Gel=1
+Nature=1,0
+Flags=n,1,o,n,n,n,n,n
+[CHAMP]
+Version=1,20130128163348,ROOT                ,20130128163427,ROOT                
+Nom=ChampCe,Champ Ce,1
+DateM=36331CF56CFDCD01
+Gel=1
+Nature=20
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20090327165543,ROOT                ,20090327165543,ROOT                
+Nom=Champs,Champs,1
+Gel=1
+Nature=30
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20090814160828,ROOT                ,20090814160828,ROOT                
+Nom=cle_cebin,Cebin dans la clé,1
+Gel=1
+Nature=1,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20090814160811,ROOT                ,20090814160811,ROOT                
+Nom=cle_dos,Dossier dans la clé,1
+Gel=1
+Nature=1,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20090603170743,ROOT                ,20090603170743,ROOT                
+Nom=Cle_P,Clé primaire,1
+Gel=1
+Nature=30
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20111104220645,ROOT                ,20111104220645,ROOT                
+Nom=CodePage,CodePage,1
+Gel=1
+Nature=4,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,199912230000,MJV ,20030121112455,MJV
+Nom=Conf,confidentialité en màj,1
+DateM=008E805737C1C201
+Gel=1
+Nature=4
+Flags=o,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20030324111100,JSM                 ,20050111135954,RR
+Nom=ConfGrp,Code groupe confidentialité,1
+DateM=E02061C229F8C201
+Gel=1
+Nature=4
+NomOdbc=GroupeConfidentialite
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20091030104655,ROOT                ,20091030104655,ROOT                
+Nom=Controle_cle,Contrôle que les données de la clé sont obligatoire,1
+Gel=1
+Nature=1,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20090326171651,ROOT                ,20090326171651,ROOT                
+Nom=Dico,Dictionnaire,1
+Gel=1
+Nature=256
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20090814145951,ROOT                ,20090814145951,ROOT                
+Nom=dos,Dossier,1
+Gel=1
+Nature=3,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20111104212843,ROOT                ,20111104212856,ROOT                
+Nom=Doublons,Gestion des doublons ,1
+Gel=1
+Nature=1,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20090327165513,ROOT                ,20090330141652,ROOT                
+Nom=Enreg,Enregistrement,1
+DateM=8006B280F4AEC901
+Gel=1
+Nature=30
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20090330141911,ROOT                ,20090330141911,ROOT                
+Nom=Fichier,Fichier,1
+Gel=1
+Nature=30
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20080605190719,ROOT                ,20080605190719,ROOT                
+Nom=Lib100,Libellé 100,1
+Gel=1
+Nature=100
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20090327165600,ROOT                ,20090327165600,ROOT                
+Nom=Lib70,Libellé,1
+Gel=1
+Nature=70
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20080605192239,ROOT                ,20080605192239,ROOT                
+Nom=LibConf,Libellé confidentialité,1
+Gel=1
+Nature=80
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20080605192210,ROOT                ,20080605192210,ROOT                
+Nom=LibGrp,Libellé du groupe,1
+Gel=1
+Nature=80
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20090731120001,ROOT                ,20090731120342,ROOT                
+Nom=longueur,Longueur de la donnée,1
+DateM=645B592FC611CA01
+Gel=1
+Nature=5,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20111019121812,ROOT                ,20111019121812,ROOT                
+Nom=Nature,Nature dans le Dico (Num\valpha,1
+Gel=1
+Nature=2,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20111019135142,ROOT                ,20111019135142,ROOT                
+Nom=nbdecimal,nb decimal ou indice system.zdec,1
+Gel=1
+Nature=1,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20090602142010,ROOT                ,20090602142010,ROOT                
+Nom=Niveau,Niveau,1
+Gel=1
+Nature=2,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20021015132912,DEMO,20050111113649,RR
+Nom=Nom,Nom de l'utilisateur,1
+Gel=1
+Nature=40
+NomOdbc=Nom
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20111019153033,ROOT                ,20111019153033,ROOT                
+Nom=Nomfichier,Nom du fichier HFI,1
+Gel=1
+Nature=40
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,199710 60000,MJV ,1999 7210000,MJV
+Nom=Note,Numéro de note,1
+Gel=1
+Nature=8,0
+Flags=n,1,o,n,n,n,n,n
+[CHAMP]
+Version=1,20090326171628,ROOT                ,20090326171628,ROOT                
+Nom=phase,Phase,1
+Gel=1
+Nature=1
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20110915134958,ROOT                ,20110915134958,ROOT                
+Nom=PosCe,Position CE,1
+Gel=1
+Nature=5,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20090731115952,ROOT                ,20090731115952,ROOT                
+Nom=posd,Position Début,1
+Gel=1
+Nature=5,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20090814121118,ROOT                ,20090814121124,ROOT                
+Nom=Present_Cle,Champ présent dans la clé,1
+DateM=75AF1D94C71CCA01
+Gel=1
+Nature=1,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20090814141239,ROOT                ,20090814141239,ROOT                
+Nom=Present_pack,Champ présent dans la zone packée,1
+Gel=1
+Nature=1,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20091030090619,ROOT                ,20091030090619,ROOT                
+Nom=taille,Taille de l'enregistrement,1
+Gel=1
+Nature=5,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20090601171719,ROOT                ,20090602142015,ROOT                
+Nom=Type,Type,1
+DateM=7D51117C7CE3C901
+Gel=1
+Nature=2,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20090731114338,ROOT                ,20090731114555,ROOT                
+Nom=Type_Cle,Lettre lé = 1 ou clé nommé = 2,1
+Gel=1
+Nature=1,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120207163346,ROOT                ,20120207165333,ROOT                
+Nom=ug_Chemin,Chemin,1
+DateM=8E63E6A4B0E5CC01
+Gel=1
+Nature=256*10
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120207163316,ROOT                ,20120207163316,ROOT                
+Nom=ug_DosRacine,Dossier Racine,1
+Gel=1
+Nature=256
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120207163645,ROOT                ,20120207163659,ROOT                
+Nom=ug_Dossier,Dossier,1
+DateM=0C66AE54AEE5CC01
+Gel=1
+Nature=20*4*3
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20100121160224,ROOT                ,20100121161451,ROOT                
+Nom=ug_input,Valeur input,1
+DateM=C8E1C27AAC9ACA01
+Gel=1
+Nature=1500
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20100121160318,ROOT                ,20100121160318,ROOT                
+Nom=ug_input_A,Valeur Alpha,1
+Gel=1
+Nature=100
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20100121160523,ROOT                ,20100121160523,ROOT                
+Nom=ug_input_D,Valeur Date,1
+Gel=1
+Nature=D8
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20100121160603,ROOT                ,20100121160603,ROOT                
+Nom=ug_input_L,Libellé input,1
+Gel=1
+Nature=100
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20100121161439,ROOT                ,20100121161524,ROOT                
+Nom=ug_input_Lst,Liste input,1
+DateM=C239FE8DAC9ACA01
+Gel=1
+Nature=20*50
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20100121160344,ROOT                ,20100121160500,ROOT                
+Nom=ug_input_N,Valeur Numérique,1
+DateM=0825331AAB9ACA01
+Gel=1
+Nature=24,10
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20100121160614,ROOT                ,20100121160614,ROOT                
+Nom=ug_input_T,Titre input,1
+Gel=1
+Nature=100
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20100121161705,ROOT                ,20100121164016,ROOT                
+Nom=ug_input_Type,Type input (A/N/D/L),1
+DateM=6A30A107B09ACA01
+Gel=1
+Nature=1
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20100121163017,ROOT                ,20100121163017,ROOT                
+Nom=ug_input_zoom,Numéro zoom,1
+Gel=1
+Nature=8,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120529215928,ROOT                ,20120529215928,ROOT                
+Nom=ug_Lib256,Libelle 256,1
+Gel=1
+Nature=256
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20080602100721,ROOT                ,20080605192307,ROOT                
+Nom=ug_LibMess,Libellé message,1
+DateM=20F3C65BE414C901
+Gel=1
+Nature=256
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20080602100709,ROOT                ,20080605192301,ROOT                
+Nom=ug_NumMess,Numéro de message,1
+DateM=84BB0358E414C901
+Gel=1
+Nature=8,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20021015132441,DEMO,20080605092128,GIPEC
+Nom=User,Utilisateur,1
+DateM=8C5243C5DCC6C801
+Gel=1
+Nature=20
+NomOdbc=Collaborateur
+Flags=n,1,n,o,n,n,n,n
+[CHAMP]
+Version=1,20021015170131,LM  ,20041222171426,MARIE JO
+Nom=UserCr,Auteur de la création,1
+Gel=1
+Nature=20
+NomOdbc=UtilisateurCreation
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20021017113748,MJV ,20041222171409,MARIE JO
+Nom=UserCrDh,Utilisateur date et heure de création,1
+DateM=A0DF70E7C075C201
+Gel=1
+Nature=DH
+Flags=n,1,o,n,n,n,n,n
+[CHAMP]
+Version=1,1989 1230000,MJV ,20050106094720,MARIE JO
+Nom=UserCrDt,Date de création,1
+DateM=400BE12A5C74C201
+Gel=1
+Nature=D8
+NomOdbc=DateCreation
+Flags=o,1,n,o,n,n,n,n
+[CHAMP]
+Version=1,20021015170117,LM  ,20041222171433,MARIE JO
+Nom=UserMo,Auteur de la modification,1
+Gel=1
+Nature=20
+NomOdbc=UtilisateurModif
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20021017113843,MJV ,20041222171402,MARIE JO
+Nom=UserMoDh,Utilisateur date et heure de modification,1
+Gel=1
+Nature=DH
+Flags=n,1,o,n,n,n,n,n
+[CHAMP]
+Version=1,20041222171349,MARIE JO            ,20050106094737,MARIE JO
+Nom=UserMoDt,Date de modification,1
+Gel=1
+Nature=D8
+NomOdbc=DateModif
+Flags=n,1,n,o,n,n,n,n
+[CHAMP]
+Version=1,20021015174750,LM  ,20021016105758,LM
+Nom=UserTrace,Traçabilité utilisateur,1
+Gel=1
+Nature=28
+Flags=n,1,o,o,n,n,n,n
+[CHAMP]
+Version=1,20031202092148,TL                  ,20050111155602,RR
+Nom=userx,user pour sql,1
+Gel=1
+Nature=20
+Flags=n,1,o,n,n,n,n,n
+[CHAMP]
+Version=1,20110915135021,ROOT                ,20110915135021,ROOT                
+Nom=ValeurCe,Valeur CE Chr(xx),1
+Gel=1
+Nature=3,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20130128163844,ROOT                ,20130128163844,ROOT                
+Nom=ValeurCeA,Valeur CE Alpha,1
+Gel=1
+Nature=1
+Flags=n,1,n,n,n,n,n,n
+[CHAMPR]
+nom=ug_input
+[CHAMPL]
+Nom=ug_input_A,1,0,0,N,1
+Nom=ug_input_N,101,0,0,N,1
+Nom=ug_input_D,125,0,0,N,1
+Nom=ug_input_L,133,0,0,N,1
+Nom=ug_input_T,233,0,0,N,1
+Nom=ug_input_Lst,333,0,0,N,1
+Nom=ug_input_Type,1333,0,0,N,1
+Nom=ug_input_zoom,1334,0,0,N,1
+[/CHAMPL]
+nom=User
+[CHAMPL]
+Nom=userx,1,0,0,N,1
+[/CHAMPL]
+nom=UserCrDh
+[CHAMPL]
+Nom=UserCrDt,1,0,0,N,1
+[/CHAMPL]
+nom=UserMoDh
+[CHAMPL]
+Nom=UserMoDt,1,0,0,N,1
+[/CHAMPL]
+nom=UserTrace
+[CHAMPL]
+Nom=UserCrDh,1,0,0,N,1
+Nom=UserMoDh,15,0,0,N,1
+[/CHAMPL]
+[/CHAMPR]
+[TABLE]
+Version=1,20090327165529,ROOT                ,20090330141923,ROOT                
+Nom=uge_champs,Champs,1
+DateM=8F671205E120CA01
+Taille=200,200
+Pack=0,0
+[CHAMPS]
+Nom=Champs,1,2,N,0,0,N,1
+Nom=Lib70,31,2,N,0,0,N,1
+Nom=Type,101,2,N,0,0,N,1
+Nom=Niveau,103,2,N,0,0,N,1
+Nom=posd,105,2,N,0,0,N,1
+Nom=longueur,110,2,N,0,0,N,1
+Nom=Present_Cle,115,2,N,0,0,N,1
+Nom=Present_pack,116,2,N,0,0,N,1
+Nom=Nature,117,2,N,0,0,N,1
+Nom=nbdecimal,119,2,N,0,0,N,1
+[/CHAMPS]
+[TABLE]
+Version=1,20120207163257,ROOT                ,20120207163257,ROOT                
+Nom=uge_Chemin,Table pour les Chemins des fichiers joints,1
+DateM=48CDF3A5B0E5CC01
+Taille=10000,10000
+Pack=0,0
+[CHAMPS]
+Nom=ug_DosRacine,1,2,N,0,0,N,1
+Nom=ug_Chemin,257,2,N,0,0,N,1
+Nom=ug_Dossier,2817,2,N,0,0,N,1
+[/CHAMPS]
+[TABLE]
+Version=1,20090603170709,ROOT                ,20090603170709,ROOT                
+Nom=uge_cle_primaire,Clé primaire,1
+DateM=7A5869C32EF4CB01
+Taille=200,200
+Pack=0,0
+[CHAMPS]
+Nom=Cle_P,1,2,N,0,0,N,1
+Nom=Lib70,31,2,N,0,0,N,1
+Nom=Acces,101,2,N,0,0,N,1
+Nom=Type_Cle,131,2,N,0,0,N,1
+Nom=cle_dos,132,2,N,0,0,N,1
+Nom=cle_cebin,133,2,N,0,0,N,1
+[/CHAMPS]
+[TABLE]
+Version=1,20080605091956,GIPEC               ,20080912162837,ROOT                
+Nom=uge_ConfUser,Confidentialités par utilisateur,1
+DateM=211C3AD8E314C901
+Taille=300,300
+Pack=0,0
+[CHAMPS]
+Nom=ce,1,2,N,0,0,N,1
+Nom=User,2,2,N,0,0,N,1
+Nom=Nom,22,2,N,0,0,N,1
+Nom=ConfGrp,62,2,N,0,0,N,1
+Nom=LibGrp,66,2,N,0,0,N,1
+Nom=Conf,146,2,N,0,0,N,1
+Nom=LibConf,150,2,N,0,0,N,1
+[/CHAMPS]
+[TABLE]
+Version=1,20090327165501,ROOT                ,20130128170945,ROOT                
+Nom=uge_Enreg,Enregistrement,1
+DateM=2A6ADAE371FDCD01
+Taille=384,384
+Pack=0,0
+[CHAMPS]
+Nom=Fichier,1,2,N,0,0,N,1
+Nom=Enreg,31,2,N,0,0,N,1
+Nom=Lib70,61,2,N,0,0,N,1
+Nom=posd,131,2,N,0,0,N,1
+Nom=longueur,136,2,N,0,0,N,1
+Nom=taille,141,2,N,0,0,N,1
+Nom=PosCe,146,2,N,0,0,N,1
+Nom=ValeurCe,151,2,N,0,0,N,1
+Nom=ValeurCeA,154,2,N,0,0,N,1
+Nom=Nomfichier,155,2,N,0,0,N,1
+Nom=ChampCe,195,2,N,0,0,N,1
+[/CHAMPS]
+[TABLE]
+Version=1,20090326171614,ROOT                ,20090326171614,ROOT                
+Nom=uge_Imp_Exp,Selection Import/Export,1
+DateM=FF3FCBBBE81CCA01
+Taille=300,300
+Pack=0,0
+[CHAMPS]
+Nom=phase,1,2,N,0,0,N,1
+Nom=Dico,2,2,N,0,0,N,1
+Nom=dos,258,2,N,0,0,N,1
+Nom=cebin,261,2,N,0,0,N,1
+Nom=Controle_cle,264,2,N,0,0,N,1
+Nom=Doublons,265,2,N,0,0,N,1
+Nom=CodePage,266,2,N,0,0,N,1
+[/CHAMPS]
+[TABLE]
+Version=1,20100121160210,ROOT                ,20100121161446,ROOT                
+Nom=uge_input,Input,1
+DateM=6A30A107B09ACA01
+Taille=1500,1500
+Pack=0,0
+[CHAMPS]
+Nom=ug_input,1,2,N,0,0,N,1
+[/CHAMPS]
+[TABLE]
+Version=1,20080602100653,ROOT                ,20080912163154,ROOT                
+Nom=uge_Mess,Enregistrement Message,1
+DateM=20F3C65BE414C901
+Taille=500,500
+Pack=0,0
+[CHAMPS]
+Nom=ug_NumMess,1,2,N,0,0,N,1
+Nom=ug_LibMess,9,2,N,0,0,N,1
+Nom=UserCr,265,2,N,0,0,N,1
+Nom=UserMo,285,2,N,0,0,N,1
+Nom=UserTrace,305,2,N,0,0,N,1
+Nom=CeNote,333,2,N,0,0,N,1
+Nom=Note,334,2,N,0,0,N,1
+[/CHAMPS]
+[TABLE]
+Version=1,20080605190622,ROOT                ,20120529215911,ROOT                
+Nom=uge_Sel,Affichage Selection,1
+DateM=1A3FFA83D53DCD01
+Taille=356,356
+Pack=0,0
+[CHAMPS]
+Nom=Lib100,1,2,N,0,0,N,1
+Nom=ug_Lib256,101,2,N,0,0,N,1
+[/CHAMPS]
+[TABLE]
+Version=1,20080605190654,ROOT                ,20120529215917,ROOT                
+Nom=uge_Trt,Affichage Traitement,1
+DateM=B8B45B87D53DCD01
+Taille=356,356
+Pack=0,0
+[CHAMPS]
+Nom=Lib100,1,2,N,0,0,N,1
+Nom=ug_Lib256,101,2,N,0,0,N,1
+[/CHAMPS]
+[BASE]
+Version=1,20080605091922,GIPEC               ,20090310164850,ROOT                
+Nom=ugf_ConfUser,Confidentialités par utilisateur,1
+DateM=B913D8B497A1C901
+Fichier=I,0,ugf_ConfUser.dhfi
+DateMIndex=B0E595F830C7C801
+[TABLES]
+Nom=uge_ConfUser,0
+[/TABLES]
+[BASE]
+Version=1,20080602100635,ROOT                ,20090310163917,ROOT                
+Nom=ugf_Mess,Fichier des messages,1
+DateM=9B1FB95F96A1C901
+Fichier=I,0,ugf_Mess.dhfi
+DateMIndex=5AD6BEF287C4C801
+[TABLES]
+Nom=uge_Mess,0
+[/TABLES]
+[INDEX]
+Version=1,20080605092721,GIPEC               ,20080912163325,ROOT                
+Nom=UGI_CU,Par conf et utilisateur,1
+DateM=98C51584E414C901
+CLE=ugf_ConfUser, ,,1,032,n,1,n
+Alias=UGI_CU
+[CHAMPS]
+Nom=Conf,1,0,
+Nom=User,5,0,
+[/CHAMPS]
+[/INDEX]
+[INDEX]
+Version=1,20080605092840,GIPEC               ,20080912163338,ROOT                
+Nom=UGI_GU,Par groupe et user,1
+DateM=F76BF48BE414C901
+CLE=ugf_ConfUser, ,ce,2,1,n,1,n
+Alias=UGI_GU
+[CHAMPS]
+Nom=ConfGrp,1,0,
+Nom=User,5,0,
+[/CHAMPS]
+[/INDEX]
+[INDEX]
+Version=1,20080605092706,GIPEC               ,20080912163315,ROOT                
+Nom=UGI_UGC,Par user\v Groupe et conf ,1
+DateM=EB0BE97DE414C901
+CLE=ugf_ConfUser, ,,1,032,n,1,n
+Alias=UGI_UGC
+[CHAMPS]
+Nom=User,1,0,
+Nom=ConfGrp,21,0,
+Nom=Conf,25,0,
+[/CHAMPS]
+[/INDEX]
+[INDEX]
+Version=1,20080602100909,ROOT                ,20090728163940,ROOT                
+Nom=UGI_NumMess,Par numéro,1
+DateM=A27A663D910FCA01
+CLE=ugf_Mess, ,,1,032,o,1,n
+Alias=UGI_NumMess
+[CHAMPS]
+Nom=ug_NumMess,1,0,
+[/CHAMPS]
+[/INDEX]
+[INDEXL]
+Nom=ugf_ConfUser,uge_ConfUser,UGI_CU,0
+Nom=ugf_ConfUser,uge_ConfUser,UGI_GU,0
+Nom=ugf_ConfUser,uge_ConfUser,UGI_UGC,0
+Nom=ugf_Mess,uge_Mess,UGI_NumMess,0
+[/INDEXL]

@@ -1,0 +1,181 @@
+;*
+;*		UTILITAIRES Réalisé par Corentin  et Revue pour faire fonctionner dans les standards Gipec
+;*
+
+OverWrittenBy ugut_initmcheminficjoint.dhop
+
+;*
+;*		Déclarations
+;*
+
+
+;*
+;*		Procédures / Fonctions
+;*
+
+Public Procedure	ug_Init_MChemin
+	; Création des MChemin
+	Hfile		"a5dd.dhsd"		A5FTAB			A5FTABW
+	Hfile		"a5dd.dhsd"		A5FTAB			A5FTABV
+	Hfile		"gtfdd.dhsd"	GTFDOS			GTFDOSW
+	Record	"a5dd.dhsd"		MCHEMIN			MCHEMINW
+	Record	"a5dd.dhsd"		MJOINTNATURE	MJOINTNATW
+	Record	"gtfdd.dhsd"	SOC				SOCW 
+	1	ug_chemin 100
+BeginP
+	input("Indiquer le répertoire des fichiers joints sans arborescence",ug_chemin)
+	GTFDOSW.Key = "A"
+	Loop Hread(GTFDOSW,SOCW,GTFDOSW.Key) = 0
+		if Socw.Dos in (997..999) | redoloop | endif
+		init MCHEMINW = ""
+		MCheminW.CE1 			= 9
+		MCheminW.Dos 			= SocW.Dos
+		MCheminW.UserCr 		= system.User
+		MCheminW.UserCrDh 	= time(7)
+		MCheminW.CheminTyp 	= 1 ;chemin Harmony
+
+		init MJOINTNATW = ""
+		MJointNatW.CE1			= 8
+		MJointNatW.Dos 		= SocW.Dos
+		MJointNatW.UserCr 	= system.User
+		MJointNatW.UserCrDh 	= time(7)
+		;MJointNatW.ApplicNo	= 0 ;DAV		
+		mJointNatW.Applic="DAV"
+
+
+		MCheminW.CheminCod 			= "JOINT_DAV"
+		MCheminW.Lib80					= "Chemin FicJoints DAV Article"
+		MCheminW.Chemin				= ug_chemin && "/" && modify(" ","_",nospaces(socW.nom))	&& "/ARTICLE"
+		MJointNatW.JointCheminCod 	= MCheminW.CheminCod
+		MJointNatW.NatureJointCod	= "ART"
+		MJointNatW.Lib					= MCheminW.Lib80				 			
+		HWrite(A5FTABV,MJointNatW)
+		HWrite(A5FTABW,MCHEMINW)
+
+		MCheminW.CheminCod 			= "JOINT_DAV1"
+		MCheminW.Lib80					= "Chemin FicJoints DAV Nomenclature"
+		MCheminW.Chemin				= ug_chemin && "/" && modify(" ","_",nospaces(socW.nom))	&& "/NOMENCLATURE"
+		MJointNatW.JointCheminCod 	= MCheminW.CheminCod
+		MJointNatW.NatureJointCod	= "BA"
+		MJointNatW.Lib					= MCheminW.Lib80
+		HWrite(A5FTABV,MJointNatW)
+		HWrite(A5FTABW,MCHEMINW)
+
+		MCheminW.CheminCod 			= "JOINT_DAV2"
+		MCheminW.Lib80					= "Chemin FicJoints DAV CLIENT"
+		MCheminW.Chemin				= ug_chemin && "/" && modify(" ","_",nospaces(socW.nom))	&& "/CLIENT/[cli.tiers]"
+		MJointNatW.JointCheminCod 	= MCheminW.CheminCod
+		MJointNatW.NatureJointCod	= "CLI"
+		MJointNatW.Lib					= MCheminW.Lib80
+		HWrite(A5FTABV,MJointNatW)
+		HWrite(A5FTABW,MCHEMINW)
+
+		MCheminW.CheminCod 			= "JOINT_DAV3"
+		MCheminW.Lib80					= "Chemin FicJoints DAV FOURNISSEUR"
+		MCheminW.Chemin				= ug_chemin && "/" && modify(" ","_",nospaces(socW.nom))	&& "/FOURNISSEUR/[fou.tiers]"
+		MJointNatW.JointCheminCod 	= MCheminW.CheminCod
+		MJointNatW.NatureJointCod	= "FOU"
+		MJointNatW.Lib					= MCheminW.Lib80
+		HWrite(A5FTABV,MJointNatW)
+		HWrite(A5FTABW,MCHEMINW)
+
+		MCheminW.CheminCod 			= "JOINT_DAV4"
+		MCheminW.Lib80					= "Chemin FicJoints DAV DEVIS CLIENT"
+		MCheminW.Chemin				= ug_chemin && "/" && modify(" ","_",nospaces(socW.nom))	&& "/DEVIS_CLIENT/[cli.tiers]"
+		MJointNatW.JointCheminCod 	= MCheminW.CheminCod
+		MJointNatW.NatureJointCod	= "ENT_C_DEVIS"
+		MJointNatW.Lib					= MCheminW.Lib80
+		HWrite(A5FTABV,MJointNatW)
+		HWrite(A5FTABW,MCHEMINW)
+
+		MCheminW.CheminCod 			= "JOINT_DAV5"
+		MCheminW.Lib80					= "Chemin FicJoints DAV COMMANDE CLIENT"
+		MCheminW.Chemin				= ug_chemin && "/" && modify(" ","_",nospaces(socW.nom))	&& "/COMMANDE_CLIENT/[cli.tiers]"
+		MJointNatW.JointCheminCod 	= MCheminW.CheminCod
+		MJointNatW.NatureJointCod	= "ENT_C_CDE"
+		MJointNatW.Lib					= MCheminW.Lib80
+		HWrite(A5FTABV,MJointNatW)
+		HWrite(A5FTABW,MCHEMINW)
+
+		MCheminW.CheminCod 			= "JOINT_DAV6"
+		MCheminW.Lib80					= "Chemin FicJoints DAV BON DE LIVRAISON CLIENT"
+		MCheminW.Chemin				= ug_chemin && "/" && modify(" ","_",nospaces(socW.nom))	&& "/BON-DE-LIVRAISON_CLIENT/[cli.tiers]"
+		MJointNatW.JointCheminCod 	= MCheminW.CheminCod
+		MJointNatW.NatureJointCod	= "ENT_C_BL"
+		MJointNatW.Lib					= MCheminW.Lib80
+		HWrite(A5FTABV,MJointNatW)
+		HWrite(A5FTABW,MCHEMINW)
+
+		MCheminW.CheminCod 			= "JOINT_DAV7"
+		MCheminW.Lib80					= "Chemin FicJoints DAV FACTURE CLIENT"
+		MCheminW.Chemin				= ug_chemin && "/" && modify(" ","_",nospaces(socW.nom))	&& "/FACTURE_CLIENT/[cli.tiers]"
+		MJointNatW.JointCheminCod 	= MCheminW.CheminCod
+		MJointNatW.NatureJointCod	= "ENT_C_FACTURE"
+		MJointNatW.Lib					= MCheminW.Lib80
+		HWrite(A5FTABV,MJointNatW)
+		HWrite(A5FTABW,MCHEMINW)
+
+		MCheminW.CheminCod 			= "JOINT_DAV8"
+		MCheminW.Lib80					= "Chemin FicJoints DAV DEVIS FOURNISSEUR"
+		MCheminW.Chemin				= ug_chemin && "/" && modify(" ","_",nospaces(socW.nom))	&& "/DEVIS_FOURNISSEUR/[fou.tiers]"
+		MJointNatW.JointCheminCod 	= MCheminW.CheminCod
+		MJointNatW.NatureJointCod	= "ENT_F_DEVIS"
+		MJointNatW.Lib					= MCheminW.Lib80
+		HWrite(A5FTABV,MJointNatW)
+		HWrite(A5FTABW,MCHEMINW)
+
+		MCheminW.CheminCod 			= "JOINT_DAV9"
+		MCheminW.Lib80					= "Chemin FicJoints DAV COMMANDE FOURNISSEUR"
+		MCheminW.Chemin				= ug_chemin && "/" && modify(" ","_",nospaces(socW.nom))	&& "/COMMANDE_FOURNISSEUR/[fou.tiers]"
+		MJointNatW.JointCheminCod 	= MCheminW.CheminCod
+		MJointNatW.NatureJointCod	= "ENT_F_CDE"
+		MJointNatW.Lib					= MCheminW.Lib80
+		HWrite(A5FTABV,MJointNatW)
+		HWrite(A5FTABW,MCHEMINW)
+
+		MCheminW.CheminCod 			= "JOINT_DAV10"
+		MCheminW.Lib80					= "Chemin FicJoints DAV BON DE LIVRAISON FOURNISSEUR"
+		MCheminW.Chemin				= ug_chemin && "/" && modify(" ","_",nospaces(socW.nom))	&& "/BON-DE-LIVRAISON_FOURNISSEUR/[fou.tiers]"
+		MJointNatW.JointCheminCod 	= MCheminW.CheminCod
+		MJointNatW.NatureJointCod	= "ENT_F_BL"
+		MJointNatW.Lib					= MCheminW.Lib80
+		HWrite(A5FTABV,MJointNatW)
+		HWrite(A5FTABW,MCHEMINW)
+
+		MCheminW.CheminCod 			= "JOINT_DAV11"
+		MCheminW.Lib80					= "Chemin FicJoints DAV FACTURE FOURNISSEUR"
+		MCheminW.Chemin				= ug_chemin && "/" && modify(" ","_",nospaces(socW.nom))	&& "/FACTURE_FOURNISSEUR/[fou.tiers]"
+		MJointNatW.JointCheminCod 	= MCheminW.CheminCod
+		MJointNatW.NatureJointCod	= "ENT_F_FACTURE"
+		MJointNatW.Lib					= MCheminW.Lib80
+		HWrite(A5FTABV,MJointNatW)
+		HWrite(A5FTABW,MCHEMINW)
+
+		MCheminW.CheminCod 			= "JOINT_DAV12"
+		MCheminW.Lib80					= "Chemin FicJoints DAV PIECE INTERNE"
+		MCheminW.Chemin				= ug_chemin && "/" && modify(" ","_",nospaces(socW.nom))	&& "/PIECE_INTERNE"
+		MJointNatW.JointCheminCod 	= MCheminW.CheminCod
+		MJointNatW.Lib					= MCheminW.Lib80
+		MJointNatW.NatureJointCod	= "ENT_I_DEVIS"
+		HWrite(A5FTABV,MJointNatW)
+		MJointNatW.NatureJointCod	= "ENT_I_CDE"
+		HWrite(A5FTABV,MJointNatW)
+		MJointNatW.NatureJointCod	= "ENT_I_BL"
+		HWrite(A5FTABV,MJointNatW)
+		MJointNatW.NatureJointCod	= "ENT_I_FACTURE"
+		HWrite(A5FTABV,MJointNatW)
+		HWrite(A5FTABW,MCHEMINW)
+
+
+	EndLoop
+Endp
+
+;*
+;*	 	MAIN
+;*
+main
+
+	
+
+		ug_Init_MChemin
+	

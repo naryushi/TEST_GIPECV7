@@ -1,0 +1,236 @@
+;*
+;*	Module gestion des tris sur les listes
+;*
+
+OverWrittenBy ugum_liste.dhop
+
+Public Structure ugs_PosLgTri_Lst	 ; Structure pour les positions longueurs des champs à trier
+	1 Lst L
+	1 NomListe		100
+	1 NbParam		L ; Nommbre de parametre ou de champ trie
+	1 PosTri 		X * 10
+	1 LgTri 			8,0 * 10
+	
+	
+	
+endStructure
+
+1 LstTri L
+
+
+
+1 Lst L
+
+;*
+;*	Procedures
+;*
+
+Public function char ug_init_PosLgTri_Lst(*)
+;
+; Function pour Gerer le Tri
+;
+; Parametre 1 = Ptr(Enreg)
+; Parametre 2 = Ptr(Enreg.champ)
+; Parametre 3 = Size(Enreg.Champ)
+; Parametre 4 = Ptr(Enreg.Champ2)
+; Parametre 5 = Size(Enreg.champ2)
+; Etc ...
+
+recorddiva ugs_posLgTri_Lst Ptri
+1 Lst L
+1 Param L
+1 Taille L
+1 PtrEnreg L
+1 Indice 3,0=1
+beginf
+	init ptri.LgTri(*)=0
+	init ptri.PosTri(*)=0
+	ptri.NbParam=0
+	Lst=ListParamGetId
+	ListBegin(Lst)
+	Loop ListNext(Lst,Param)<>0
+		if ListNumber(Lst)=1 
+			PtrEnreg=Param 
+		else
+			Ptri.PosTri(Indice)=Param-PtrEnreg+1
+			ListNext(Lst,Taille)
+			Ptri.LgTri(Indice) =Taille
+			Indice++
+			Ptri.NbParam++
+		endif 	
+	endloop
+	freturn (ptri)
+endf
+
+;*
+function long ug_tri_PosLg(&a,&b)
+;
+Recorddiva ugs_PosLgTri_Lst a
+Recorddiva ugs_PosLgTri_Lst b
+1 A1 S
+1 B1 S
+beginf
+	A1=a.Lst
+	B1=b.Lst
+	freturn (SortCompare(A1,B1))
+endf
+
+
+;*
+function long ug_tri_liste(&a,&b)
+;
+1 a A
+1 b A
+1 A1 S
+1 B1 S
+1 LstTri L
+1 vI 3,0
+recorddiva ugs_PosLgTri_Lst PosLgTri
+beginf
+	LstTri=ListGetId("ug_Liste_des_Pos_Lg")
+	if ListCurrent(LstTri,PosLgTri)<>0
+		For vI=1 to PosLgTri.NbParam
+			A1 &=Mid(a,PosLgTri.PosTri(vI),PosLgTri.LgTri(vI))
+			B1 &=Mid(b,PosLgTri.PosTri(vI),PosLgTri.LgTri(vI))	
+		next
+	endif
+	freturn (SortCompare(A1,B1))
+endf
+;*
+Public Procedure ug_Lance_Tri_Liste(Lst,PosLgTri,Trier)
+; Attention il faut imperativement lancer les fonctions
+; 
+; UG_LISTINSERT 
+; UG_LISTSEEK
+; UG_LISTSEEK_CLE
+; UG_LISTSEARCH
+1 Lst L
+1 Trier 1,0=True ; Tri Actif True
+;1 PosLgTriA 200=" "
+recorddiva ugs_PosLgTri_Lst PosLgTri
+recorddiva ugs_PosLgTri_Lst PosLgTriTrouve
+1 AdrTri 16
+1 AdrFonc 16
+beginp
+	GetAdressFunction(" ","ug_Tri_Liste",AdrTri)
+	ListMode(Lst,Trier,AdrTri)
+	if Trier=True
+		
+		if PosLgTri.PosTri(1)>0
+			; Gestion du tri pour la liste interne au module
+			LstTri=ListGetId("Ug_Liste_des_Pos_Lg")
+			GetAdressFunction("ugtm_liste.dhop","ug_tri_PosLg",AdrFonc)
+			ListMode(LstTri,1,AdrFonc)
+			;
+			PosLgTri.Lst=Lst
+			PosLgTri.NomListe=ListGetName(Lst)
+			if ListSeek(LstTri,PosLgTri,PosLgTriTrouve)>0
+				PosLgTriTrouve.NomListe=PosLgTri.NomListe
+				PosLgTriTrouve.PosTri(*)=PosLgTri.PosTri(*)
+				PosLgTriTrouve.LgTri(*)=PosLgTri.LgTri(*)
+				ListModify(LstTri,PosLgTriTrouve)	
+			else
+				ListInsert(LstTri,PosLgTri)	
+			endif
+			;
+			ListSort(Lst,AdrTri)
+			
+		endif
+	endif
+endp
+;*
+
+Public Function long ug_ListInsert(Lst,Enreg)
+; Pour faire un listeinsert avec les fonctions de tri spe
+1 Lst         L
+1 Enreg       A
+
+1 Retour L=0
+recorddiva ugs_PosLgTri_Lst PosLgTri
+beginf
+	LstTri=ListGetId("Ug_Liste_des_Pos_Lg")
+	PosLgTri.Lst=Lst
+	if ListSeek(LstTri,PosLgTri,PosLgTri)>0
+		Retour=ListInsert(Lst,Enreg)	
+	endif	
+	Freturn(Retour)		
+endf
+;*
+Public Function long ug_ListSeek(Lst,Enreg,&EnregTrouve)
+; Pour faire un liste seek avec les fonctions de tri spe
+1 Lst         L
+1 Enreg       A
+1 EnregTrouve A
+1 Retour L=0
+recorddiva ugs_PosLgTri_Lst PosLgTri
+beginf
+	LstTri=ListGetId("Ug_Liste_des_Pos_Lg")
+	PosLgTri.Lst=Lst
+	if ListSeek(LstTri,PosLgTri,PosLgTri)>0
+		Retour=ListSeek(Lst,Enreg,EnregTrouve)	
+	endif	
+	Freturn(Retour)		
+endf
+;*
+Public Function long ug_ListModify(Lst,Enreg)
+; Pour faire un liste Modify avec les fonctions de tri spe
+1 Lst         L
+1 Enreg       A
+1 Retour L=0
+recorddiva ugs_PosLgTri_Lst PosLgTri
+beginf
+	LstTri=ListGetId("Ug_Liste_des_Pos_Lg")
+	PosLgTri.Lst=Lst
+	if ListSeek(LstTri,PosLgTri,PosLgTri)>0
+		Retour=ListModify(Lst,Enreg)	
+	endif	
+	Freturn(Retour)		
+endf
+;*
+Public Function long ug_ListSeek_Cle(Lst,ParamCle,&EnregTrouve)
+; Pour faire un liste seek avec les fonctions de tri spe
+; Dans paramcle il ne doit y avoir que la cle
+1 Lst         L
+1 ParamCle    A
+1 EnregTrouve A
+1 Retour L=0
+1 vI L
+1 PosD L=1
+recorddiva ugs_PosLgTri_Lst PosLgTri
+beginf
+	LstTri=ListGetId("Ug_Liste_des_Pos_Lg")
+	PosLgTri.Lst=Lst
+	if ListSeek(LstTri,PosLgTri,PosLgTri)>0
+		For vI=1 to PosLgTri.NbParam
+			Mid(EnregTrouve,PosLgTri.PosTri(vI),PosLgTri.LgTri(vI))=Mid(ParamCle,PosD,PosLgTri.LgTri(vI))
+			PosD +=PosLgTri.LgTri(vI)		
+		next
+		Retour=ListSeek(Lst,EnregTrouve,EnregTrouve)	
+	endif	
+	Freturn(Retour)		
+endf
+;*
+Public Function long ug_ListSearch(Lst,Enreg,&EnregTrouve)
+; Pour faire un liste seek avec les fonctions de tri spe
+1 Lst         L
+1 Enreg       A
+1 EnregTrouve A
+1 Retour L=0
+recorddiva ugs_PosLgTri_Lst PosLgTri
+beginf
+	LstTri=ListGetId("Ug_Liste_des_Pos_Lg")
+	PosLgTri.Lst=Lst
+	if ListSeek(LstTri,PosLgTri,PosLgTri)>0
+		Retour=ListSearch(Lst,Enreg,EnregTrouve)	
+	endif	
+	Freturn(Retour)		
+endf
+
+
+;*
+;*	Programme Principal
+;*
+
+Main
+	Lst=ListGetId("Liste_Test")
+

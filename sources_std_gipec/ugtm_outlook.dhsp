@@ -1,0 +1,810 @@
+;*
+;*	 Lecture de la boite mail
+;*
+
+include zyoutlook.dhsp
+module youtlook.dhop
+module ysystemex.dhop
+
+1 NumMsg 3,0=0
+
+;Const olFolderDeletedItems = 3	   ;element supprimés
+;Const olFolderOutbox = 4				;boite d'emission
+;Const olFolderSentMail = 5			;element envoyés
+;Const olFolderInbox = 6 				;boite de reception
+;Const olFolderCalendar = 9			;calendrier
+;Const olFolderContacts = 10			;contacts
+;Const olFolderJournal = 11			;journal
+;Const olFolderNotes = 12				;notes
+;Const olFolderTasks = 13				;taches
+;Const olFolderDrafts = 16				;brouillons
+
+;*
+;*	Procedures
+;*
+Public Procedure ug_Outlook_Begin
+beginp
+	OutlookOpen	
+endp
+;*
+Public Procedure ug_Outlook_End
+beginp
+	OutlookClose
+endp
+;*
+Public Function char ug_OutlookOpenFolderSpe(Folder,NomFolder)
+1 Folder L=6
+1 NomFolder 50
+1 NumFolder 5,0=1
+1 buffer 50
+1 j 3,0
+1 vI 5,0
+1 Lst L=1
+1 AdrL L
+1 NbFolder 3,0
+beginf
+	Loop Lst<200
+		AdrL=ListGetAdressCurrent(Lst)
+		if ListFirst(Lst,Buffer)<>0
+			if Count("LangChangeType francais",buffer)>0
+				exitloop
+			endif
+		endif
+		ListSetAdressCurrent(Lst,AdrL)
+		Lst++
+	endloop
+	NomFolder=Fstring("U",NomFolder)
+	OutlookOpenFolder(Folder)
+	j=OutlookExec('oo_ff_1.Folders.Count')
+
+	NbFolder=OutlookGetResultat
+;	Buffer=Fstring("U",Buffer)
+	Buffer='$$'
+	Loop Buffer<>NomFolder and Buffer<>" " and NumFolder<NbFolder
+		NumFolder++
+		;j=OutlookExec('oo_ff_1.Folders.GetNext.Name')
+		j=OutlookExec('oo_ff_1.Folders.Item(' & val(NumFolder) & ').Name')
+		Buffer=OutlookGetResultat
+		Buffer=Fstring("U",Buffer)
+	Endloop
+	;j=OutlookExec('oo_ff_1.Folders.GetFirst.Name')
+	j=OutlookExec('set oo_ff_1=oo_ff_1.Folders.Item(' & Val(NumFolder) & ')')
+	For vI=54 to 58 ; V72
+		ListIndex(Lst,Buffer,vI)
+		OutlookExec(Buffer)
+	Next
+	Freturn(Buffer)
+endf
+
+;*
+Function char ug_GetNewId
+beginf
+	Sleep 10 
+	freturn(Fstring("0",Rtime))
+endf
+;*
+public Procedure ug_GetUser(&Name,&Adress,&nomoutlook,&Version)
+1 Name 50
+1 Adress 50
+1 NomOutlook 50
+1 Version 50
+beginp
+	OutlookGetCurrentUser
+	Name = OutlookReadPropRecip("Name") 
+	Adress = OutlookReadPropRecip("Address") 
+
+	;nom de version de outlook
+	OutlookExec("oo.name") | nomoutlook = OutlookGetResultat 
+	OutlookExec("oo.version") | Version = OutlookGetResultat 
+endp
+;*
+public Function char ug_Creation_Tache(Sujet,Body,DhDebut,DhFin,LstPropSup,LstValProp,Ident)
+1 Sujet S="Tâche à Réaliser"
+1 dhDebut 14
+ 2 dtDebut 8
+ 2 hDebut 6
+1 dhFin 14
+ 2 dtFin 8
+ 2 hFin 6
+1 Body S=" "
+1 Categorie 50="Divalto"
+1 LstPropSup L=0
+1 LstValProp L=0
+1 Prop 50
+1 ValProp 90000
+1 Ident 20=" "
+1 I 2,0
+beginf
+	if Ident=" " | init Ident="9" | endif
+	i = OutlookOpenFolder(olFolderTasks) ;pour lire les Taches
+	if (i:=OutlookFind( "[Catégories]='Divalto'"))=0
+		i = OutlookFind( "[Catégories]='Divalto' and [ugIdent]='" && left(Ident) && "'" )
+	endif
+	if i<>0
+		Ident=ug_GetNewId
+		OutlookCreateMessage(olTaskItem)
+		OutlookAddProp("Subject",Sujet)
+		OutlookAddProp("Body",Body)
+		OutlookAddProp("StartDate",dtDebut,hDebut,PropDate)
+		OutlookAddProp("DueDate"  ,dhFin ,hFin,PropDate)
+		OutlookAddProp("Categories",Categorie)
+		; mise à jour des prop sup
+		If LstPropSup>0
+			ListBegin(LstPropSup)
+			Loop ListNext(LstPropSup,Prop)<>0
+				ListIndex(LstValProp,ValProp,val(ListNumber(LstPropSup)))
+				if Count("u_",Prop)>0
+					OutlookAddPropUser(Modify("u_","",Prop),ValProp && "")
+				else
+					OutlookAddProp(Prop,ValProp && "")
+				endif
+			endloop	
+		endif
+	
+		OutlookAddPropUser("ugIdent",Ident)
+		OutlookEndCreate(Outlook_SAVE) ;en auto
+		OutlookExecuteMessage
+	else
+		if Sujet<>" " | OutlookWriteProp("Subject",Sujet) | endif
+		if dhDebut<>" " | OutlookWriteProp("StartDate",dtDebut,PropDate,hDebut) | endif
+		if dhFin<>" " | OutlookWriteProp("DueDate"  ,dtFin,PropDate ,hFin) | endif
+		if Body<>" " | OutlookWriteProp("Body",Body) | endif
+		; mise à jour des prop sup
+		If LstPropSup>0
+			ListBegin(LstPropSup)
+			Loop ListNext(LstPropSup,Prop)<>0
+				ListIndex(LstValProp,ValProp,val(ListNumber(LstPropSup)))
+				if Count("u_",Prop)>0
+					OutlookWritePropUser(Modify("u_","",Prop),ValProp && "")
+				else
+					OutlookWriteProp(Prop,ValProp && "")
+				endif
+			endloop	
+		endif
+
+		OutlookSaveMess
+	endif
+	Freturn(Ident)
+endf
+
+;*
+public Function char ug_Creation_RDV(Sujet,Body,Lieu,dhDebut,dhFin,Importance,Rappel,RappelMin,Categorie,LstPropSup,LstValProp,Ident)
+1 Sujet S="RDV"
+1 Lieu S=" "
+1 dhDebut 14
+ 2 dtDebut 8
+ 2 hDebut 6
+1 dhFin 14
+ 2 dtFin 8
+ 2 hFin 6
+1 Body S=" "
+1 Importance 2,0=olImportanceHigh
+1 Rappel 2,0=oltrue
+1 RappelMin 5,0=5
+1 Categorie 50="Divalto"
+1 LstPropSup L=0
+1 LstValProp L=0
+1 Prop 50
+1 ValProp 90000
+1 Ident 20=" "
+1 I 2,0
+beginf
+	if Ident=" " | init Ident="9" | endif
+	i = OutlookOpenFolder(olFolderCalendar) ;pour lire le calendrier
+	if (i:=OutlookFind( "[Catégories]='Divalto'"))=0
+		i = OutlookFind( "[Catégories]='Divalto' and [ugIdent]='" && left(Ident) && "'" )
+	endif
+	if i<>0
+		Ident=ug_GetNewId
+	 	OutlookCreateMessage(olAppointmentItem)
+		OutlookAddProp("MeetingStatus",olNonMeeting)
+		OutlookAddProp("Subject",Sujet)
+		OutlookAddProp("Body",Body)
+		OutlookAddProp("Location",Lieu)
+		OutlookAddProp("Start",dtDebut,hDebut,PropDate)
+		OutlookAddProp("End",dtFin ,hFin,PropDate)
+		OutlookAddProp("Importance",Importance)
+		OutlookAddProp("Sensitivity",olNormal)
+		OutlookAddProp("BillingInformation"," ")
+	
+		;OutlookAddPropUser("Evenement",EVTTIERS.DOS&EVTTIERS.EVTNO)
+	
+		OutlookAddProp("ReminderSet",Rappel)
+		OutlookAddProp("ReminderMinutesBeforeStart",RappelMin)
+		OutlookAddProp("Categories",Categorie)
+	
+		; mise à jour des prop sup
+		If LstPropSup>0
+			ListBegin(LstPropSup)
+			Loop ListNext(LstPropSup,Prop)<>0
+				ListIndex(LstValProp,ValProp,val(ListNumber(LstPropSup)))
+				if Count("u_",Prop)>0
+					OutlookAddPropUser(Modify("u_","",Prop),ValProp && "")
+				else
+					OutlookAddProp(Prop,ValProp && "")
+				endif
+			endloop	
+		endif
+		OutlookAddPropUser("ugIdent",Ident) ; pas de "_" pour un nom de colonne
+		OutlookEndCreate(Outlook_SAVE)
+		OutlookExecuteMessage
+	else
+		if sujet<>" "  | OutlookWriteProp("Subject",Sujet) | endif
+		if lieu<>" "   | OutlookWriteProp("Location",Lieu) | endif
+		if dhDebut<>" "| OutlookWriteProp("Start",dtDebut,,hDebut)  | endif
+		if Body<>" " | OutlookWriteProp("Body",Body) | endif
+		if dhFin<>" "  | OutlookWriteProp("End",dtFin ,,hFin)       | endif
+		if Importance<>" " | OutlookWriteProp("Importance",Importance) | endif
+	
+		;OutlookWritePropUser("Evenement",EVTTIERS.DOS&EVTTIERS.EVTNO)
+	
+		if Rappel<>" " | OutlookWriteProp("ReminderSet",Rappel) | endif
+		if RappelMin<>" " | OutlookWriteProp("ReminderMinutesBeforeStart",RappelMin) | endif
+		if Categorie<>" " | OutlookWriteProp("Categories",Categorie) | endif
+	
+		; mise à jour des prop sup
+		If LstPropSup>0
+			ListBegin(LstPropSup)
+			Loop ListNext(LstPropSup,Prop)<>0
+				ListIndex(LstValProp,ValProp,val(ListNumber(LstPropSup)))
+				if Count("u_",Prop)>0
+					OutlookWritePropUser(Modify("u_","",Prop),ValProp && "")
+				else
+					OutlookWriteProp(Prop,ValProp && "")
+				endif
+			endloop	
+		endif
+		OutlookSaveMess
+	endif
+	freturn(Ident)
+endf
+;*
+
+;*
+public function long ug_Ajout_Contact(Name,Adrss,LstPropSup,LstValProp)
+1 Name S
+1 Adrss S 
+1 LstPropSup L=0
+1 LstValProp L=0
+1 i 3,0
+1 Flags 1,0
+
+1 Prop 50
+1 ValProp 90000
+beginf
+  OutlookSetContext(2)                  ;on passe sur le jeu de variables 2
+  i = OutlookOpenFolder(olFolderContacts) ;boîte des contacts 
+	i = OutlookFind('[FullName]="' & left(name) & '"')
+	if i <> 0 
+			OutlookCreateMessage(olContactItem)
+			OutlookAddProp("FullName",name)
+			OutlookAddProp("Email1Address",adrss)
+
+			if string("@",adrss) <> 0
+				OutlookAddProp("Email1AddressType","SMTP")	;internet 
+		   else
+				OutlookAddProp("Email1AddressType","MS")		;adresse outlook
+			endif
+			; mise à jour des prop sup
+			If LstPropSup>0
+				ListBegin(LstPropSup)
+				Loop ListNext(LstPropSup,Prop)<>0
+					ListIndex(LstValProp,ValProp,val(ListNumber(LstPropSup)))
+					OutlookAddProp(Prop,ValProp && "")
+				endloop	
+			endif
+			OutlookEndCreate(Outlook_SAVE)	
+			OutlookExecuteMessage
+	Else
+		;OutlookWriteProp("FullName",name)	
+		OutlookWriteProp("Email1Address",Adrss)
+		; mise à jour des prop sup
+		If LstPropSup>0
+			ListBegin(LstPropSup)
+			Loop ListNext(LstPropSup,Prop)<>0
+				ListIndex(LstValProp,ValProp,val(ListNumber(LstPropSup)))
+				OutlookWriteProp(Prop,ValProp && "")
+			endloop	
+		endif
+		OutlookSaveMess
+	endif
+	OutlookSetContext(1)                  ;on repasse sur le jeu de variables 1 
+	freturn(0)
+endf
+;*
+
+
+;*
+;public Procedure ug_Recuperation_Messagez_test;(Adresse,Piecejointe,Deplacer,DossierDeplacement)
+;1 Adresse 500
+;1 fichier 500
+;1 Piecejointe 500=" "
+;1 fini 1,0=false
+;1 name 500
+;1 sujet 50
+;1 body 500
+;1 Sendername 500
+;1 SentOn 500
+;1 buffer 500
+;1 flags 5,0
+;1 i 5,0
+;1 j 5,0
+;1 Nb 5,0
+;1 Folder L
+;1 UnRead 1,0
+;1 vI 3,0
+;1 Lst L=1
+;beginp
+;	OutlookOpen	
+;	;Folder=3
+;;	Getadressfunction("gtpmwin.dhop","ole_question",adr)
+;;	Functioncall(adr,"Excel.Application.Sheets.Count',result)
+;
+;	buffer=ug_OutlookOpenFolderSpe(6,"EmailLu")
+;;	OutlookOpenFolder(6)
+;;	j=OutlookExec('oo_ff_1.Folders.GetFirst.Name')
+;;	Buffer=OutlookGetResultat
+;;	j=OutlookExec('set oo_ff_1=oo_ff_1.Folders.GetFirst')
+;;	For vI=51 to 54
+;;		ListIndex(Lst,Buffer,vI)
+;;		OutlookExec(Buffer)
+;;	Next
+;
+;	;OutlookOpenFolder(Folder)
+;	OutlookSetFolderForCopyAndMove
+;	;Folder=OutlookFindFolder("Dossiers personnels" , "Boîte de réception\EmailLu")
+;	;Folder=OutlookFindFolder("Dossiers personnels" , "Boîte de réception")
+;	;oo_ff_1=Outlook.Session.Folders.GetFirst.Folders.GetNext.Folders.Item(1)
+;	OutlookOpenFolder(6)
+;	Loop (i:=OutlookFindNextMess)=0
+;		
+;		OutlookCopyMess
+;		Sujet = OutlookReadProp("Subject")
+;		;if Count("<UG_LU>",Sujet)>0 | redoloop | endif
+;		Sujet=Modify("<UG_LU>","",Sujet)
+;		OutlookWriteProp("Subject","<UG_LU>" & Sujet && "")
+;		OutlookSaveMess
+;		Body = OutlookReadProp("Body")
+;		Body = OutlookReadProp("HTMLBody")
+;		SenderName = OutlookReadProp("SenderName")
+;		SentOn = OutlookReadProp("SentOn")
+;		Name = OutlookReadProp("To")
+;		OutlookLoadRecip
+;		OutlookReadOrgineMess(name,flags)
+;		nb = OutlookReadGetNbRecipientMess
+;		UnRead=OutlookReadProp("UnRead")
+;		OutlookWriteProp("UnRead",false)
+;		;OutlookCopyMess
+; 		for j = 1 to nb
+;			i = OutlookReadDestinataireMess(name,adresse,flags,j)
+;		next
+;	endloop
+;	OutlookClose
+;endp
+
+;*
+Public Function long ug_Deplacement_Message(Dossier,Identz,Adresse,Piecejointe,Deplacer,DosDepl,DosDeplSpe)
+1 Dossier N
+1 Adresse S=" "
+1 Piecejointe S=" "
+1 Deplacer 1,0=false	; 1=deplacer 2=copier
+1 DosDepl N=3
+1 DosDeplSpe S
+1 Ident 20=" "
+1 Identz 20=" "
+1 LstMsg L
+1 NomFichier S
+1 AdrTrouve 50
+1 NomPiece S
+1 Trouve 1,0=false
+1 name 50
+1 flags 5,0
+1 Nb 5,0
+1 J L
+1 DestExp S
+;Const olFolderDeletedItems = 3	   ;element supprimés
+;Const olFolderOutbox = 4				;boite d'emission
+;Const olFolderSentMail = 5			;element envoyés
+;Const olFolderInbox = 6 				;boite de reception
+;Const olFolderCalendar = 9			;calendrier
+;Const olFolderContacts = 10			;contacts
+;Const olFolderJournal = 11			;journal
+;Const olFolderNotes = 12				;notes
+;Const olFolderTasks = 13				;taches
+;Const olFolderDrafts = 16				;brouillons
+
+beginf
+	
+	if DosDeplSpe=" "
+		OutlookOpenFolder(DosDepl)
+	else
+		ug_OutlookOpenFolderSpe(DosDepl,DosDeplSpe)
+	endif
+	OutlookSetFolderForCopyAndMove
+
+	OutlookOpenFolder(Dossier)
+	Loop OutlookFindNextMess=0
+		if Identz<>" " and Identz<>OutlookReadPropUser("ugIdent") | redoloop | endif
+		if Adresse<>" "
+			Trouve=false
+			if Adresse<>(AdrTrouve:=OutlookReadEmailOrgineMess) 
+				; recherche des email correspondant
+				OutlookLoadRecip
+				nb = OutlookReadGetNbRecipientMess
+				For j=1 to nb
+					OutlookReadDestinataireMess(name,adrTrouve,flags,j)
+					if Adresse=adrTrouve | Trouve=True | endif
+				next
+			else
+				Trouve=True
+			endif
+			if Trouve=True and PieceJointe<>" "
+				; recherche des fichiers dans l'email
+				Trouve=false
+				nb=OutlookReadGetNbFilesMess	
+				For j=1 to nb
+					OutlookReadFileMess(AdrTrouve,name,flags,j)	
+					if Piecejointe=AdrTrouve | trouve=true	| endif
+				next
+			endif
+			if Trouve=False | Redoloop | endif
+		endif
+		; si deplacement ou copie
+		if Deplacer=1
+			OutlookMoveMess	
+		elsif Deplacer=2
+			OutlookCopyMess	
+		endif
+	endloop
+	OutlookClose
+	freturn(0)
+endf
+;*
+
+;*
+Public Function long ug_Recuperation_Messages(Dossier,Identz,Adresse,Piecejointe,Deplacer,DosDepl,DosDeplSpe,MajProp,ValProp,AffProp,SaveFichier,TypeSave,RepSave,SavePiece)
+1 Dossier N
+1 Adresse S=" "
+1 Piecejointe S=" "
+1 Deplacer 1,0=false	; 1=deplacer 2=copier
+1 DosDepl N=3
+1 DosDeplSpe S=" "
+1 MajProp S="UnRead" ;si plusieurs Gerer Liste Prop
+1 ValProp S=False    ;si plusieurs valeur Prop gere Lister
+1 MajTmp 50
+1 AffTmp 50
+1 ValTmp 90000
+1 AffProp S=" "
+1 SaveFichier 1,0=false
+1 SavePiece 1,0=false
+1 TypeSave 2,0=3
+1 RepSave S=" "
+1 Ident 20=" "
+1 Identz 20=" "
+1 LstMsg L
+1 Types 5*8="TXT  RTF  TMPL MSG  DOC  HTMVCARDVCAL"
+1 NomFichier S
+1 NomFichier2 500
+
+1 AdrTrouve 50
+1 NomPiece S
+1 Trouve 1,0=false
+1 name 50
+1 flags 5,0
+1 Nb 5,0
+1 J L
+1 DestExp S
+1 i 3,0
+1 Adr 16
+record  * htdf fic
+;Const olFolderDeletedItems = 3	   ;element supprimés
+;Const olFolderOutbox = 4				;boite d'emission
+;Const olFolderSentMail = 5			;element envoyés
+;Const olFolderInbox = 6 				;boite de reception
+;Const olFolderCalendar = 9			;calendrier
+;Const olFolderContacts = 10			;contacts
+;Const olFolderJournal = 11			;journal
+;Const olFolderNotes = 12				;notes
+;Const olFolderTasks = 13				;taches
+;Const olFolderDrafts = 16				;brouillons
+
+;			type = Const olTXT = 0
+;					Const olRTF = 1
+;					Const olTemplate = 2
+;					Const olMSG = 3
+;					Const olDoc = 4
+;					Const olHTML = 5
+;					Const olVCard = 6
+;					Const olVCal = 7
+beginf
+	NumMsg ++
+	LstMsg=ListGetId("Ug_LISTE_MSG" & NumMsg)
+	OutlookOpen
+	if DosDeplSpe=" "
+		OutlookOpenFolder(DosDepl)
+	else
+		ug_OutlookOpenFolderSpe(DosDepl,DosDeplSpe)
+	endif
+	OutlookSetFolderForCopyAndMove
+	OutlookOpenFolder(Dossier)
+
+	;	; preparation pour la recherche
+;	if Identz<>" "
+;		i=OutlookFind( "[ugIdent]='"&& Identz &&"'")
+;	elsif Adresse<>" "
+;		;i=OutlookFind( "[To]='"&& Adresse &&"' or [SenderEmailAddress]='" && Adresse && "' or [Cc]='" & Adresse && "' or [Bcc]='" & Adresse && "'" )
+;		i=OutlookFind( "[Subjetc]='" & Adresse && "'" )
+;	endif
+	Loop OutlookFindNextMess=0
+		;OutlookAppendFile("c:\f121208.pnm")
+		
+		if Identz<>" " and Identz<>OutlookReadPropUser("ugIdent")| redoloop  | endif
+
+		if Adresse<>" "
+			Trouve=false
+			if Adresse<>(AdrTrouve:=OutlookReadEmailOrgineMess) 
+				; recherche des email correspondant
+				OutlookLoadRecip
+				nb = OutlookReadGetNbRecipientMess
+				For j=1 to nb
+					OutlookReadDestinataireMess(name,adrTrouve,flags,j)
+					if Adresse=adrTrouve | Trouve=True | endif
+				next
+			else
+				Trouve=True
+			endif
+			if Trouve=True and PieceJointe<>" "
+				; recherche des fichiers dans l'email
+				Trouve=false
+				nb=OutlookReadGetNbFilesMess	
+				For j=1 to nb
+					OutlookReadFileMess(AdrTrouve,name,flags,j)	
+					if Piecejointe=AdrTrouve | trouve=true	| endif
+				next
+			endif
+			if Trouve=False | Redoloop | endif
+		endif
+		; ajout expediteur
+		AdrTrouve=OutlookReadEmailOrgineMess
+		DestExp="<NOMEXP>" & AdrTrouve && "" 
+		; ajout des destinataires
+		DestExp=" "
+		OutlookLoadRecip
+		nb = OutlookReadGetNbRecipientMess
+		For j=1 to nb
+			OutlookReadDestinataireMess(name,adrTrouve,flags,j)
+			DestExp &="<NOMDEST" & val(j) & ">" & Name &&	"<ADRESSEDEST" & Val(j) & ">" & AdrTrouve && ""
+		next
+		; mise à jour implicites de la propriete
+		Ident=OutlookReadPropUser("ugIdent")
+		if Ident=" "
+			Ident=ug_GetNewId	  ; creation d'un id pour retrouver un message sur outlook
+			OutlookAddPropUser("ugIdent","ugIdentification")
+			OutlookWritePropUser("ugIdent",Ident)
+			OutlookSaveMess
+		endif	
+		NomFichier="<IDENT>" & Ident
+		; mise à jour des proprietes 
+		if MajProp<>" " and isnum(MajProp)=True
+	 		ListBegin(MajProp)
+	 		Loop ListNext(MajProp,MajTmp)<>0
+				ListIndex(ValProp,ValTmp,ListNumber(ValProp))
+				OutlookWriteProp(MajTmp,ValTmp)
+			endloop	 			
+		elsif MajProp<>" "
+			OutlookWriteProp(MajProp,ValProp)			
+		endif
+		OutlookSaveMess
+		; affichage des proprietes
+		if AffProp<>" " and isnum(AffProp)=true
+			ValTmp=" "
+			ListBegin(AffProp)
+			Loop ListNext(AffProp,AffTmp)<>0
+				ValTmp &="<" & AffTmp && ">" & hmpencode(OutlookReadProp(AffTmp))
+			endloop
+		elsif AffProp<>" "
+			ValTmp="<" & AffProp && ">" & OutlookReadProp(AffProp && "") && ""
+		endif
+		; Sauvegarde de fichiers
+		if RepSave=" "
+			RepSave=WinGetTempPath
+		endif
+		RepSave=Modify("/","\",RepSave)
+		if savefichier=true
+			NomFichier &="<NOMFICHIER>" & RepSave && "\MSG" & Ident &&"." & Types(TypeSave+1) && ""
+			j=OutlookSaveMessAs(RepSave && "\MSG" & Ident && "." & Types(TypeSave+1) && $00 ,typeSave)
+			fic.name=RepSave && "\MSG" & Ident && "." & Types(TypeSave+1) && $00
+			if fopen(fic,"F")<>0
+				OutlookExec('oo_msg_1.SaveAs("' & RepSave && "\MSG" & Ident && "." & Types(TypeSave+1) && "" & '",'& TypeSave &')')		
+			endif
+			;fclose(fic)
+			fclose(fic)
+		endif
+		; Read AP
+		if getAdressProcedure(harmony.defpmodule,"ug_Email_Read_Ap",Adr)=0
+			ProcedureCall(Adr,NomFichier2)
+			Nomfichier &=Nomfichier2 && ""
+		endif
+
+		; Affichage des noms des pieces jointes
+		;OutlookExec('oo_msg_1.Attachments.Item(1).SaveAsFile("C:\qqq.txt")') ; enregistrer les pieces jointes
+		
+		NomPiece=""
+		nb=OutlookReadGetNbFilesMess
+		NomPiece &="<NB_PIECEJOINTE>" & val(nb)
+		for j=1 to nb
+			OutlookReadFileMess(AdrTrouve,name,flags,j)	
+			NomPiece &="<NOM_PIECEJOINTE" & val(j) & ">" & RepSave && "\"  & name && ""
+			if SavePiece=True
+				;*
+				;OutlookExec('oo_msg_1.Attachments.Item('& val(j) & ').SaveAsFile("' & RepSave && "\" & Name && '")')
+				;*
+				if WinMoveFile(AdrTrouve && $00,RepSave && "\" & Name && $00)=false ; si pas de copie 
+					OutlookExec('oo_msg_1.Attachments.Item('& val(j) & ').SaveAsFile("' & RepSave && "\" & Name && '")')
+				endif
+			else
+				WindeleteFile(AdrTrouve && $00) ; suppression du fichier si pas besoins
+			endif
+		next
+		;
+
+
+
+		;enregistement dans la liste
+		NomFichier &=NomPiece && ValTmp
+		ListAddEnd(LstMsg,Nomfichier)
+		; si deplacement ou copie
+		if Deplacer=1
+			OutlookMoveMess	
+		elsif Deplacer=2
+			OutlookCopyMess	
+		endif
+		i=1 ;pour lecture du second message
+	endloop
+	; si boite d'envoi
+	if Dossier=4
+		OutlookOpenFolder(Dossier)
+		Loop OutlookFindNextMess=0
+			OutlookExec('oo_msg_1.Send')
+		endloop
+	endif
+	freturn(LstMsg)
+endf
+;*
+;*
+public Function char ug_Creation_Email(Folder,Sujet,Body,DestTo,DestCC,DestCCI,TypeEmail,LstPropSup,LstValProp,Signature, LstFichier)
+1 Sujet S="Tâche à Réaliser"
+1 Body S=" "
+1 Categorie 50="Divalto"
+1 LstPropSup L=0
+1 LstValProp L=0
+1 Prop 50
+1 ValProp 90000
+1 DestTo 1000
+1 DestCC 1000=" "
+1 DestCCI 1000=" "
+1 Ident 20=" "
+1 Folder L=6
+1 I 2,0
+1 TypeEmail 1,0=0	 ;Outlook_SEND	  = 0 Outlook_SAVE	  = 1 Outlook_DISPLAY	  = 2
+1 Retour 1,0
+1 Signature S="0"
+1 Texte 2000
+1 HtmlBody S
+record ddsys.dhsd OPDIR OP
+record ddsys.dhsd ELTDIR EL
+Record * htdf fic
+1 Lst L
+1 Lst2 L
+1 LstFichier L=0 ; Liste de Fichier 
+beginf
+	if Ident=" " | init Ident="9" | endif
+	i = OutlookOpenFolder(Folder) ;pour lire les Taches
+	Ident=ug_GetNewID
+	OutlookCreateMessage(olMailItem)
+	OutlookAddProp("Subject",Sujet)
+	OutlookAddProp("To",DestTo)
+	OutlookAddProp("CC",DestCC)
+	OutlookAddProp("BCC",DestCCI)
+	OutlookAddProp("Body",Body)
+	; mise à jour des prop sup
+	If LstPropSup>0
+		ListBegin(LstPropSup)
+		Loop ListNext(LstPropSup,Prop)<>0
+			ListIndex(LstValProp,ValProp,val(ListNumber(LstPropSup)))
+			if Count("u_",Prop)>0
+				OutlookAddPropUser(Modify("u_","",Prop),ValProp && "")
+			else
+				OutlookAddProp(Prop,ValProp && "")
+			endif
+		endloop	
+	endif
+	; ajout de fichier 
+	if LstFichier >0
+		ListBegin(LstFichier)
+		Loop ListNext(LstFichier,ValProp)<>0
+			OutlookAddFile(Left(ValProp) & $00)
+		endloop
+	endif
+	OutlookAddPropUser("ugIdent",Ident)
+	OutlookEndCreate(TypeEmail) ;en auto
+	Retour=OutlookExecuteMessage
+	if Retour=0
+		Freturn(Ident)
+	else
+		Freturn(" ")
+	endif
+endf
+
+;*
+;*	Programme Principal
+;* 
+main
+
+	;ug_Recuperation_Messages(Dossier,Identz,Adresse,Piecejointe,Deplacer,DossierDeplacement,MajProp,ValProp,AffProp,SaveFichier,TypeSave,RepSave,SavePiece)
+	1 Chaine 90000
+	1 Param 50
+	1 Valeur 90000
+	1 AffProp1 50="Subject"
+	1 Lst L
+	1 Lst2 L
+	1 St X
+
+	ug_Outlook_Begin
+
+;* Deplacer un message
+;	ug_OutlookOpenFolderSpe(olFolderInbox,"EmailTraiter")
+;	OutlookSetFolderForCopyAndMove
+;	OutlookOpenFolder(6)
+;	
+;	st=OutlookFind('[Subject]="' & 'telnet + accès Psion' & '"')
+;	OutlookMoveMess
+;* Fin deplace un message
+
+;* debut test recup message
+;Lst=ListGetId("Prop")
+;Lst2=ListGetId("ValProp")
+;ListAddEnd(Lst,"Subject")
+;ListAddEnd(Lst,"BCC")
+;ListAddEnd(Lst,"Body")
+;ListAddEnd(Lst,"CC")
+;ListAddEnd(Lst,"To")
+;;ug_Recuperation_Messages(Dossier,Identz,Adresse,Piecejointe,Deplacer,DosDepl,DosDeplSpe,MajProp,ValProp,AffProp,SaveFichier,TypeSave,RepSave,SavePiece)
+;Lst=ug_Recuperation_Messages(6,Adresse="Test d'envoie de mail",AffProp=Val(Lst),Deplacer=2)
+;ListBegin(Lst)
+;Loop ListNext(Lst,Chaine)<>0
+;	Display "Message N°" & val(ListNumber(Lst))
+;	Loop (st:=HmpRead(Chaine,Param,Valeur))=0
+;		Display Param && " = " & Valeur &&""
+;	endloop
+;	st=getbchar()
+;endloop
+;* fin test recup message
+
+;ug_Recuperation_Messagez;(Adresse=" ",Piecejointe="")
+
+
+
+;* Ajout Contact
+;ListAddEnd(Lst,"HomeAddressCity")
+;ListAddEnd(Lst2,"Thiennes")
+;ListAddEnd(Lst,"HomeAddressPostalCode")
+;ListAddEnd(Lst2,"59189")
+;ListAddEnd(Lst,"HomeAddressStreet")
+;ListAddEnd(Lst2,"15 rue d'aire")
+;ug_Ajout_Contact("Herve Duriez","hduriez@gipec.fr",Lst,Lst2)
+;* fin Ajout Contact
+;* Ajout RDV
+1 Ident 20
+;Ident=ug_Creation_RDV(Sujet="Anniversaire de mon pere",Body="body",Lieu="GIPEC",dhDebut="20090103080101",dhFin="20090103230101")
+;Ident=ug_Creation_RDV(Sujet="Anniversaire de mon pere SAMEDI",Body="body",Lieu="GIPEC",dhDebut="20090103080101",dhFin="20090103230101",Ident=Ident)
+;* fin ajout RDV
+;* Ajout Tache
+;Ident=ug_Creation_Tache(Sujet="Tache à faire",Body="Body",DhDebut="20090104110000",DhFin="20090104120000")
+;Ident=ug_Creation_Tache(Sujet="Tache à faire completement",Body="Body",DhDebut="20090104110000",DhFin="20090104120000",Ident=Ident)
+;* Fin Ajout Tache
+;* Creation Email
+;ug_Creation_Email(Folder=4,Sujet="Sujet du Message",Body="Texte du Message",DestTo="Destinataire<hduriez@gipec.fr>",DestCC="DestinataireCC<hduriez@gipec.fr>",DestCCI="DestinataireCCI<hduriez@gipec.fr>",TypeEmail=0)
+;* Fin Creation Email
+ug_Outlook_End
+programgoto "xquit"

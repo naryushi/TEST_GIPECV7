@@ -1,0 +1,208 @@
+;*
+;*	Programme pour la recuperation des fichiers "_base" pour un repertoire
+;*
+
+module gtpm000.dhop
+module ugtm_tech.dhop
+
+1 Result 1000
+1 DossierPack 7="/packs/"
+1 LstMsg L
+
+
+
+;*
+;*	Procedure
+;*
+
+Function char ug_Parcourt_Rep(Rep,Fichier,DateBase)
+;
+1 Rep     512
+1 Fichier 128
+1 Texte 1000
+ 2 DateNew 45.30
+1 DateBase 14
+1 Niv	5,0
+1 Retour 512=" "
+record ddsys.dhsd OpDir 
+record ddsys.dhsd EltDir El
+record  * htdf ficStd
+beginf
+	
+	Display [=8 1 "Rep : " & Rep]
+	Display [=9 1 "Fic : " & Fichier]
+
+	OpDir.Racine=Rep
+	OpDir.Prefixe=Fichier
+	OpDir.Tri=1
+	OpDir.Attributs=0
+	OpDir.MontrerCaches=True
+	OpDir.TestAttributs=False
+	if DirOpen(OpDir)=0
+		Loop DirRead(OpDir,El)=0
+			if El.Nom in(".","..") |Redoloop | endif
+			if El.Flagdir=True
+				Retour=ug_Parcourt_Rep(OpDir.Racine && "/" & el.nom ,Fichier,DateBase)
+				if Retour<>" " | exitloop | endif	
+			elsif Fichier=El.Nom
+				FicStd.Name=OpDir.Racine && "/" & Fichier
+				If Fopen(ficStd,"P")=0 and Hread(FicStd,Texte)=0
+					DateNew=Nospaces(DateNew)
+					FClose(FicStd)
+					if DateNew=DateBase
+						Retour=FicStd.Name
+						Exitloop
+					endif
+				endif
+			endif	
+		endloop
+		DirClose(OpDir)
+	endif
+	freturn (Retour)
+endf
+
+
+
+;*
+function int ug_Rechercher_Base(NomFic,Repertoire,RepertoirePack,ControleDate)
+; recherche le fichier de base 
+; et le copie dans le repertoire
+1 NomFic 128
+1 Repertoire 512
+1 RepertoirePack 512
+1 Texte 512
+1 DateBase 14
+1 ControleDate 14=" "
+1 FichierBase 512
+1 NumFic 1,0
+record * htdf ficU
+record ddsys.Dhsd Hstat
+
+beginf
+	ficU.Name=Repertoire && "/" & NomFic
+	if Fopen(ficU,"P")=0	
+		; Lecture de la date modif base
+		Loop Hread(FicU,Texte)=0	
+			if count("date_modif_base",Texte)>0
+				DateBase=Nospaces(Modify("=","",Modify('"','',Modify("date_modif_base","",Texte))))
+				Exitloop	
+			endif
+		endloop
+		Fclose(ficU)
+		if ControleDate=" "
+			; parcourt des packs pour trouver le fichier 
+			FichierBase=ug_Parcourt_Rep(RepertoirePack,Modify("u.",".",NomFic),DateBase)
+			; copie du fichier de base
+			if FichierBase<>" " and HcopyFile(FichierBase && "",Repertoire && "/" & Modify(".","_base.",FileNameLastSegment(FichierBase)),False,'P',True,NumFic)=0
+				ListAddEnd(LstMsg,"Fichier KO  " & NomFic &&  " Copie du fichier " & FichierBase && " vers " & Modify(".","_base.",FichierBase))	
+			elsif FichierBase=" "
+				ListAddEnd(LstMsg,"Fichier ERR " & NomFic &&  " Fichier de Base non trouvé")	
+			endif
+		elsif ControleDate<>DateBase
+			; parcourt des packs pour trouver le fichier 
+			FichierBase=ug_Parcourt_Rep(RepertoirePack,Modify("u.",".",NomFic),DateBase)
+			; copie du fichier de base
+			if FichierBase<>" " and HcopyFile(FichierBase && "",Repertoire && "/" & Modify(".","_base.",FileNameLastSegment(FichierBase)),False,'P',True,NumFic)=0
+				ListAddEnd(LstMsg,"Fichier KO  " & NomFic &&  " Copie du fichier " & FichierBase && " vers " & Modify(".","_base.",FichierBase))	
+			elsif FichierBase=" "
+				ListAddEnd(LstMsg,"Fichier ERR " & NomFic &&  " Pas de Fichier Trouvé")
+			endif	
+		elsif ControleDate=DateBase
+			ListAddEnd(LstMsg,"Fichier OK  " & NomFic)		
+		endif
+		; passage en fichier caché
+		if statfile(Modify("u.","_base.",FicU.Name),Hstat)=0
+			Hstat.Fhidden=True
+			Hstat.Fsystem=false
+			Hstat.Farchive=True
+			Fmodstat(Modify("u.","_base.",FicU.Name),Hstat,STAT_CHANGE_ATTRIBUTES)
+		endif
+	endif
+	freturn (0)
+endf
+
+
+;*
+Procedure ug_Traitement
+;
+1 Repertoire 512
+1 Extension 5
+1 Texte 1000
+ 2 DateNew 45.30
+record ddsys.dhsd OpDir
+Record ddsys.dhsd EltDir El
+
+record * htdf ficBase
+
+beginp
+	; Recherche du repertoire à consulter
+	Repertoire=ug_Select_Rep_Spe(SelectWin=False,Options=HAR_NOCREATEBUTTON,Titre="Selectionner une Repertoire 'sources' ex : /specifs/clients/sources/")
+	; Lecture des Ecrans et Impression du dossier
+	Display Repertoire
+	Repertoire
+	if Repertoire =  " "	| preturn | endif
+	OpDir.Racine=Repertoire
+	OpDir.Prefixe="*"
+	OpDir.Tri=1
+	OpDir.Attributs=0
+	OpDir.MontrerCaches=True
+	OpDir.TestAttributs=False
+
+	if DirOpen(OpDir)=0
+		Loop DirRead(OpDir,El)=0
+			El.Nom=Fstring("l",El.Nom)
+			if (Extension:=Modify(FileNameNoExt(El.Nom),"",El.Nom)) in(".dhse",".dhsi") and Count("u.",El.Nom)>0  ; si ecran ou impression et est une surcharge
+				ficBase.Name=OpDir.Racine && "/" & Modify("u.","_base.",el.Nom)
+				if Fopen(ficBase,"P")<>0
+					ug_Rechercher_Base(el.Nom,OpDir.Racine,DossierPack)	
+				else
+					; controle à faire supplementaire
+					;ListAddEnd(LstMsg,"Fichier OK " & El.Nom)
+					if HRead(FicBase,Texte)=0 
+						Fclose(ficBase)
+						DateNew=Nospaces(DateNew)
+						ug_Rechercher_Base(el.Nom,OpDir.Racine,DossierPack,DateNew)		
+					else
+						Fclose(ficBase)						
+					endif
+				endif						
+			endif
+		endloop
+		DirClose(OpDir)
+	endif
+	; Creation fichier 
+	ficBase.Name=WinGetTempPath & "\ug_erreur.txt"
+	Loop Fopen(ficBase,"P")<>0
+		HCreateFile(FicBase.Name,"U")
+	endloop
+	Herase(FicBase)
+	; Ecriture du fichier
+	ListBegin(LstMsg)
+	Loop ListNext(LstMsg,Texte)
+		Hwrite(FicBase,Left(Texte))
+	Endloop
+	; execution fichier 
+	WinShellExecute("OPEN",FicBase.name)
+endp
+
+
+
+;*
+;*	Programme Principal
+;*
+
+main
+	Display " "
+	XmeTitle ('Programme de recuperation des "_base"')
+	Display "Le programme consiste à controler le repertoire donné pour"
+	Display 'savoir si les fichiers "_base" sont present.'
+
+	Display " "
+	Display "Vous allez devoir selectionner le repertoire des sources"
+
+	LstMsg=ListGetId("ug_Liste_Message")
+	ListErase(LstMsg)
+
+	if G3_Afficher_Fenetre_Validation=Idyes
+		ug_Traitement
+	endif

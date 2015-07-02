@@ -1,0 +1,19 @@
+;* Include commun
+
+module ugtm_tech.dhop
+module ugtm_fonc.dhop
+module ugtm_note.dhop
+module ugtm_excel.dhop
+
+const ugc_Alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+Const ugc_Numeric = "0123456789"
+
+;Intégration
+public record gtfdd.dhsd ipar
+public record gtfdd.dhsd ent ient
+public record gtfdd.dhsd ead iead
+public record gtfdd.dhsd itxt
+public record gtfdd.dhsd mouv imouv
+public record gtfdd.dhsd mvtl imvtl
+
+

@@ -1,0 +1,246 @@
+;* Module fonctions XML
+
+OverWrittenBy ugum_xml.dhop
+
+;*
+;20101118			| RTH			| Version initiale
+;*
+
+module ugtm_tech.dhop
+
+Public Structure ugs_Xml
+	1 NoGroupe L		; Numero de groupe
+	1 St L				; Type de Balise
+	1 Niveau L			; Niveau dans le fichier xml
+	1 Tag 50				; Tag 
+	1 TagMinus 50 		; Tag en Minuscule
+	1 Valeur 500		; Valeur 
+	1 ValeurMinus 500	; Valeur en Minuscule
+EndStructure
+
+1 ModuleAppel 50
+
+
+;*
+public procedure ug_XML_Ecrire(idfic,balise,valeur,fin,memo,prop)
+	;Ecriture d'une ligne dans le fichier XML
+	;Possibilité de mémorisé la balise pour écrire les balises de fin lors de la fermeture du fichier 
+	1 idFic L						;Identifiant du fichier XML
+	1 balise S = " "			 	;Code balise
+	1 valeur S = " "				;Valeur
+	1 fin B = true					;Insérer la balise de fin
+	1 memo B 						;Mémorise la balise ?
+	1 prop B 						;La balise sera suivi de propriété. Attention, dans ce cas, on ne peut pas renseigne la valeur ni la fin !
+
+	1 TE L
+	1 Lst L
+
+beginp
+	 
+	;Ecriture de la ligne
+	winwritefile(idfic,condition(balise <> system.Esp,"<" & nospaces(balise) & condition(prop=false,">"," "),"") & \
+					XmlTranslate(nospaces(valeur),true,True) & \
+					condition(fin and balise <> system.esp,"</" & nospaces(balise) & ">","") & $0D0A,TE)
+
+	;Si on mémorise les balises pour la cloture
+	if	not fin and memo and balise <> system.Esp
+		lst = ug_liste("LST_BALISE",false)
+		listaddbegin(lst,"</" & nospaces(balise) & ">")
+	endif
+
+endp
+
+;*
+public procedure ug_XML_Ecrire_Prop(idfic,prop,valeur,derniere)
+	;Ecriture d'une ligne propriété de la balise dans le fichier XML
+	1 idFic L						;Identifiant du fichier XML
+	1 prop S = " "			 		;propriété
+	1 valeur S = " "				;Valeur
+	1 derniere B = false			;Dernière propriété (pour cloturer la balise)
+
+	1 TE L
+
+beginp
+
+	winwritefile(idfic,nospaces(prop) & '="' & nospaces(valeur) & '"' & condition(derniere,">"," ") & $0D0A,TE)
+
+endp
+
+;*
+public function long ug_XML_Debut(NomFic,Encoding)
+	;Création d'un fichier export XML
+	;Retour = 0 si erreur, IDfic si ok
+	1 NomFic 1000
+	1 Encoding 2,0			;1=ISO-8859-1, 2=UTF-8
+	1 idFic L
+	1 Lst L
+
+beginf
+
+	;Création du fichier sur le disque
+	idfic = ug_Creer_Fichier(NomFic,false)
+	if idfic = 0
+		freturn(0)
+	endif
+
+	;Création et effacement (surtout) de la liste des balises
+	lst = ug_liste("LST_BALISE")
+
+	;Définition du fichier XML
+	switch encoding
+		case 1
+			ug_XML_Ecrire(idfic,valeur = '<?xml version="1.0" encoding="ISO-8859-1"?>',false,false,false)
+		case 2
+			ug_XML_Ecrire(idfic,valeur = '<?xml version="1.0" encoding="UTF-8" ?>',false,false,false)
+	endswitch
+
+	freturn(idfic)
+
+endf
+
+;*
+public procedure ug_XML_Fin_Une_Balise(idfic)
+	;Fermeture du fichier XML
+	;Possibilité d'écrire toutes les balises de fin mémorisé
+	1 idFic L				  	;Identifiant du fichier XML
+	
+	1 lst L
+	1 balise S
+
+beginp
+
+	lst = ug_liste("LST_BALISE",false)
+	if listfirst(lst,balise) > 0
+		ug_XML_Ecrire(idfic,valeur=balise,false,false,false)
+		listdelete(lst)
+	endif
+
+endp
+
+;*
+public procedure ug_XML_FIN(idfic,memo)
+	;Fermeture du fichier XML
+	;Possibilité d'écrire toutes les balises de fin mémorisé
+	1 idFic L				  	;Identifiant du fichier XML
+	1 memo B = true			;Ecriture des balises de fin
+	
+	1 lst L
+	1 balise S
+
+beginp
+
+	if memo
+		lst = ug_liste("LST_BALISE",false)
+		loop listcount(lst) > 0
+			ug_XML_Fin_Une_Balise(idfic)
+		endloop
+	endif
+
+	winclosehandle(idfic)
+
+endp
+
+;*
+Public Function long ug_Xml_Open(FichierOuChaine,Mode)
+;Ouverture d'un fichier XML ou une chaine 
+1 FichierOuChaine S
+1 Mode    1,0=1 ; 1=Chaine de Caractere 2=Fichier Windows 3=Fichier Harmony
+1 Ticket L=0
+1 Status L
+1 Chaine 1000
+beginf
+	Ticket=XmlOpen(FichierOuChaine,Mode)	
+	if Ticket=0
+		status = XmlGetFileError(chaine) 
+		Messagebox("Erreur=" & tostring(status) & " Fichier=" & chaine && "","Alerte",Mb_iconexclamation)
+	endif
+	freturn (Ticket)
+endf
+;*
+Public Function long ug_Xml_Close(Ticket)
+;Fermeture du fichier Xml
+1 Ticket L
+beginf
+	freturn (XmlClose(Ticket))
+endf
+;*
+Function Long ug_Xml_Analyse_Lecture(St,Tag,Valeur)
+;
+1 St L
+1 Tag 50
+1 Valeur 500
+1 Adr 16
+beginf
+	if ModuleAppel<>' ' and GetAdressFunction(ModuleAppel,'ug_Xml_St_Autoriser',Adr)=0 
+		St=FunctionCall(Adr,st)
+	endif
+	freturn (st)
+endf
+;*
+Function long ug_Xml_St_Autoriser(st)
+; Retour True ok
+1 st L
+1 Rep 1,0=False
+
+1 Modules 50=' '
+1 Adr 16
+beginf
+	if ModuleAppel<>' ' and GetAdressFunction(ModuleAppel,'ug_Xml_St_Autoriser',Adr)=0 
+		Rep=FunctionCall(Adr,st)
+	elsif st in(XML_ATTRIBUT,XML_TEXTVALUE)
+		Rep=True
+	endif 	
+	freturn (Rep)
+endf
+;*
+Public Function Long ug_Xml_Analyse(Ticket,Modules)
+; Retour d'une liste avec les tags
+; Module pour l'appel de fonction	ug_Xml_St_Autoriser
+; Module pour l'appel de fonction 	ug_Xml_Analyse_Lecture
+1 Ticket L
+1 Modules 50=' '
+1 St L
+1 Tag 50
+1 Valeur 500
+1 Niveau L=0
+recordDiva ugs_Xml
+1 Lst L
+
+1 NoGroupe L=0
+beginf
+	
+	Swap ModuleAppel Modules
+	Lst=ListGetId("ug_Liste_Xml") | ListErase(Lst)
+	; suppression des espaces pour la lecture
+	XmlSetoption(Ticket,"<whitespacehandling>none")	
+	; lecture du fichier Xml
+	Loop (st:=XmlRead(Ticket,Tag,Valeur))>XML_END
+		Niveau+=Condition(st=XML_BEGINTAG,+1,Condition(st=XML_ENDTAG,-1,0))
+		st = ug_Xml_Analyse_Lecture(st,Tag,Valeur)
+		if ug_Xml_St_Autoriser(st)=True 
+			NoGroupe+=Condition(Niveau=2,1,0)
+			init ugs_Xml=" "
+			ugs_Xml.Niveau =Niveau
+			ugs_Xml.St		=St
+			ugs_Xml.Tag		=Tag
+			ugs_Xml.Valeur	=Valeur
+			ugs_Xml.ValeurMinus=FString("l",Valeur)
+			ugs_Xml.NoGroupe=NoGroupe
+			ListAddEnd(Lst,ugs_Xml)
+		endif
+	endloop
+	Swap ModuleAppel Modules
+
+	freturn (Lst)
+endf
+;*
+
+
+;;*
+;
+;Main
+;	;ug_Xml_Analyse_XSD("/divalto/sys/implicite.xsd",3)
+;	1 st L
+;	St=ug_Xml_Open("/divalto/sys/connexions.Xml",3)
+;	ug_Xml_Analyse(st,)
+;	ug_Xml_Close(St)

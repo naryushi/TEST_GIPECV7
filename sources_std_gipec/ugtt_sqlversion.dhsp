@@ -1,0 +1,286 @@
+
+;*
+;*	Programme de mise à jour des version des fichiers SQL 
+;*
+
+;include  ugtm_tech.dhsp
+;include ugtm_vbs.dhsp
+include ugtm_tech.dhsp
+
+Module yodbcSQL.dhop
+
+1 LstBase L
+
+record * htdf fconfig 
+
+1 ug_FlagOui 1,0=True
+
+1 Enreg 500
+
+Structure ugs_EnrSql 1300
+	1 IDdico L
+	1 EnrSQL 1020
+	 2 FlagOUINON 2.1,0 ; 1=OUI 2=NON
+	 2 Lib 		35.32
+	 2 NomDico 	67.50
+	 2 Nomfic 	163.32
+	 2 Version 	195.5
+	1 VersionDico 5
+	1 Cle >ddsys.dhsd cle
+endStructure
+;*
+;*	Procedure
+;*
+
+Public Procedure ug_Charger_NomBase
+;
+beginp
+	LstBase = listgetid("LST_INPUT")
+	Listerase(LstBase)
+	fconfig.name=WinReadProfileString("System","CheminFpartd","Divalto.ini")
+	fconfig.name=Modify("fpartd","fpart",Modify("hfd","hfi",fconfig.name))
+	hopen(fconfig,"P")
+	fconfig.key = "B"
+	loop hread(fconfig,enreg) = 0
+		if Asc(Mid(Enreg,71,1))=4
+			listinsert(LstBase,mid(enreg,141,32))
+		endif
+	endloop	
+endp
+;*
+Function long ug_Charger_Dico(NomDico)
+; retour de l'ID du Dico
+1 NomDico S
+1 IdDico L=0
+1 Buffer 8096
+1 Niveau 1,0=3
+beginf
+	if DDInterface(DD_OPEN,IDDico,NomDico,Buffer,Niveau)<>0
+		IdDico=0
+	endif
+	freturn (IdDico)
+endf
+;*
+Function char ug_Charger_Table(IdDico,Fichier)
+;
+1 IdDico  L
+1 Fichier S
+1 Buffer 8096
+1 Niveau 1,0=2
+1 Retour L
+beginf
+	if (Retour:=DDInterface(DD_FILEFIND,IDDico,Fichier,Buffer,Niveau))<>0
+		Buffer=" "		
+	endif
+	freturn (Buffer)
+endf
+;*
+Function long ug_TriFic(&a,&b)
+;
+recorddiva ugs_EnrSql a
+recorddiva ugs_EnrSql b
+beginf
+	
+	freturn (SortCompare(a.NomDico,b.NomDico))
+endf
+;*
+Public Function Char ug_Select_Base
+;
+1 Cmd S
+record * htdf fic
+beginf
+;	ug_powershell_Debut_Fichier(fic)
+;	
+;	
+;	Cmd=" [void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')"	& $0a0d & \
+;	" [void][System.Reflection.Assembly]::LoadWithPartialName('System.Drawing')"			& $0a0d & \
+;	
+;	;"# creation d'une fenetre"																			& $0a0d & \
+;	" $Form1 = New-Object System.Windows.Forms.Form"												& $0a0d & \
+;	" $Form1.ClientSize = New-Object System.Drawing.Size(290, 100)"							& $0a0d & \
+;	" #$Form1.topmost = $true"																				& $0a0d & \
+;	" $Form1.Text = 'Selectionner une Valeur'"														& $0a0d & \
+;	" $Form1.FormBorderStyle='FixedToolWindow'"														& $0a0d & \
+;	
+;	;"# creation d'un libelle"																				& $0a0d & \
+;	" $comboBox1Title = new-object System.Windows.Forms.Label"									& $0a0d & \
+;	" $comboBox1Title.Location = New-Object System.Drawing.Point(25, 20)"					& $0a0d & \
+;	" $comboBox1Title.Size = New-Object System.Drawing.Size(250, 20)"							& $0a0d & \
+;	" $comboBox1Title.Text = 'Veuillez selectionner une valeur'"								& $0a0d & \
+;	" $Form1.Controls.Add($comboBox1Title)"															& $0a0d & \
+;	
+;	;"# creation d'une combo box"																			& $0a0d & \
+;	" $comboBox1 = New-Object System.Windows.Forms.ComboBox"										& $0a0d & \
+;	" $comboBox1.Location = New-Object System.Drawing.Point(25, 45)"							& $0a0d & \
+;	" $comboBox1.Size = New-Object System.Drawing.Size(250, 20)"								& $0a0d & \
+;	" $comboBox1.DropDownStyle='DropDownList'"														& $0a0d & \
+;	
+;	;" $comboBox1.Items.add('Premier choix')"															& $0a0d & \
+;	;" $comboBox1.Items.add('deuxieme choix')"														& $0a0d & \
+;	;" $comboBox1.Items.add('troisieme choix')"														& $0a0d & \
+;	
+;	;'# ajout du control'																					& $0a0d & \
+;	" $Form1.Controls.Add($comboBox1)"																	& $0a0d & \
+;	
+;	;"# creation d'un bouton pour valider"																& $0a0d & \
+;	" $Button = New-Object System.Windows.Forms.Button"											& $0a0d & \
+;	" $Button.Location = New-Object System.Drawing.Point(25, 70)"								& $0a0d & \
+;	" $Button.Size = New-Object System.Drawing.Size(250, 30)"									& $0a0d & \
+;	" $Button.Text = 'Valider'"																			& $0a0d & \
+;	
+;	" $Button.add_Click("																					& $0a0d & \
+;	" {Set-Content 'ug_NomFicLog' $comboBox1.Items.Item($comboBox1.SelectedIndex)"		& $0a0d & \
+;	
+;	" $form1.Visible=$false"																				& $0a0d & \
+;	" }"																											& $0a0d & \
+;	" )"																											& $0a0d & \
+;	" $Form1.Controls.Add($Button)"																		& $0a0d & \
+;	
+;	;'# Affichage de la page		'																		& $0a0d & \
+;	" $form1.StartPosition ='CenterScreen'"															& $0a0d & \
+;	" $form1.WindowState='Normal'"																		& $0a0d 
+;	
+;	
+;	; ajout des choix de base SQL
+;	ListBegin(LstBase)
+;	Loop ListNext(LstBase,Enreg)>0
+;		Cmd &=" $comboBox1.Items.add('" & Enreg && "')"		& $0a0d
+;	endloop
+;	
+;	cmd &=" [void]$form1.showdialog()"
+;	
+;	ug_powershell_Write(fic,cmd)
+;	ug_Powershell_Fin_Fichier(fic)
+;
+;	Cmd=ug_PowerShell_Lancement_Fic(fic.Name)
+;	Freturn(Cmd && "")
+	ug_Input_init(uge_input,Type='L')
+	; ajout des choix de base SQL
+	ListBegin(LstBase)
+	Loop ListNext(LstBase,Enreg)>0
+		uge_input.ug_input_Lst(ListNumber(LstBase))=Enreg
+	endloop
+	ug_input_charger_liste(uge_input)
+	if ug_input_saisie(uge_input)=0
+		Freturn(uge_input.ug_input_A)
+	else
+		Freturn(' ')
+	endif
+endf
+
+
+;*
+Procedure ug_Traitement
+;
+record ugd_outils.dhsd uge_input
+record * htdf fhsql
+
+recorddiva ugs_EnrSql EnrSql
+
+recorddiva ugs_EnrSql EnrSav
+
+1 LstFic L
+1 AdrFonc 16
+1 Buffer 5000
+1 Err 9,0=0
+
+beginp
+	LstFic=ListGetId("ug_Liste_Fichiers") |ListErase(LstFic)
+	GetAdressFunction(" ","ug_TriFic",AdrFonc)
+	ListMode(LstFic,True,AdrFonc)
+	; recherche des bases presente sur le poste
+	ug_Charger_NomBase
+	; Selection de la base à mettre à jour les versions	
+	ListFirst(LstBase,uge_input.ug_input_A)
+;	ug_input_saisie(uge_input)
+	uge_input.ug_input_A=ug_Select_Base
+	; Gestion de la connexion ODBC
+	If Messagebox("Voulez vous mettre à jour la connexion ODBC ?","Mise à jour de la connexion ODBC",mb_yesno+mb_iconquestion+mb_defbutton2)=IdYes
+		fhsql.Name=GetHarmonyDirectory & "/" & uge_input.ug_input_A	 && "/" & "fhsql.dhfi"
+		if fopen(fhsql,"P")=0
+			if Hseek(fhsql,EnrSql.EnrSQL,"CCONNECT")=0
+				
+				SqlOpen
+				SQLDisconnect( SQLDriverConnect(Mid(Enrsql.EnrSQL,10),Buffer,2))
+				SQLClose
+				if Count("DSN=",Buffer)>0
+					Mid(EnrSQL.EnrSQL,10)=Buffer
+				 	Hrewrite(fhsql,EnrSQl.EnrSQL)
+				endif
+			endif
+			fclose(fhsql)
+		endif			
+	endif
+	; Lecture du fichiers et Version 
+	fhsql.Name=GetHarmonyDirectory & "/" & uge_input.ug_input_A	 && "/" & "fhsql.dhfi"
+	if fopen(fhsql,"P")=0	
+		fhsql.Key="A" 
+		Loop hread(fhsql,EnrSql.EnrSQL)=0		
+			EnrSql.Cle=fhsql.Key			
+			ListInsert(LstFic,EnrSql)
+			if ug_FlagOui=True
+				EnrSQL.FlagOUINON=1
+				Hrewrite(fhsql,EnrSql.EnrSQL)	
+			endif
+		endloop
+		
+	endif
+	; Controle des Versions
+	ListMode(LstFic,0,AdrFonc)
+	PrintBegin
+	Print ["Dictionnaire   -   Fichier     -VersFHSQL-VersDico "]
+
+	ListBegin(LstFic)
+	Loop ListNext(LstFic,EnrSql)>0	
+		if EnrSav.NomDico=EnrSql.NomDico
+			EnrSql.IDdico=EnrSAV.IDdico
+		else
+			EnrSql.IDdico=ug_Charger_Dico(GetHarmonyDirectory & "\" & uge_input.ug_input_A && "\" & EnrSql.NomDico && "")
+		endif
+
+		Buffer=ug_Charger_Table(EnrSql.IDdico,EnrSql.Nomfic && "")			
+		EnrSql.VersionDico=HmpSeek(Buffer,"VersionFichier")
+		if HmpSeek(Buffer,"VersionFichier")<>EnrSql.Version
+			Print [ Left(EnrSql.NomDico,15) "-" Left(EnrSql.Nomfic,15) "-" EnrSql.Version Rept(" ",4) "-" & EnrSql.VersionDico]
+			Err++
+		endif
+		ListModify(LstFic,EnrSql)										
+		EnrSav=EnrSQL
+	endloop
+
+	PrintEnd
+
+	if Err>0 and Messagebox("Voulez vous Traiter ces differences de version dans le fichier fhsql.dhfi ?","Question",mb_yesno+mb_iconquestion)=idyes
+		ListBegin(LstFic)
+		Loop ListNext(LstFic,EnrSql)>0
+			if EnrSql.Version<>EnrSql.VersionDico			
+				if Hseek(fhsql,EnrSql.EnrSQL,EnrSql.Cle)=0
+					EnrSql.Version=EnrSql.VersionDico					
+					HRewrite(fhsql,EnrSql.EnrSQL)
+				endif
+			endif
+		endloop
+		fclose(fhsql)
+	endif
+endp
+
+
+
+;*
+;*	Programme Principal
+;*
+
+Main
+
+
+	;ug_init()  ; pas de ug_init nous n'avons pas besoin du dossier
+	if MessageBox("Voulez vous passer en valider à 'OUI' pour tout les fichiers ?","Question",mb_iconquestion+mb_yesno+mb_defbutton2)=idyes
+		ug_FlagOui=True
+	endif
+
+	
+	ug_Traitement
+
+	
+
+	programgoto "xquit"

@@ -1,0 +1,29 @@
+;*
+;*	Module de Gestion InterTache
+;*
+
+Module ysystemex.dhop
+
+;*
+;*	Procedures
+;*
+
+Public Function int ug_InterTache_Demarrer(NomServeur,Mode)
+;
+1 NomServeur 50
+1 Mode       1,0=0 ; 0=Local à la session windows 1=Global à toutes les sessions windows
+1 St x
+beginf
+	if (st:=InterTacheOpen)=0 and (st:=InterTacheSetName(NomServeur,$f0,0,Mode))=0
+		InterTacheClose
+	endif
+	freturn (st)
+endf
+;*
+
+;*
+Public Procedure ug_InterTache_Ecrire_Message(NomServeur,Mode
+
+
+
+	

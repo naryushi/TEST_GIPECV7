@@ -1,0 +1,638 @@
+;*
+;*	Moulinette de recopie des parametrages de table dans le dossier 999
+;*
+
+module ugtm_tech.dhop
+module gtpmfic.dhop
+module gttm000.dhop
+Module gtpm000.dhop
+
+Public record ugd_outils.dhsd uge_champs
+Public record ugd_outils.dhsd uge_Enreg
+public record ugd_outils.dhsd uge_cle_primaire
+
+
+
+public hfile gtfdd.dhsd gtftab gtftab
+
+
+
+
+
+Public record A5dd.Dhsd mz
+
+public record gtfdd.dhsd T000
+public record gtfdd.dhsd T000 T000_USER  ; Table T000 modifier par l'utilisateur
+Public record gtfdd.dhsd soc
+
+
+
+;record gtfdd.dhsd T005		;Unite
+;record gtfdd.dhsd T012		;famille stat
+;record gtfdd.dhsd T023		;libelle des unités
+;record gtfdd.dhsd T029		;code statistiques tiers
+;record gtfdd.dhsd T036 		;libelle nature de produit
+;record gtfdd.dhsd T037		;collaborateur
+;record gtfdd.dhsd T043		;famille de relance
+;record gtfdd.dhsd T044		;famille d'of
+;record gtfdd.dhsd T047		;famille de production
+;record gtfdd.dhsd T060		;famille d'inventaire
+;record gtfdd.dhsd T070		;region administrative
+;
+;record gtfdd.dhsd T014
+;record gtfdd.dhsd T035
+
+
+
+;record gtfdd.dhsd T005 T005z		;Unite
+;record gtfdd.dhsd T012 T012z		;famille stat
+;record gtfdd.dhsd T023 T023z		;libelle des unités
+;record gtfdd.dhsd T029 T029z		;code statistiques tiers
+;record gtfdd.dhsd T036 T036z		;libelle nature de produit
+;record gtfdd.dhsd T037 T037z		;collaborateur
+;record gtfdd.dhsd T043 T043z		;famille de relance
+;record gtfdd.dhsd T044 T044z		;famille d'of
+;record gtfdd.dhsd T047 T047z		;famille de production
+;record gtfdd.dhsd T060 T060z		;famille d'inventaire
+;record gtfdd.dhsd T070 T070z		;region administrative
+
+1 dico 20
+1 IdEnreg L
+1 IdChamp L
+1 IdDico L
+1 Retour 8096
+1 NivDico 1,0=5
+
+1 LstCC_Champs L
+1 LstCC L
+
+
+
+;*
+;*	Procedures
+;*
+
+;*
+procedure Ouvre_Dico(Dico)
+1 Dico 50
+beginp
+
+	ddinterface(dd_close,iddico," ",retour,NivDico)					;Ferme un dictionnaire potentiellement ouvert
+
+	dico = FileNameLastSegment(dico)	
+
+	if DDInterface(DD_OPEN,IdDico,Dico,Retour,NivDico) <> 0 
+		DDInterface(DD_GETERROR,IdDico," ",Retour,NivDico)
+		ug_Erreur(hmpseek(Retour,"TexteErreur"))
+		programexit
+	endif
+
+endp
+;*			 
+procedure Ferme_Dico
+beginp
+
+	ddinterface(dd_close,iddico," ",retour,NivDico)					;Ferme un dictionnaire potentiellement ouvert
+
+endp
+;*
+;*
+procedure Index_Principal(fichier,Enreg)
+	1 fichier > ugd_outils.dhsd fichier
+	1 enreg > ugd_outils.dhsd enreg
+	record ugd_outils.dhsd uge_champs erech
+	1 Lect L
+	1 NomChamp > ugd_outils.dhsd champs
+	1 adr 16
+
+beginp
+
+	;Liste mémoire qui va contenir les champs de la clé
+	LstCC = ug_liste("CHAMP_CLE")
+;	if getadressfunction(" ","Tri_champs_cle",adr) <> 0
+;		ug_info(16,"Tri_Champs_Cle")
+;		programexit
+;	endif
+;	listmode(LstCC,true,adr)
+	LstCC_Champs = ug_liste("CHAMP_CLE_DETAIL")
+
+	init uge_Cle_Primaire = " "
+
+	if ddinterface(DD_FILEFIND,iddico,fichier,retour) = 0 and DDInterface(DD_TABLEFIND,IdDico,enreg,Retour) = 0
+
+		Lect = DDInterface(DD_KEYBEGIN,IdDico," ",Retour,1)
+		loop Lect = 0
+
+			if hmpseek(retour,"FlagClePrimaire") = true
+
+				uge_cle_primaire.cle_p = hmpseek(retour,"nom")
+				uge_cle_primaire.lib70 = hmpseek(retour,"libelle")
+				uge_cle_primaire.acces = hmpseek(retour,"cleounomdecle")
+				uge_cle_primaire.Type_Cle = condition(hmpseek(retour,"lettrecle")	= system.Esp,2,1)		;Si vide, clé nommé (2) sinon lettre cle (1)
+				uge_cle_primaire.cle_cebin = 1
+				uge_cle_primaire.cle_dos = 1
+
+				;Lecture des champs de l'index principal pour marquer dans le tableau
+				lect = ddinterface(dd_datakeybegin,IdDico," ",retour,1)
+				loop lect = 0
+					
+					init erech = " "
+					erech.Champs = hmpseek(retour,"nom")
+					erech.posd = hmpseek(retour,"position")	  			;20110406
+					erech.longueur = hmpseek(retour,"longueur")			;20110406
+					listInsert(LstCC_Champs,erech)
+
+					listinsert(LstCC,hmpseek(retour,"nom"))
+
+					if hmpseek(retour,"nom") = "DOS"
+						uge_cle_primaire.cle_dos = 2
+					endif
+					if hmpseek(retour,"nom") = "CEBIN"
+						uge_cle_primaire.cle_cebin = 2
+					endif
+
+					lect = ddinterface(dd_datakeynext,iddico," ",retour,1)
+
+				endloop
+				Exitloop
+			endif
+
+			lect = DDInterface(DD_KEYNEXT,IdDico," ",Retour,1)	
+		endloop
+	endif
+
+endp
+
+
+;*
+Function Long Charger_Champs(Dico,Enreg,OuvertureDico)
+	; charge tout les champs d'un enreg
+	record ugd_outils.dhsd uge_champs erech
+	1 dim 5,0*4
+	1 Vi 5,0
+	1 vJ 5,0
+	1 vk 5,0
+	1 vL 5,0
+	1 Lect L
+	1 Champs > ugd_outils.dhsd champs
+	1 Zpack B = false
+	1 DebutDepack > ugd_outils.dhsd posd
+	1 Enreg 50
+	1 dico 50
+	1 IdChamp L
+	1 OuvertureDico 1,0=false	; ouverture prealable à faire si false
+	1 Pas 9,0*4
+beginf
+	if OuvertureDico=True
+		Ouvre_Dico(Dico)
+	endif
+	IdChamp=ListGetId("ug_Liste_champ")
+	ListErase(IdChamp)
+	
+	if DDInterface(DD_TABLEFIND_DD,IdDico,enreg,Retour,NivDico) = 0
+		Lect = DDInterface(DD_DATABEGIN,IdDico," ",Retour,NivDico)	
+		loop Lect = 0 
+		
+			if hmpSeek(Retour,"ChampVirtuel") = " "
+	
+				init uge_champs = " "
+				
+				;TODO : Vérifier les tableaux
+						
+				dim(1) = hmpseek(Retour , "Dimensions1")
+				dim(2) = hmpseek(Retour , "Dimensions2")
+				dim(3) = hmpseek(Retour , "Dimensions3")
+				dim(4) = hmpseek(Retour , "Dimensions4")
+
+				uge_champs.niveau = hmpseek(retour,"Niveau")
+				uge_champs.lib70 = hmpseek(retour,"Libelle")
+				uge_champs.type = hmpseek(retour,"Nature")
+				uge_champs.posd = hmpseek(retour,"position")
+				uge_champs.longueur = hmpseek(retour,"longueur")
+				uge_champs.nature =hmpseek(retour,"vrainature")
+				uge_champs.nbdecimal=hmpseek(retour,"nbdecimales")
+
+				;Indicateur donnée dans la zone packée
+				if val(hmpseek(retour,"DonneePack")) = 1
+					uge_enreg.posd = uge_champs.posd
+					uge_enreg.longueur = uge_champs.longueur
+				endif
+				
+				if not zPack
+					if val(hmpseek(retour,"DonneePack")) = 2
+						zPack = true
+						DebutDepack = uge_champs.posd - 1
+					endif
+				endif
+
+				uge_champs.Present_pack = condition(zPack,2,1)
+				if uge_champs.Present_pack = 2
+					uge_champs.posd -= DebutDepack
+				endif
+
+
+				
+				if dim(1) = 0
+					uge_champs.champs = hmpseek(retour,"Nom")
+					Listaddend(idChamp,uge_Champs)
+				else
+					for vI = 1 to Dim(1)
+						if Dim(2) > 0
+							For vJ = 1 to dim(2)
+								if Dim(3) > 0
+									for vK = 1 to dim(3)
+										if Dim(4) > 0
+											For vL = 1 to dim(4)
+												uge_champs.posd = hmpseek(retour,"position")
+												Pas(1)=HmpSeek(Retour,"EnJambees1")
+												Pas(2)=HmpSeek(Retour,"EnJambees2")
+												Pas(3)=HmpSeek(Retour,"EnJambees3")
+												Pas(3)=HmpSeek(Retour,"EnJambees4")
+												uge_champs.posd +=(Pas(1)*(vI-1)) + (Pas(2)*(vJ-1)) + (Pas(3)*(vK-1)) + (Pas(4)*(vL-1))
+
+
+												uge_champs.champs = hmpseek(retour,"Nom") && "(" && val(vI) && "," && Val(vJ) && "," && Val(vK) && "," && Val(vL) && ")"
+												Listaddend(idChamp,uge_Champs)
+											next
+										else
+											uge_champs.posd = hmpseek(retour,"position")
+											Pas(1)=HmpSeek(Retour,"EnJambees1")
+											Pas(2)=HmpSeek(Retour,"EnJambees2")
+											Pas(3)=HmpSeek(Retour,"EnJambees3")
+											uge_champs.posd +=(Pas(1)*(vI-1)) + (Pas(2)*(vJ-1)) + (Pas(3)*(vK-1))
+
+											uge_champs.champs = hmpseek(retour,"Nom") && "(" && val(vI) && "," && Val(vJ) && "," && Val(vK) && ")"
+											Listaddend(idChamp,uge_Champs)
+										endif
+									next
+								else
+									uge_champs.posd = hmpseek(retour,"position")
+									Pas(1)=HmpSeek(Retour,"EnJambees1")
+									Pas(2)=HmpSeek(Retour,"EnJambees2")
+									uge_champs.posd +=(Pas(1)*(vI-1)) + (Pas(2)*(vJ-1)) 
+
+									uge_champs.champs = hmpseek(retour,"Nom") && "(" && val(vI) && "," && Val(vJ) && ")"
+									Listaddend(idChamp,uge_Champs)
+								endif
+							next
+						else
+							uge_champs.posd = hmpseek(retour,"position")
+							Pas(1)=HmpSeek(Retour,"EnJambees1") 
+							uge_champs.champs = hmpseek(retour,"Nom") && "(" && val(vI) && ")"
+							uge_champs.posd +=Pas(1)*(vI-1)
+							Listaddend(idChamp,uge_Champs)
+						endif
+					next
+				endif	
+				
+
+			endif
+
+			lect = DDInterface(DD_DATANEXT,IdDico," ",Retour,NivDico)
+					
+		endloop
+	endif
+	if OuvertureDico=True
+		Ferme_Dico
+	endif
+	Freturn(IdChamp)
+endf
+;*
+
+;*
+function Long Charger_Tables(Dico,OuvertureDico,Nomfichier)
+	1 premier B = true
+	1 Dico 50
+	1 Nomfichier 50=" "
+	1 OuvertureDico 1,0=false	; ouverture prealable à faire si false
+	1 IdEnreg L
+
+beginf
+
+	if OuvertureDico=True | Ouvre_Dico(Dico) | endif
+
+	IdEnreg=ListGetId("ug_Liste_Table_Fichier")
+	ListErase(IdEnreg)
+
+
+	loop  (NomFichier=" "  and DDInterface(condition(premier,DD_FILEBEGIN,DD_FILENEXT),IdDico,,Retour) = 0) or \
+			(NomFichier<>" " and DDInterface(DD_FILEFIND,IdDico,NomFichier,Retour,NivDico)=0)	
+		
+		premier = true
+		
+		init uge_enreg = " "
+		uge_enreg.fichier = hmpseek(Retour,"Nom")
+		uge_enreg.nomfichier=hmpseek(Retour,"NomFichier")
+
+		loop DDInterface(condition(premier,DD_TABLEBEGIN,DD_TABLENEXT),IdDico,uge_enreg.fichier,retour) = 0
+
+			premier = false
+
+			uge_enreg.enreg = hmpseek(Retour,"Nom")
+			uge_enreg.lib70 = hmpseek(Retour,"Libelle")
+			uge_enreg.posd = hmpseek(Retour,"PositionPack")
+			uge_enreg.longueur = hmpseek(Retour,"LgPack")
+			uge_enreg.taille = hmpseek(Retour,"LgTable")
+			uge_enreg.PosCe  = Hmpseek(Retour,"PositionCe")
+			uge_enreg.ValeurCe=Hmpseek(Retour,"ValeurCe")
+			
+			Listaddend(idenreg,uge_enreg)
+
+		endloop
+
+		premier = false 		;Cas ou pas d'enregistrement dans un fichier
+		if Nomfichier<>" " | ExitLoop | endif
+	endloop
+
+	if OuvertureDico=True | Ferme_Dico | endif
+
+	freturn(idenreg)
+endf
+;*
+Procedure ug_Moulinage_T000
+;
+1 Cebin > gtfdd.Dhsd Cebin
+1 Clemax > ddsys.dhsd cle
+1 Dos > gtfdd.dhsd Dos*2="   999"
+
+1 IdTable L
+
+record * htdf fic
+record * htdf ficW ; pour les Write
+record ugd_outils.dhsd uge_champs uge_champs_cle
+
+1 enreg 10000
+1 Fini 1,0=False
+
+
+beginp
+	define Masque_T000="GTEZ040.DHOE"
+
+	Dos(1)=mz.dos
+	Dico="gtfdd.dhsd"
+	; Affichage du masque des choses à passer en commune	  7
+	T000_User=T000 ; copie des parametrages dans l'enreg user
+	Swap T000 T000_User
+
+	XmeLoad(masque_T000)
+
+	XmeInfoPage (Masque_T000,1)						;lire la taille de la page
+	XmeSetWindowSize (Masque_T000,1,Harmony.Opara3,Harmony.Opara4)
+	XmeToolbarSetWindow(xmeToolbarGetID(Masque_T000,"ZOOM",True),Masque_T000,1)
+	XmeToolbarValidateButton(xmeToolbarGetID(Masque_T000,"ZOOM",True),"CREATION",False)
+	XmeToolbarValidateButton(xmeToolbarGetID(Masque_T000,"ZOOM",True),"MODIF",False)
+	XmeToolbarValidateButton(xmeToolbarGetID(Masque_T000,"ZOOM",True),"SUPP",False)
+	XmeToolbarValidateButton(xmeToolbarGetID(Masque_T000,"ZOOM",True),"SEPARATEUR_3",False)
+	XmeToolbarValidateButton(xmeToolbarGetID(Masque_T000,"ZOOM",True),"SORTIR",False)
+	XmeToolbarValidateButton(xmeToolbarGetID(Masque_T000,"ZOOM",True),"IMPRIMER",False)
+	XmeToolbarValidateButton(xmeToolbarGetID(Masque_T000,"ZOOM",True),"AIDE",False)
+
+
+	XmeDispv(Masque_T000,1,Xme_Mode_Goto)
+
+	XmeInput(Masque_T000,3,0,XME_MODE_GOTO)
+	Loop fini=false
+		if Harmony.Key in(K_F9,K_F10)		
+			fini=True	
+		endif
+		if Fini=False
+			XmeNext Harmony.Retour Harmony.Cplretour
+		endif
+	endloop
+	;XmeRet
+	;XmeRet
+
+	if Harmony.Key=k_F9 | ProgramExit | endif
+
+	Swap T000 T000_User
+
+	;
+	ug_Trace_Debut("Dictionnaire " & Dico)
+
+	Ouvre_Dico(Dico)	
+
+	IdTable=Charger_Tables(Dico,NomFichier="gtftab")
+
+	; ouverture du fichier
+	fic.Name=uge_enreg.Nomfichier
+	ficW.Name=uge_enreg.Nomfichier
+
+	if Fopen(Fic,"P")=0  and Fopen(ficW,"P")=0
+
+		ListBegin(IdTable)
+		Loop ListNext(IDTable,uge_Enreg)>0
+
+			ug_Trace_Sel(uge_enreg.Fichier && " " & uge_enreg.Enreg)
+
+			if uge_enreg.ValeurCe=0 | redoloop | endif
+			if T000.TabTyp(uge_Enreg.ValeurCe)=T000_USER.TabTyp(uge_Enreg.ValeurCe) | Redoloop | endif
+			if T000.TabTyp(uge_Enreg.ValeurCe)=2 | Redoloop | endif ; la table est deja en 999
+
+			IdChamp=Charger_Champs(Dico,uge_enreg.Enreg)
+			; index 
+			Index_Principal(uge_enreg.Fichier,uge_enreg.Enreg)
+			;Constitution de la cle
+			Fic.Key=" "
+
+			Fic.LKey=Condition(Length(uge_cle_primaire.Acces)>1,GetKeyByName(Fic,uge_cle_primaire.Acces),uge_cle_primaire.Acces)
+			ListBegin(LstCC_Champs)
+			Loop ListNext(LstCC_Champs,uge_champs_Cle)>0
+				Mid(Fic.Key,uge_champs_cle.posd+1,uge_champs_cle.longueur)=Condition(uge_champs_cle.Champs="DOS",str(Dos(T000.TabTyp(uge_enreg.ValeurCe))),\
+					 Condition(uge_champs_cle.Champs="CEBIN",right(decbin(val(uge_enreg.ValeurCe)),uge_champs_cle.longueur)," "))	
+			endloop
+			Clemax=Fic.Key && $FF
+			;Lecture du fichier
+			
+			Loop HRead(fic,Enreg)=0 and Clemax > Fic.Key
+				; Recherche des champs
+				ListBegin(IdChamp)
+				uge_champs.Champs="DOS"
+				Loop ListFind(IdChamp,Ptr(uge_champs.Champs)-ptr(uge_champs)+1,size(uge_champs.Champs),uge_champs.Champs,uge_champs)<>0
+					mid(Enreg,uge_Champs.posd,uge_champs.longueur)=Dos(T000_USER.TabTyp(uge_Enreg.ValeurCe))
+					Hwrite(FicW,Enreg)
+
+					ug_Trace_Trt(Enreg)
+				endloop
+			endloop
+
+		endloop
+		fclose(fic) | Fclose(ficW)
+
+
+		if SRes_Soc(mz.Dos)=0 and Seek_T000=0
+			T000.TabTypTb(*)=T000_User.TabTypTb(*)
+			HRewrite(Gtftab,T000)
+		else
+			Messagebox("Veuillez mettre à jour dans le dossier les Tables passées en table commune","Info",mb_iconinformation)
+		endif
+	endif
+
+	Ferme_Dico
+
+	ug_Trace_Fin
+
+
+
+;	; Unite
+;	Cebin=005
+;	gtftab.Key	="A" & Dos(T000.TabTyp(Cebin)) & Cebin
+;	Clemax		=Gtftab.Key && $FF
+;
+;	Loop Hread(gtftab,T005)=0 and Clemax>gtftab.key
+;		T005.Dos=Dos(2)
+;		Hwrite(gtftabz,T005)
+;	endloop
+;	; Famille de Stat
+;	Cebin=012
+;	gtftab.Key	="A" & Dos(T000.TabTyp(Cebin)) & Cebin
+;	Clemax		=Gtftab.Key && $FF
+;
+;	Loop Hread(gtftab,T012)=0 and Clemax>gtftab.key
+;		T012.Dos=Dos(2)
+;		Hwrite(gtftabz,T012)
+;
+;	endloop
+;	; Libelle des unités
+;	Cebin=023
+;	gtftab.Key	="A" & Dos(T000.TabTyp(Cebin)) & Cebin
+;	Clemax		=Gtftab.Key && $FF
+;
+;	Loop Hread(gtftab,T023)=0 and Clemax>gtftab.key
+;		T023.Dos=Dos(2)
+;		Hwrite(gtftabz,T023)
+;
+;		T023.Dos=10
+;
+;		gtftabz.key=gtftab.key	 | mid(gtftabz.key,2,Size(mz.Dos))=" 10"
+;		if HSeek(gtftabz,T023z,gtftabz.Key)<>0
+;			Hwrite(gtftabz,T023)
+;		else
+;			HRewrite(gtftabz,T023)
+;		endif
+;
+;	endloop
+;	; Code statistique Tiers
+;	Cebin=029
+;	gtftab.Key	="A" & Dos(T000.TabTyp(Cebin)) & Cebin
+;	Clemax		=Gtftab.Key && $FF
+;
+;	Loop Hread(gtftab,T029)=0 and Clemax>gtftab.key
+;		T029.Dos=Dos(2)
+;		Hwrite(gtftabz,T029)
+;	endloop
+;	; Libelle des Natures de Produit
+;	Cebin=036
+;	gtftab.Key	="A" & Dos(T000.TabTyp(Cebin)) & Cebin
+;	Clemax		=Gtftab.Key && $FF
+;
+;	Loop Hread(gtftab,T036)=0 and Clemax>gtftab.key
+;		T036.Dos=Dos(2)
+;		Hwrite(gtftabz,T036)
+;	endloop
+;	; Collaborateur
+;	Cebin=037
+;	gtftab.Key	="A" & Dos(T000.TabTyp(Cebin)) & Cebin
+;	Clemax		=Gtftab.Key && $FF
+;
+;	Loop Hread(gtftab,T037)=0 and Clemax>gtftab.key
+;		T037.Dos=Dos(2)
+;		Hwrite(gtftabz,T037)
+;	endloop
+;	; Famille Relance
+;	Cebin=043
+;	gtftab.Key	="A" & Dos(T000.TabTyp(Cebin)) & Cebin
+;	Clemax		=Gtftab.Key && $FF
+;
+;	Loop Hread(gtftab,T043)=0 and Clemax>gtftab.key
+;		T043.Dos=Dos(2)
+;		Hwrite(gtftabz,T043)
+;	endloop
+;	; Famille d'OF
+;	Cebin=044
+;	gtftab.Key	="A" & Dos(T000.TabTyp(Cebin)) & Cebin
+;	Clemax		=Gtftab.Key && $FF
+;
+;	Loop Hread(gtftab,T044)=0 and Clemax>gtftab.key
+;		T044.Dos=Dos(2)
+;		Hwrite(gtftabz,T044)
+;	endloop
+;	; Famille de Production
+;	Cebin=047
+;	gtftab.Key	="A" & Dos(T000.TabTyp(Cebin)) & Cebin
+;	Clemax		=Gtftab.Key && $FF
+;
+;	Loop Hread(gtftab,T047)=0 and Clemax>gtftab.key
+;		T047.Dos=Dos(2)
+;		Hwrite(gtftabz,T047)
+;	endloop
+;	; Famille d'inventaire
+;	Cebin=060
+;	gtftab.Key	="A" & Dos(T000.TabTyp(Cebin)) & Cebin
+;	Clemax		=Gtftab.Key && $FF
+;
+;	Loop Hread(gtftab,T060)=0 and Clemax>gtftab.key
+;		T060.Dos=Dos(2)
+;		Hwrite(gtftabz,T060)
+;	endloop
+;	; Region Administrative
+;	Cebin=070
+;	gtftab.Key	="A" & Dos(T000.TabTyp(Cebin)) & Cebin
+;	Clemax		=Gtftab.Key && $FF
+;
+;	Loop Hread(gtftab,T070)=0 and Clemax>gtftab.key
+;		T070.Dos=Dos(2)
+;		Hwrite(gtftabz,T070)
+;	endloop
+;
+;
+;
+;	; Commerciaux
+;	gtfpcf.key="C" & mz.Dos & "5" 
+;	clemax=gtfpcf.Key && $FF
+;	Loop Next_VRP('','',Gtfpcf.key)=0 and clemax>gtfpcf.key
+;		VRP.Dos=10
+;
+;		if Hseek(gtfpcfz,VRPz,"C" & vrp.dos & "5" & vrp.Tiers)<>0 
+;			Hwrite(gtfpcfz,VRP)	
+;		else
+;			Hrewrite(gtfpcfz,VRP)
+;		endif
+;	endloop
+;
+;	; Code Tarif
+;	Cebin=014
+;	gtftab.Key	="A" & Dos(T000.TabTyp(Cebin)) & Cebin
+;	Clemax		=Gtftab.Key && $FF
+;
+;	Loop Hread(gtftab,T014)=0 and Clemax>gtftab.key
+;		T014.Dos=Dos(2)
+;		Hwrite(gtftabz,T014)
+;	endloop
+;	; Code Remise
+;	Cebin=035
+;	gtftab.Key	="A" & Dos(T000.TabTyp(Cebin)) & Cebin
+;	Clemax		=Gtftab.Key && $FF
+;
+;	Loop Hread(gtftab,T035)=0 and Clemax>gtftab.key
+;		T035.Dos=Dos(2)
+;		Hwrite(gtftabz,T035)
+;	endloop
+endp
+
+
+;*
+;*	Programme Principal
+;*
+
+main
+	ug_init(0,0,0,0)
+
+	Seek_Soc(mz.dos)
+
+	XmeTitle("Moulinette T000 - " & Soc.nom)
+
+	if MessageBox("Voulez vous la moulinette T000 pour passer du dossier " & mz.Dos & " vers 999 ?||Attention le programme fait des Write sans contrôler l'existance","Alerte",mb_iconexclamation+mb_yesno)=idyes
+		ug_Moulinage_T000	
+	endif
+
+

@@ -1,0 +1,50 @@
+;* Gestion des réservations
+
+OverWrittenBy ugum_res.dhop
+
+module gtpmfic.dhop
+module ugtm_tech.dhop
+
+public record a5dd.dhsd mz
+
+public record gtfdd.dhsd mres
+public record gtfdd.dhsd mvtl
+
+;*
+public procedure ug_Controle_Res
+	1 keyR > ddsys.dhsd cle
+	1 keyV > ddsys.dhsd cle
+
+beginp
+
+	ug_Trace_Debut("Contrôle des réservations",false)
+
+	;Boucle sur les réservations
+	keyR = "E" & mz.dos
+	loop Next_MRES ("","","","","","","",sreftjrs=false,TiersStockTjrs=false,keyR) = 0
+		
+		ug_Trace_Sel([mres.depo " " mres.ref " " mres.sref1 " " mres.sref2 " " mres.ticketrese " " mres.ticketress ])
+
+		;Vérifie que les tickets d'entrées et de sortie existe toujours et supprime les réservations orphelines
+		;Le numéro de ticket de sortie est TOUJOURS renseigné	sinon pas de réservation possible !
+		keyV = "F" & mz.dos & mres.ticketress
+		if seek_mvtl_key(keyV) <> 0
+			ug_Trace_Trt([mres.depo " " mres.ref " " mres.sref1 " " mres.sref2 " " mres.ticketrese " " mres.ticketress ])
+			delete_mres
+			redoloop
+		endif
+		
+		;Si ticket d'entrée renseigné mais non valide
+		if mres.ticketrese <> 0 
+			keyV = "F" & mz.dos & mres.ticketrese
+			if seek_mvtl_key(keyV) <> 0
+				ug_Trace_Trt([mres.depo " " mres.ref " " mres.sref1 " " mres.sref2 " " mres.ticketrese " " mres.ticketress ])
+				delete_mres
+			endif
+		endif
+
+	endloop
+
+	ug_Trace_Fin
+
+endp

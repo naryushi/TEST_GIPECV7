@@ -1,0 +1,135 @@
+;*
+;*	Module pour Fonction de production
+;*
+
+Module ggpmBas.dhop
+Module gtpmficSql.dhop
+
+Public record A5dd.dhsd mz
+Public record gtfdd.dhsd Soc
+
+Extern Record gtfdd.dhsd Art
+recordSql gtrsart.dhoq Article ArtOFSql
+
+;*
+;* Procedures
+;*
+
+Public Function int ug_Creation_Of_Auto(Grref,CdQte,Puun,FinDh,Prodind,GrGam,Depo,Nst,Status,HmpParam,PreChargerCreation)
+; Creation automatique d'of
+1 Status	 > gtfdd.dhsd Status=2 ; 1=Provisoire 2=Confirme 3=Lance 4=Demarrer
+1 Grref   > gtfdd.dhsd Grref
+ 2 Ref 	 > gtfdd.dhsd Ref
+1 Prodind > gtfdd.dhsd Prodind=' '
+1 GrGam   > gtfdd.dhsd Grgam=' '
+1 CdQte 	 > gtfdd.dhsd CdQte
+1 Puun 	 > gtfdd.dhsd Puun=" " ; si vide Art.refun
+1 FinDh	 > gtfdd.dhsd FinDh
+1 Depo	 > gtfdd.dhsd Depo =' ' ; si vide mz.depo
+1 Nst		 > gtfdd.dhsd Nst=' ' ; si vide soc.nst
+1 HmpParam S=' ' ; <G6.DOS>100
+1 PreChargerCreation 1,0=False ; Si False Creation Auto
+1 Ofno > gtfdd.dhsd Pino
+record gtfdD.dhsd g6
+1 Tag 50
+1 Valeur 1000
+1 AdrDesc 120
+Beginf		 
+	;Creation du fichier gtfplan
+	init g6=' '
+	g6.GrRef=Grref
+	g6.Status=Status
+	g6.ProdInd=ProdInd
+	g6.GrGam=GrGam
+	g6.Qte=Cdqte
+	g6.PuUn=Puun
+	g6.Choix(10)=2 ; Appliquer regle de prod
+	g6.FinDh=FinDh
+	g6.FinHms=Condition(g6.FinHms="000000","120000",g6.FinHms)
+	g6.Choix(11)=2 ; Date de Fin
+	g6.Choix(12)=2 ; Au plus Tard
+	g6.Depo=Depo
+	g6.Nst=Nst
+
+
+	if HmpParam<>" "
+		Loop HmpRead(HmpParam,Tag,Valeur)=0
+			if DataDescriptor(Tag,AdrDesc)=0
+				DataValue(AdrDesc)=Valeur
+			endif
+		endloop
+	endif
+
+	; creation de l'of
+	Tunnel_OF_Creer2(G6,Condition(PreChargerCreation=True,False,True))
+
+	PongReceive("PINO",valeur)
+
+	Ofno=val(Valeur)
+	
+	Freturn(Ofno)
+Endf
+
+;*
+Public Function int ug_Creation_Of_Auto_Import(Status,Grref,CdQte,Venun,FinDh,Prodind,GrGam,Depo,Nst,HmpParam)
+; Creation automatique d'of
+1 Status	 > gtfdd.dhsd Status=2 ; 1=Provisoire 2=Confirme 3=Lance 4=Demarrer
+1 Grref   > gtfdd.dhsd Grref
+ 2 Ref 	 > gtfdd.dhsd Ref
+1 Prodind > gtfdd.dhsd Prodind=' '
+1 GrGam   > gtfdd.dhsd Grgam=' '
+1 CdQte 	 > gtfdd.dhsd CdQte
+1 Venun 	 > gtfdd.dhsd Venun=" " ; si vide Art.refun
+1 FinDh	 > gtfdd.dhsd FinDh
+1 Depo	 > gtfdd.dhsd Depo =' ' ; si vide mz.depo
+1 Nst		 > gtfdd.dhsd Nst=' ' ; si vide soc.nst
+1 HmpParam S=' ' ; <BL.DOS>100
+1 Ofno > gtfdd.dhsd Pino
+htmpfile gtfdd.dhsd gtfplan gtfplan Deleteonexit
+record gtfdD.dhsd bl
+1 Tag 50
+1 Valeur 50
+1 AdrDesc 120
+Beginf		 
+	;Creation du fichier gtfplan
+	init Bl=' '
+	bl.Dos=mz.Dos
+	bl.GrRef=Grref
+	bl.ProdInd=Prodind
+	bl.GrGam=GrGam
+	bl.Qte=CdQte
+	if Venun=" " and Art.Ref=Ref
+		Venun=Art.RefUn
+	elsif Venun=" " and Art.Ref<>Ref
+		if Seek_Article(ArtOFSql,Ref)=0
+			Art=ArtOfSql.Art
+			Venun=ArtOfSql.Refun
+		endif
+	endif
+	bl.PuUn=Venun
+	bl.FinDh=FinDh
+	bl.Depo=condition(Depo=" ",mz.Depo,Depo)
+	bl.Nst=condition(Nst=' ',Soc.Nst,Nst)
+	bl.Status=Status
+
+	if HmpParam<>" "
+		Loop HmpRead(HmpParam,Tag,Valeur)=0
+			if DataDescriptor(Tag,AdrDesc)=0
+				DataValue(AdrDesc)=Valeur
+			endif
+		endloop
+	endif
+
+	Hwrite(gtfplan,bl)
+
+	Fclose(gtfplan)
+	; creation de l'of
+	Tunnel_OF_Importer(gtfplan.Name,True)
+	PongReceive("FICPINO",Valeur)
+	PongReceive("PINO",Ofno)
+
+	PingLocal("FICPINO",Valeur)
+	;Ofno=val(Valeur)
+	
+	Freturn(Ofno)
+Endf

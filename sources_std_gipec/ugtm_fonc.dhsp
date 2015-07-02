@@ -1,0 +1,1403 @@
+;* Module commun fonctionnel
+
+;*
+;20110112			| RTH			| Correctif déclaration variable
+;*
+
+OverWrittenBy ugum_fonc.dhop
+
+module ccpmfic.dhop
+module gtpm000.dhop
+module gtpmfic.dhop
+module gttm000.dhop
+module ugtm_tech.dhop
+Module gttmpce.dhop
+Module ugtm_baseSTD.dhop
+Module gtpmstoc.dhop
+
+public record a5dd.dhsd mz
+
+public record gtfdd.dhsd g6
+public record gtfdd.dhsd sart
+public record gtfdd.dhsd soc
+
+
+Extern Record gtfdD.dhsd Cli
+Extern Record gtfdD.dhsd Fou
+Extern Record gtfdd.Dhsd Art
+Protected Record gtfdd.dhsd T003
+
+Hfile gtfdd.Dhsd gtfpcf gtfpcf openonuse
+hfile gtfdd.dhsd Gtfat gtfat   openonuse
+Protected hfile gtfdd.Dhsd gtftab gtftab
+
+Extern record gtfdd.dhsd ent
+Extern record gtfdd.dhsd GTENT
+Extern record gtfdd.dhsd G1T1
+
+Extern Record gtfdd.dhsd Art
+Extern Record gtfdd.dhsd Cli
+Extern Record gtfdd.dhsd Fou
+
+Public record gtfdd.dhsd T000
+Public record gtfdd.dhsd T020
+public record gtfdd.dhsd xq g3xq
+
+public record rcfdd.dhsd xq r3xq
+public record rcfdd.dhsd xk
+Extern record gtfdd.dhsd xt G3xt
+
+Extern Record ddsys.dhsd Rowinfo
+
+1 IdDico L
+1 Retour 5000
+
+Structure ug_ce ; idenfiant Ce d'une table
+	1 ChampCe 20
+	1 PositionCe 5,0
+	1 ValeurCe 3,0 ; exprimé en ASCII   ex : ASC(55)
+endStructure
+
+1 DicoOuvert 1,0=False
+
+;*
+;* Confidentialités
+;*
+
+;*
+;*
+function int ug_Seek_mConfDet2(ConfGrp,Conf)
+	1 ConfGrp > a5dd.dhsd Confgrp
+	1 Conf > a5dd.dhsd Conf
+
+	hfile A5dd.dhsd A5fdos A5fdos
+	record A5dd.dhsd mConfDet mConfDet
+
+beginf
+
+	freturn(hseek(A5fdos,mConfDet,"F" & Confgrp & Conf))
+
+endf
+
+;*
+public function int ug_Confid(Conf,User,err)
+	;Vérifie l'accès a une confidentialité pour un utilisateur
+	;Retour : 0 = OK, 1 = Non autorisé
+	1 Conf > gtfdd.dhsd conf				;Code confidentialité
+	1 User > a5dd.dhsd User					;Utilisateur
+
+	hfile a5dd.dhsd a5fdos a5fdos
+	record a5dd.dhsd mConfuser mConfUser
+	1 vI 5,0
+	1 Reponse 1,0 = false
+	1 Err 1,0=false ; si true et erreur harmony.retour=xmenext_saut_donnee
+	1 Clemax > ddsys.dhsd cle
+
+	RecordSql ugr_fonc.dhoq ConfUtil mConfUserSql
+	;recordSql A5rsppDos.dhoq DetGrpConf mConfDetSql
+	1 Rd_Conf L
+beginf
+
+	if nospaces(conf) = ""
+		freturn(0)
+	endif
+	
+	mConfUserSql.Init()
+;	mConfUSerSql.SqlSelect("WITH(NOLOCK) " & \
+;									"LEFT JOIN MCONFDET on MCONFUSER.CONFTYP=2 and MCONFUSER.CONF=MCONFDET.CONFGRP " & \ 
+;									"Where MCONFUSER.USERX ='" & User && "' " & \ 
+;									"And MCONFDET.CONF='" & Conf && "' " & \
+;									"or MCONFUSER.USERX ='" & User && "' " & \
+;									"and MCONFUSER.CONF='" & Conf && "'") 
+	mConfUserSql.Where.ug_Confid(Conf,User)
+	mConfUserSql.Where.AddCondition('ug_Confid')
+	
+								
+	if (Rd_Conf:=mConfUserSql.ReaderSelect())>0 and mConfUserSql.ReaderNext(Rd_Conf)=false
+		reponse=True
+	endif
+	mConfUSerSql.ReaderClose(Rd_Conf)
+	mConfUserSql.Init()
+
+	if reponse=true and err<>false
+		Harmony.retour=xmenext_saut_donnee
+	endif
+	freturn(reponse)
+
+endf
+
+
+;*
+;* Vérification
+;*
+
+;*
+public function int ug_Controle_Siret(NumeroSiret,AffMess)
+	;Vérifier la validité d'un numéro de siret
+	;Retour : 0 = OK, 1 Siret incorrect
+	1 NumeroSiret > gtfdd.dhsd siret					;Numéro de siret
+	1 AffMess B = true									;Affichage message
+	
+	1 Result 2
+	 2 ResultN 2,0
+	1 Chiffre 1,0
+	1 Cumul 3,0
+	1 i 2,0
+	
+beginf
+
+	;Numéro sur 14 caractères. Divalto utilise une zone sur 15
+	if length(NumeroSiret) <> 14
+		if AffMess
+			ug_alert(9)
+			harmony.retour = xmenext_ressaisie
+		endif
+		freturn(1)
+	endif
+	
+	Cumul = 0
+
+	;On ajoute la somme des chiffres pair plus la somme des chiffres impairs * 2
+	;Pour les chiffres impair, on effectue la somme des chiffres obtenus par la multiplication
+	;et pas le nouveau nombre
+	;Ex : 9 --> 9*2 = 18 --> 1+8
+	for i = 1 to 14
+		if modulo(i,2) <> 0
+			ResultN = val(mid(numerosiret,i,1)) * 2
+		else
+			ResultN = val(mid(numerosiret,i,1))
+		endif
+		Result = fstring("0",result)
+		Cumul += val(mid(result,1,1))
+		Cumul += val(mid(result,2,1))
+	next
+
+	;Si multiple de 10 --> OK
+	if modulo(Cumul,10) <> 0
+		if AffMess
+			ug_Alert(9)
+			harmony.retour = xmenext_ressaisie
+		endif 
+		freturn(1)
+	endif
+
+	freturn(0)
+
+endf
+
+;*
+public function int ug_Controle_EAN13(CodeEan,AffMess)
+	;Vérifier la validité d'un code EAN
+	;Retour : 0 = OK, 1 Ean incorrect
+	1 CodeEan > gtfdd.dhsd ean					;Code EAN a vérifier
+	1 AffMess B = true							;Affichage message
+
+	1 totP 10,0	= 0								;Total Pair
+	1 totI 10,0	= 0							 	;Total Impair
+	1 totG 10,0	= 0
+	1 reste 10,0
+	1 Cle 1,0 				;20110112
+	1 i 3,0
+
+beginf
+
+	for i = 1 to 12 step 2
+		totI += val(mid(CodeEan,i,1))
+	next
+
+	for i = 2 to 12 step 2
+		totP += val(mid(CodeEan,i,1))
+	next
+
+	totG = (totP * 3) + totI
+	Reste = modulo(totG,10)
+	Cle = 10 - reste
+
+	if val(right(CodeEan,1)) <> cle
+		if AffMess
+			ug_alert(11)
+		endif
+		freturn(1)
+	endif	
+
+	freturn(0)
+
+endf
+
+;*
+public function int ug_generer_cle_sscc(sscc)
+	;Calcul et renvoi la clé d'un SSCC
+	1 sscc 256
+
+	1 v_pg_cle 1
+	1 var 3,0
+	1 varent 3,0
+	1 i 3,0
+
+beginf
+	
+	for i = (length(nospaces(sscc))-1) to 1 step -2
+		if i - 1 <=  (length(nospaces(sscc)) - 1) 
+			var += val(mid(sscc,i,1)) * 3 + val(mid(sscc,i-1,1)) 
+		else
+			var += val(mid(sscc,i,1)) * 3
+		endif
+	next
+
+	if modulo(var,10) <> 0
+		varent = (var - modulo(var,10)) / 10
+		freturn (((varent + 1) * 10) - var)
+	else
+		freturn(0)
+	endif
+
+endf
+
+;*
+;* ERP
+;*
+
+;*
+public procedure ug_Calcul_Pub(&pub,qte,mont,ppar,&rem,&remtyp,remmt)
+	;Permet de calculer un PUB à partir du montant.
+	1 pub	> gtfdd.dhsd pub
+	1 qte > gtfdd.dhsd refqte				;Quantité de la ligne (DVQTE, CDQTE, BLQTE ou FAQTE)
+	1 mont > gtfdd.dhsd mont
+	1 ppar > gtfdd.dhsd ppar
+	1 rem > gtfdd.dhsd rem *1	  			;Voir déclaration dans gttmpce. A passer par adresse pour éviter les errreurs de compilation.
+	1 remtyp	> gtfdd.dhsd remtyp *1		;Voir déclaration dans gttmpce. A passer par adresse pour éviter les errreurs de compilation.
+	1 remmt > gtfdd.dhsd remmt
+
+	1 pub1 24,10								;Zone de travail pour calcul du prix unitaire
+	1 rem1 24,10								;Remises cumulatives
+	1 i 2,0
+
+beginp
+
+	ppar = condition(ppar <> 0,ppar,1)
+		
+	pub1 = ug_divise(mont,qte) * ppar
+
+	;Déduction du montant unitaire de remise
+	if mont >= 0
+		pub1 = max (pub1 + remmt * qte, 0)
+	else
+		pub1 = min (pub1 + remmt * qte, 0)
+	endif
+
+	rem1 = 0
+
+	;Application des remises cumulatives
+	for i = 1 to 3
+		if remtyp(i) = 1
+			rem1 += rem(i)
+		endif
+	next
+	if rem1 > 0
+		pub1 = ug_divise(pub1,1 - (rem1 / 100))
+	endif
+
+	;Application des remises successives
+	for i = 3 to 1 step -1
+		if remtyp(i) = 2 and rem(i) > 0
+			pub1 = ug_divise(pub1,1 - (rem(i) / 100))
+		endif
+	next
+
+	pub = pub1
+
+endp
+
+;*
+public function int ug_Calcul_PUN(pubtyp,pub,ppar,&rem,&remtyp,remmt)
+	;Permet de calculer un PUN à partir du PUB.
+	1 pubtyp > gtfdd.dhsd pubtyp
+	1 pub	> gtfdd.dhsd pub
+	1 ppar > gtfdd.dhsd ppar
+	1 rem > gtfdd.dhsd rem *1	  			;Voir déclaration dans gttmpce. A passer par adresse pour éviter les errreurs de compilation.
+	1 remtyp	> gtfdd.dhsd remtyp *1		;Voir déclaration dans gttmpce. A passer par adresse pour éviter les errreurs de compilation.
+	1 remmt > gtfdd.dhsd remmt
+
+	1 punet > gtfdd.dhsd pub
+	1 rem1 24,10
+	1 i 2,0
+
+beginf
+
+	;Copie du traitement de calcul PUN dans GTTMPCE - CALCULER_HT
+	If PubTyp <> 2	
+		If Pub >= 0
+			punet	= Max(pub - remmt,0)
+		Else
+			punet	= Min(pub - remmt,0)
+		Endif
+	
+		rem1	= 0
+	
+		For i = 1 to 3
+			If RemTyp(i) = 1
+				rem1 = rem1 + Rem(i)
+			Endif
+		Next
+		punet	= punet * (1 - (rem1 / 100))
+	
+		For i = 1 to 3
+			If remtyp(i) = 2
+				punet = punet * (1 - (Rem(i) / 100))
+			Endif
+		Next
+	Else
+		punet = Pub
+	Endif
+
+	freturn(punet)
+
+endf
+
+;*
+;* PILOTAGE ERP
+;*
+
+;*
+public procedure ug_Lance_Compteurs_Article(ldb)
+	;Lancement de la mise a jour des compteurs articles
+	1 ldb B = false			;Marquer le lancement dans le livre de bord
+
+beginp
+
+	if ldb
+		g3_log_ano(1,"-> Mise à jour des compteurs articles",fichier = "giperr.dhfi",applic="DAV")
+	endif
+
+
+	pinglocal("ZECHANGE",mz.echange)
+
+
+	Ping_Enreg(True,false,false,false,True)
+
+	init g3xq = system.esp
+	mz.mecle	= "GTEE080.DHOE"
+	mz.mtcle	= "GTTT080.DHOP"
+	g3xq.echange =	mz.echange
+	g3xq.dos = mz.dos
+	G3xq.etb = mz.etb
+	g3xq.job = 2
+
+	;Paramètres de lancement du masque
+	init g3xq.reff = "z"
+	g3xq.choix(1)  =  1			;Pas de réservation dossier
+
+	
+
+	Ping("XQ", G3XQ)
+	ProgramCall("GTPP080.DHOP",sw_hide,call_wait,WpfNOclient=True)
+
+	pinglocalreceiveanddelete("ZECHANGE",mz.echange)
+
+	if ldb
+		g3_log_ano(1,"<- Mise à jour des compteurs articles",fichier = "giperr.dhfi",applic="DAV")
+	endif
+
+endp
+
+;*
+public procedure ug_Lance_Encours_Livraison(ldb)
+	;Lancement de la mise a jour de l'encours de livraison
+	1 ldb B = false			;Marquer le lancement dans le livre de bord
+
+beginp
+
+	if ldb
+		g3_log_ano(1,"-> Mise à jour des encours de livraison",fichier = "giperr.dhfi",applic="DAV")
+	endif
+
+	pinglocal("ZECHANGE",mz.echange)
+
+	Ping_Enreg(True,false,false,false,True)
+
+	init g3xq = system.esp
+	mz.mecle = "GTEE090.DHOE"
+	mz.mtcle = "GTTT090.DHOP"
+	g3xq.echange =	mz.echange
+	g3xq.dos = mz.dos
+	G3xq.etb = mz.etb
+	g3xq.job = 2
+
+	;Paramètres de lancement du masque
+	g3xq.choix(1) = 1			;Tous
+	g3xq.choix(2) = 1			;Pas de réservation dossier
+
+	 
+	
+	Ping("XQ", G3XQ)
+	ProgramCall("GTPP090.DHOP",sw_hide,call_wait,WpfNOclient=True)
+
+	pinglocalreceiveanddelete("ZECHANGE",mz.echange)
+
+	if ldb
+		g3_log_ano(1,"<- Mise à jour des encours de livraison",fichier = "giperr.dhfi",applic="DAV")
+	endif
+
+endp
+
+;*
+public procedure ug_Lance_Affectation_Couts_Revients(ldb)
+	;Lancement de l'affectation des coûts de revients
+	1 ldb B = false			;Marquer le lancement dans le livre de bord
+
+beginp
+
+	if ldb
+		g3_log_ano(1,"-> Affectation des coûts de revients",fichier = "giperr.dhfi",applic="DAV")
+	endif
+
+	pinglocal("ZECHANGE",mz.echange)
+
+	Ping_Enreg(True,false,false,false,True)
+
+	init g3xq = system.esp
+	mz.mecle = "GTEE120.DHOE"
+	mz.mtcle = "GTTT120.DHOP"
+	g3xq.echange = mz.echange
+	g3xq.dos = mz.dos
+	G3xq.etb = mz.etb
+	g3xq.job	= 2
+	
+	;Paramètres de lancement du masque
+	g3xq.datd = "19000101"
+	g3xq.datf = "99991231"
+
+	 
+
+	Ping("XQ", G3XQ)
+	ProgramCall("GTPP120.DHOP",sw_hide,call_wait,WpfNOclient=True)
+
+	pinglocalreceiveanddelete("ZECHANGE",mz.echange)
+
+	if ldb
+		g3_log_ano(1,"<- Affectation des coûts de revients",fichier = "giperr.dhfi",applic="DAV")
+	endif
+
+endp
+
+;*
+public procedure ug_Lance_Calcul_CMP(ldb,ReInit)
+	;Lancement du calcul des CMP.
+	;L'option réinit permet d'effacer les précédents calcul pour tout regénérer (+long)
+	1 ldb B = false			;Marquer le lancement dans le livre de bord
+	1 ReInit B = false
+
+	1 key > ddsys.dhsd cle
+
+beginp
+
+	if Reinit
+		if ldb
+			g3_log_ano(1,"-> Initialisation des coûts moyens pondérés",fichier = "giperr.dhfi",applic="DAV")
+		endif
+		ug_trace_debut("Initialisation des coûts moyens pondérés")
+		key = "H" & mz.dos
+		loop next_sart("",'','',key) = 0
+			ug_trace_trt(sart.grref)
+			sart.cmp = " "
+			sart.cmpdt = " "
+			rewrite_sart(false)
+		endloop
+		ug_trace_fin
+		if ldb
+			g3_log_ano(1,"<- Initialisation des coûts moyens pondérés",fichier = "giperr.dhfi",applic="DAV")
+		endif
+	endif
+
+	if ldb
+		g3_log_ano(1,"-> Calcul des coûts moyens pondérés",fichier = "giperr.dhfi",applic="DAV")
+	endif
+
+	pinglocal("ZECHANGE",mz.echange)
+
+	Ping_Enreg(True,false,false,false,True)
+
+	init g3xq = system.esp
+	mz.mecle = "GTEE125.DHOE"
+	mz.mtcle = "GTTT125.DHOP"
+	g3xq.echange = mz.echange
+	g3xq.dos = mz.dos
+	G3xq.etb = mz.etb
+	g3xq.job	= 2
+	
+	;Paramètres de lancement du masque
+	g3xq.datf = today
+	init g3xq.reff = "z"
+
+	 
+
+	Ping("XQ", G3XQ)
+	ProgramCall("GTPP125.DHOP",sw_hide,call_wait,WpfNOclient=True)
+
+	pinglocalreceiveanddelete("ZECHANGE",mz.echange)
+
+	if ldb
+		g3_log_ano(1,"<- Calcul des coûts moyens pondérés",fichier = "giperr.dhfi",applic="DAV")
+	endif
+
+endp
+
+;*
+public procedure ug_Lance_Actualisation_Reservations(ldb)
+	;Lancement de l'actualisation des réservations
+	1 ldb B = false			;Marquer le lancement dans le livre de bord
+
+	1 i 2,0
+	record gtfdd.dhsd GTPCE
+beginp
+
+	if ldb
+		g3_log_ano(1,"-> Actualisation des réservations",fichier = "giperr.dhfi",applic="DAV")
+	endif
+
+	pinglocal("ZECHANGE",mz.echange)
+
+	Ping_Enreg(True,false,false,false,True)
+
+	init g3xq = system.esp
+	mz.mecle = "GTEE741.DHOE"
+	mz.mtcle = "GTTT741.DHOP"
+	mz.micle = "GTII741.DHOI"
+	g3xq.echange = mz.echange
+	g3xq.dos = mz.dos
+	G3xq.etb = mz.etb
+	g3xq.job	= 2
+	
+	;Paramètres de lancement du masque
+	g3xq.choix(1) 	= 1			;Tous les tiers
+	init g3xq.tiersf= "z"
+	init g3xq.tiersmsk = "*"
+	init g3xq.PiNoF = "9"
+	g3xq.datd = "19000101"
+	g3xq.datf = "99991231"
+	g3xq.priocodf = "9"
+	g3xq.choix(2)  = 1			;Pas d'impression
+	g3xq.choix(3)  = 1			;Pièces et reliquats
+	init g3xq.reff = "z"
+	init g3xq.grrefmsk = "*"
+	init g3xq.prodnatf = "z"
+	init g3xq.prodnatmsk = "*"
+	for i = 1 to 3
+		init g3xq.famf(i) = "z"
+		init g3xq.fammsk(i) = "*"
+	next
+
+	GTPCE.TICODDst='C'
+	GTPCE.PICODDst=2
+
+	;Ping("Zechange_GTPCE",GTPCE)
+	
+	 
+
+	Ping("XQ", G3XQ)
+	ProgramCall("GTPP741.DHOP",sw_hide,call_wait,WpfNOclient=True)
+
+	pinglocalreceiveanddelete("ZECHANGE",mz.echange)
+
+	if ldb
+		g3_log_ano(1,"<- Actualisation des réservations",fichier = "giperr.dhfi",applic="DAV")
+	endif
+
+endp
+;*
+public procedure ug_Lance_Generation_Reservations(ldb)
+	;Lancement de la génération des réservations
+	1 ldb B = false			;Marquer le lancement dans le livre de bord
+
+	1 i 2,0
+	record gtfdd.dhsd GTPCE
+beginp
+
+	if ldb
+		g3_log_ano(1,"-> Génération des réservations",fichier = "giperr.dhfi",applic="DAV")
+	endif
+
+	pinglocal("ZECHANGE",mz.echange)
+
+	Ping_Enreg(True,false,false,false,True)
+
+	init g3xq = system.esp
+	MZ.MECLE 		= "gtee742.dhoe"		  												; XQ.ECHANGE  a la même structure que MZ.ECHANGE !
+	MZ.MTCLE			= "gttt742.dhop"
+	MZ.MiCLE			= "gtii742.dhoi"
+	g3xq.echange = mz.echange
+	g3xq.dos = mz.dos
+	G3xq.etb = mz.etb
+	g3xq.job	= 2
+	
+	;Paramètres de lancement du masque
+	G3XQ.JOB 		= 2
+	G3XQ.DATF      = HDate(Today, Soc.ResJrnb)	
+	g3xq.dos=mz.dos
+	G3XQ.CHOIX(1)  =  2
+	G3XQ.CHOIX(2)  =  1 ; pas d'impression																	
+	G3XQ.CHOIX(3)  =  1			
+	G3XQ.CHOIX(4)  =  1 ; pas de verif de coherence
+	G3XQ.CHOIX(5)  =  2
+	G3XQ.CHOIX(6)  =  2
+	G3XQ.ECHANGE	= 	MZ.ECHANGE
+	G3XQ.REFD		=" "
+	for I=1 to 3
+		init G3XQ.FAMF(i)="z"
+		;init G3XQ.FamMsk(i)=" "
+	next
+	Init G3XQ.REFF	="z"
+	Init G3XQ.SREF1F= 'z'
+	Init G3XQ.SREF2F= 'z'
+	Init G3XQ.PINOF = '9'
+	Init G3XQ.TIERSF= 'z'
+	Init G3XQ.PRODNATF   = 'z'
+	Init G3XQ.PRIOCODF   = '9'
+	G3XQ.DATD2		=" " ;Today
+	G3XQ.DATF2		=hdate(Today,soc.resjrnb)
+	G3XQ.DATF="99991231"
+
+	GTPCE.TICODDst='C'
+	GTPCE.PICODDst=2
+
+	Ping("Zechange_GTPCE",GTPCE)
+	 
+
+	Ping("XQ", G3XQ)
+	ProgramCall("gtpp742.dhop", SW_SHOWNORMAL,CALL_WAIT,WpfNOclient=True)
+
+	pinglocalreceiveanddelete("ZECHANGE",mz.echange)
+
+	if ldb
+		g3_log_ano(1,"<- Génération des réservations",fichier = "giperr.dhfi",applic="DAV")
+	endif
+
+endp
+;*
+public procedure ug_Lance_Generation_Statistiques(ldb)
+	;Lancement de l'affectation des coûts de revients
+	1 ldb B = false			;Marquer le lancement dans le livre de bord
+
+beginp
+
+	if ldb
+		g3_log_ano(1,"-> Génération des statistiques",fichier = "giperr.dhfi",applic="DAV")
+	endif
+
+	pinglocal("ZECHANGE",mz.echange)
+
+	Ping_Enreg(True,false,false,false,True)
+
+	init g3xq = system.esp
+	mz.mecle	= "GTEE110.DHOE"
+	mz.mtcle	= "GTTT110.DHOP"
+	g3xq.echange =	mz.echange
+	g3xq.dos = mz.dos
+	G3xq.etb = mz.etb
+	g3xq.job = 2
+	
+	;Paramètres de lancement du masque
+	g3xq.TiCod = "Z"			;Client et fournisseur
+	g3xq.datd = left(hdate(today,,-1),6) & " 1"
+	g3xq.datf = g3xq.datd
+	g3xq.choix(1) = 2			;Calculer récap.
+	g3xq.Datd2 = g3xq.datf
+	g3xq.Choix(2) = 1			;Pas de réservation dossier
+
+	 
+
+	Ping("XQ", G3XQ)
+	ProgramCall("GTPP110.DHOP",sw_hide,call_wait,WpfNOclient=True)
+
+	pinglocalreceiveanddelete("ZECHANGE",mz.echange)
+
+	if ldb
+		g3_log_ano(1,"<- Génération des statistiques",fichier = "giperr.dhfi",applic="DAV")
+	endif
+
+endp
+		
+;*
+public procedure ug_Lance_Encours_Comptables(ldb)
+	;Lancement du programme de mise a jour des encours comptables
+	;ATTENTION : Il faut surcharger le RCTT070 comme ci-dessous	ou comme dans le source fourni
+	;;*
+	;procedure Programme_debut
+	;beginp
+	;	pingreceive("xq",r3xQ)
+	;	Pingreceive("XK",XK)
+	;	pingreceive ("zechange",mz)
+	;	seek_soc(mz.dos)
+	;endp
+	;;*
+	;procedure Programme_Init
+	;beginp
+	;	if r3xq.job = 2
+	;		preturn
+	;	endif
+	;	standard.programme_init
+	;endp
+
+	1 ldb B = false			;Marquer le lancement dans le livre de bord
+
+beginp
+
+	if ldb
+		g3_log_ano(1,"-> Mise à jour des encours comptables",fichier = "giperr.dhfi",applic="DREG")
+	endif
+
+	pinglocal("ZECHANGE",mz.echange)
+
+	Ping_Enreg(True,false,false,false,True)
+
+	init r3xq = system.esp
+	mz.mecle = "RCEE070.DHOE"
+	mz.mtcle = "RCTT070.DHOP"
+	r3xq.echange = mz.echange
+	r3xq.dos = mz.dos
+	r3xq.job	= 2
+	seek_ca(mz.dos)
+
+	;Paramètres de lancement du masque
+	init xk = system.esp
+	xk.chog3ce1 = 3			;Tous les tiers
+	init xk.tiers2 = "z"
+
+	Ping("XQ", R3XQ)
+	Ping("XK",XK)
+	ping ("zechange",mz)
+	ProgramCall("RCPP070.DHOP",sw_shownormal,call_wait,WpfNOclient=True)
+
+	pinglocalreceiveanddelete("ZECHANGE",mz.echange)
+
+	if ldb
+		g3_log_ano(1,"<- Mise à jour des encours comptables",fichier = "giperr.dhfi",applic="DREG")
+	endif
+
+endp
+
+;*
+public Procedure ug_Lance_CBN(ldb,erase)
+	;Lance le programme de calcul des besoins net
+	1 ldb B = false			;Marquer le lancement dans le livre de bord
+	1 erase B = true			;Effacer le fichier GTFCBN
+
+	hfile gtfdd.dhsd gtfcbn gtfcbn
+	1 i 2,0
+	1 Mtcle S
+beginp
+
+	if ldb
+		g3_log_ano(1,"-> Calcul des besoins nets",fichier = "giperr.dhfi",applic="DAV")
+	endif
+
+	mtcle=mz.mtcle
+
+	if erase
+		herase(GTFCBN)
+	endif
+
+	pinglocal("ZECHANGE",mz.echange)
+
+	Ping_Enreg(True,false,false,false,True)
+
+	init g3xq = system.esp
+	mz.mecle = "GTEE761.DHOE"
+	mz.mtcle = "GTTT761.DHOP"
+	g3xq.echange =	mz.echange
+	g3xq.dos = mz.dos
+	G3xq.etb = mz.etb
+	g3xq.job = 2
+
+	;Paramètres de lancement du masque
+	g3xq.Choix(10) = 1			;Traiter uniquement les articles référencés du fournisseur
+	init g3xq.RefF = "z"
+	init g3xq.RefMsk = "*"
+	g3xq.ReaCod = 1			;Tous les modes de réappro
+	g3xq.Nst = soc.nst
+	g3xq.datd2 = condition(soc.besjrnb = 0, "99991231", dtadd(today, soc.besjrnb))
+	g3xq.Choix(1) = 1			;Générer les proposition d'OF			
+	g3xq.Choix(2) = 1			;Recalcul des niveaux
+	g3xq.Choix(6) = 1			;Tracer le calcul
+	g3xq.Choix(8) = 1		  	;Supprimer tous les cbn en cours
+	g3xq.Choix(9) = 1	  		;Passer en administration des propositions
+	g3xq.Choix(3) = 1	  		;Traiter toutes les pièces
+	g3xq.Choix(4) = 1	  		;Atives et provisoires
+	g3xq.Choix(5) = 2	  		;Filtrer le portefeuille
+	g3xq.Choix(7) = 1	  		;Travailler a l'affaire
+	init g3xq.PiNoF = "9"
+	init g3xq.ProjetF = "z"
+	init g3xq.ProjetMsk = "*"
+	init g3xq.ProdNatF = "z"
+	init g3xq.ProdNatMsk = "*"
+	for i = 1 to 3
+		init g3xq.FamF(i) = "z"
+		init g3xq.FamMsk(i) = "*"
+	next
+	G3XQ.JOB = 2
+
+	ug_Xmt_Call("ug_Lance_CBN_av",mtcle) 
+
+	ping('xq',g3xq)
+	ProgramCall("GTPP761.DHOP",sw_shownormal,call_wait,WpfNOclient=True)
+  	
+	pinglocalreceiveanddelete("ZECHANGE",mz.echange)
+
+	if ldb
+		g3_log_ano(1,"<- Calcul des besoins nets",fichier = "giperr.dhfi",applic="DAV")
+	endif
+
+endp
+
+;*
+public Procedure ug_Lance_Calcul_couts_standards(ldb)
+	;Lance le programme de calcul des besoins net
+	1 ldb B = false			;Marquer le lancement dans le livre de bord
+	1 adrP 16
+
+beginp
+
+	if ldb
+		g3_log_ano(1,"-> Calcul des coûts standards",fichier = "giperr.dhfi",applic="DAV")
+	endif
+
+	pinglocal("ZECHANGE",mz.echange)
+
+	Ping_Enreg(True,false,false,false,True)
+
+	init g3xq = system.esp
+	mz.mecle = "GGEE020.DHOE"
+	mz.mtcle = "GGTT020.DHOP"
+	mz.MiCle = "GGII020.DHOI"
+	g3xq.echange = mz.echange
+	g3xq.dos = mz.dos
+	G3xq.etb = mz.etb
+	g3xq.job	= 2
+	
+	;On reprend las paramètres d'initialisation du programme standard. Dans la surcharge du ggtt020, on réaffecte G6.choix a g3xq.choix (réalisé dans le masque ggee020 en standard)
+	if getadressprocedure(mz.mtcle,"PROGRAMME_INIT",adrP) = 0
+		procedurecall(adrP)
+	endif
+
+	ping("ZECHANGE",mz)
+	Ping("XQ", G3XQ)
+
+	 
+
+	ProgramCall("GGPP020.DHOP",sw_shownormal,call_wait,WpfNOclient=True)
+	pinglocalreceiveanddelete("ZECHANGE",mz.echange)
+
+	if ldb
+		g3_log_ano(1,"<- Calcul des coûts standards",fichier = "giperr.dhfi",applic="DAV")
+	endif
+
+endp
+;*
+Public Procedure ug_Lance_Regularisation_EntreeForcee(ldb)
+	;Lancement de la regul des entrees forcées
+	1 ldb B = false			;Marquer le lancement dans le livre de bord
+beginp
+	if ldb
+		g3_log_ano(1,"-> Regularisation des Entrées Forcées",fichier = "giperr.dhfi",applic="DAV")
+	endif
+
+	Ping_Enreg(True,false,false,false,True)
+	
+	init g3xq = system.esp
+	mz.mecle	= "GTEE130.DHOE"
+	mz.mtcle	= "GTTT130.DHOP"
+	g3xq.echange =	mz.echange
+	g3xq.dos = mz.dos
+	G3xq.etb = mz.etb
+	g3xq.job = 2
+
+	g3xq.DatF="99991231"
+	init G3xq.RefF="z"
+
+	 
+
+	Ping("XQ",G3XQ)
+	ProgramCall("GTPP130.DHOP",SW_HIDE,Call_Wait,WpfNOclient=True)
+
+	if ldb
+		g3_log_ano(1,"<- Regularisation des Entrées Forcées",fichier = "giperr.dhfi",applic="DAV")
+	endif
+
+endp
+
+
+;*	GLE 15042014 Impression des entrés forcées
+Public Procedure ug_Lance_Impression_EntreeForcee(ldb)
+	;Lancement de la regul des entrees forcées
+	1 ldb B = false			;Marquer le lancement dans le livre de bord
+beginp
+	if ldb
+		g3_log_ano(1,"-> Impression des Entrées Forcées",fichier = "giperr.dhfi",applic="DAV")
+	endif
+	
+	init g3xq = system.esp
+	mz.mecle	= "GTEE135.DHOE"
+	mz.mtcle	= "GTTT135.DHOP"
+	mz.MiCle = "GTII135.DHOI"
+	g3xq.echange =	mz.echange
+	g3xq.dos = mz.dos
+	G3xq.etb = mz.etb
+	g3xq.job = 2
+	g3xq.DepoD = ' ' 
+
+
+	g3xq.DatF="99991231"
+	G3xq.RefD = ' '
+	G3xq.RefF = 'z'
+	G3XQ.GRREFMSK = ' '
+
+	Ping("XQ",G3XQ)
+	ProgramCall("GTPP135.DHOP",SW_HIDE,Call_Wait)
+
+	if ldb
+		g3_log_ano(1,"<- Impression des Entrées Forcées",fichier = "giperr.dhfi",applic="DAV")
+	endif
+endp
+
+;*	GLE 15042014 Lancement du contrôle d'intégrité
+Public Procedure ug_Lance_Controle_Integrite(ldb)
+	;Lancement de la regul des entrees forcées
+	1 ldb B = false			;Marquer le lancement dans le livre de bord
+beginp
+	if ldb
+		g3_log_ano(1,"-> Contrôle d'intégrité",fichier = "giperr.dhfi",applic="DAV")
+	endif
+	
+	init g3xq = system.esp
+	MZ.MECLE 		= "gtee195.dhoe"		  												; XQ.ECHANGE  a la même structure que MZ.ECHANGE !
+	MZ.MTCLE			= "gttt195.dhop"
+	G3XQ.JOB 		= 2																		; On prend le 1er jour du mois précédant
+	G3XQ.DATF      = today
+	G3XQ.CHOIX(1)  =  2																		; Pas de récap par défaut																	
+	G3XQ.ECHANGE	= 	MZ.ECHANGE
+	G3XQ.DOS			= 1
+
+	Ping("XQ",G3XQ)
+	ProgramCall("GTPP195.DHOP",SW_HIDE,Call_Wait)
+
+	if ldb
+		g3_log_ano(1,"<- Contrôle d'intégrité",fichier = "giperr.dhfi",applic="DAV")
+	endif
+endp
+
+
+;*	GLE 15042014 Lancement du calcul du CMP
+Public Procedure ug_Lance_Calcul_Cout_Moyen_Pondere(ldb)
+	;Lancement de la regul des entrees forcées
+	1 ldb B = false			;Marquer le lancement dans le livre de bord
+beginp
+	if ldb
+		g3_log_ano(1,"-> Calcul cout moyen pondéré",fichier = "giperr.dhfi",applic="DAV")
+	endif
+	
+	init g3xq = " "
+	MZ.MECLE  = "gtee125.dhoe"
+	MZ.MTCLE  = "gttt125.dhop"
+	G3XQ.dos 	 = mz.Dos
+
+	G3XQ.ECHANGE = MZ.ECHANGE
+	g3xq.dos     = mz.dos
+	G3XQ.JOB     = 2
+	; GLE 20140422 Lors du lancement du CMP, il est nécessaire de lancer le traitement sur le mois précédent
+	G3XQ.DATF    = hdate(today,"D",-1)
+	G3XQ.REFD    = "10-0000" 
+	G3XQ.REFF    = "Z-ZZZZ"
+
+	Ping("XQ",G3XQ)
+	ProgramCall("GTPP125.DHOP",SW_HIDE,Call_Wait)
+
+	if ldb
+		g3_log_ano(1,"<- Calcul cout moyen pondéré",fichier = "giperr.dhfi",applic="DAV")
+	endif
+endp
+
+
+;*	GLE 16042014 Lancement de l'affectation des coûts de revient
+Public Procedure ug_Lance_Affectation_Cout_De_Revient(ldb)
+	;Lancement de la regul des entrees forcées
+	1 ldb B = false			;Marquer le lancement dans le livre de bord
+beginp
+	if ldb
+		g3_log_ano(1,"-> Affectation des couts de revient",fichier = "giperr.dhfi",applic="DAV")
+	endif
+	
+	init g3xq = " "
+	MZ.MECLE  = "gtee120.dhoe"
+	MZ.MTCLE  = "gttt120.dhop"
+	G3XQ.dos  = mz.Dos
+	G3XQ.DATD = ' '
+	G3XQ.DATF = '99991231'
+	G3XQ.JOB  = 2
+	G3XQ.ECHANGE = MZ.ECHANGE
+
+	Ping("XQ",G3XQ)
+	ProgramCall("GTPP120.DHOP",SW_HIDE,Call_Wait)
+
+	if ldb
+		g3_log_ano(1,"<- Affectation des couts de revient",fichier = "giperr.dhfi",applic="DAV")
+	endif
+endp
+
+
+
+;*
+;*
+public Function Char ug_Recherche_Code_Op_Par_Nature(Nst,Ticod,NstDest,Sens,DebutCodeOp)
+; Recherche du Code Operation par rapport au critere
+1 Nst     > gtfdd.dhsd Nst		 ; Nst D'origine
+1 Ticod   > gtfdd.dhsd Ticod	 ; Type de Tiers
+1 NstDest > gtfdd.dhsd Nst=' ' ; Nst de Destination
+1 Sens 	 > gtfdd.dhsd Sens=2  ; Sortie
+1 DebutCodeOp > gtfdd.dhsd Op=' '
+1 Key > ddsys.dhsd Cle
+1 P > gtfdd.Dhsd Op
+1 Trouve 1,0=False
+1 Dos > gtfdd.dhsd Dos*2="   999"
+1 Cebin > gtfdd.dhsd Cebin=20
+beginf
+	Dos(1)=mz.dos
+	;P=DebutCodeOp
+	Key="A" & Dos(T000.tabTyp(20)) & Cebin & DebutCodeOp
+	Loop Next_Table(20,P,Key)	=0
+		;P=" "
+		if T020.NstO = Nst And  \
+			T020.TiCod= Ticod And	\
+			T020.NstD = NstDest And \
+			T020.Sens = Sens and \
+			T020.PrgTrtTyp(11)<>2 and \
+			(DebutCodeOp=" " or \
+			(DebutCodeOp<>" " and Left(T020.Op,Length(DebutCodeOp))=DebutCodeOp))
+			Trouve=True
+			Exitloop
+		endif
+	endloop
+	if Trouve=false |T020.Op=" " |endif
+	freturn (T020.Op)
+endf
+;*
+Public Function Int ug_Seek_Table(dico,fichier,table,ParamClePrimaire,&Enreg)
+; procedure pour eviter de faire un ug_seek_xxxxxx
+; 
+; La fonction faire la recherche de l'enregistrement par la clé primaire
+; Dos n'est pas à donnée
+; CE1 pour la cle n'est pas à donner (Cli.ce1=3 dans le dico)
+1 dico             20="gtfdd.dhsd"
+1 fichier          30
+1 table            30
+1 ParamClePrimaire 256 ; KeyValue la le
+1 Enreg A
+
+1 St L
+1 DebutLec 1,0=True ; Debut de lecture des cles du fichiers
+1 DebutLecChamp 1,0=True ; Debut de lecture des champs de la clé
+
+1 NomCle 50
+1 NomChampCle 50
+1 PosChampCle 5,0
+1 LgChampCle 5,0
+1 TypChampCle 2,0
+
+1 PosD 5,0=99999
+
+record * htdf fic
+1 Retour 5000
+1 RetourFonc 1,0=True
+1 Lst L
+1 LstCle L
+
+1 Cle > ddsys.dhsd Cle
+
+
+recordDiva ug_ce CeTbl
+beginf
+	Lst=ListGetId("Ug_Liste_Seek_Table")
+	LstCle = ListGetId("ug_Champ_De_La_Cle")
+	; ouverture du Dico si pas ouvert
+	if DicoOuvert=False and DDInterface(DD_OPEN,IdDico,Dico,Retour,1) <> 0 
+		st=DDInterface(DD_GETERROR,IdDico," ",Retour,1)
+		ug_Erreur(hmpseek(Retour,"TexteErreur"))
+		;Programexit
+	else
+		DicoOuvert=True
+	endif
+	; Recherche du fichier
+	if DDInterface(DD_FILEFIND,IdDico,Fichier,Retour,Niveau=2)=0
+		Fic.Name=HmpSeek(Retour,"NomFichier")
+	 	; recherche de la table
+		if DDInterface(DD_TABLEFIND,IdDico,Table,Retour,Niveau=2)=0
+			CeTbl.ChampCe = HmpSeek(Retour,"ChampCe")
+			CeTbl.PositionCe = HmpSeek(Retour,"PositionCe")
+			CeTbl.ValeurCe = HmpSeek(Retour,"ValeurCe")
+			; recherche le l'index cle primaire
+			Loop DDInterface(Condition(DebutLec=True,DD_KEYBEGIN,DD_KEYNEXT),IdDico,'',Retour,Niveau=2)=0	
+				DebutLec=False
+				if HmpSeek(Retour,"FlagClePrimaire")<>" "
+				 	DebutLec=3 ; Trouvé
+					NomCle=HmpSeek(Retour,"CleOuNomDeCle")
+					Cle=Condition(Length(NomCle)=1,Left(NomCle,1),GetKeyByName(Fic,NomCle))
+					; recherche des champs de la cle
+					Loop DDInterface(Condition(DebutLecChamp=True,DD_DATAKEYBEGIN,DD_DATAKEYNEXT),IDDico,'',Retour,Niveau=2)=0
+						DebutLecChamp=False
+						NomChampCle=HmpSeek(Retour,"Nom")
+						PosChampCle=HmpSeek(Retour,"Position")
+						LgChampCle=HmpSeek(Retour,"Longueur")
+						TypChampCle=HmpSeek(Retour,"Nature")
+						if NomChampCle="DOS"
+							if CeTbl.ChampCe="CEBIN"
+								if (T000.Dos=999 or Seek_T000=0) and CeTbl.ValeurCe>0
+									Mid(Cle,PosChampCle+1,LgChampCle) = Condition(T000.TabTyp(CeTbl.ValeurCe)=2,999,mz.Dos)
+								endif
+							else
+								Mid(Cle,PosChampCle+1,LgChampCle)=mz.Dos		
+							endif
+						elsif NomChampCle=CeTbl.ChampCe
+							Mid(Cle,PosChampCle+1,LgChampCle)=Chr(CeTbl.ValeurCe)
+						elsif Count("FILLER",NomChampCle)>0
+						else
+							if PosD>PosChampCle
+								Mid(Cle,PoschampCle+1)=ParamClePrimaire
+								PosD=PosChampCle
+							endif
+						endif		
+					endloop
+
+
+					exitloop
+				endif
+			endloop
+		else
+			ug_Erreur("Table " & Table && " introuvable dans le Dico " & Dico && " - Fichier " & Fichier)	
+		endif
+	else
+		ug_Erreur("Fichier " & Fichier && " introuvable dans le Dico " & Dico)	
+	endif
+	; Open du Fichier
+	if Fopen(Fic,"P")=0
+		; Hseek du Fichier
+		if Hseek(Fic,Enreg,Cle,"P")=0
+			RetourFonc=0			
+		endif
+		; Fermeture du Fichier
+		Hclose(Fic)
+	endif
+	freturn (RetourFonc)
+endf
+;*
+Public Procedure ug_Piece_Recap(Ticod,Picod,Pino,Resa,EnListeTab,IdMouv)
+	; Recalcul des montants de l'entête APRES modification
+	; Les Tables ENT et G1 doivent être déclarés en public
+	;
+	; Remarque ; si en liste ou tab l'enreg lu est G1T1
+	; En liste il n'y a pas de mise à jour de ENT
+	1 Ticod >	gtfdd.dhsd	Ticod		;Type de Tiers
+	1 Picod >	gtfdd.dhsd	Picod		;Type de Pièce
+	1 Pino  > gtfdd.dhsd Pino				;Numéro de pièce
+	1 Resa 1,0=True ; Reservation de la piece
+	1 EnListeTab 1,0=0 ; 0 Gestion par fichier ; 1 Gestion Par Tableau ; 2 Gestion Par Liste
+	1 IdMouv L=0 ; si gestion par liste numero de la liste si gestion par tableau Idem
+
+hfile gtfdd.dhsd gtfent gtfentz
+hfile gtfdd.dhsd gtfam gtfamz
+record gtfdd.dhsd mouv mouvz
+
+1	CleMouv	1*4 = "HIJK"
+1 AdrL L
+
+beginp 
+	; Reservation de l'enreg
+	if Resa=True
+		Loop Res_ENT(Ticod,Picod,Pino)<>0
+		Endloop
+	endif
+	IdMouv=Condition(IdMouv=0 and EnListeTab=1,G3xt.idTableau(1),IdMouv)
+	; lecture du BL
+	if (EnListeTab=0 and Hseek(gtfentz,ent,"G" & mz.dos & Ticod & Picod & Pino)=0) or EnListeTab<>0
+		if Lectab(20,Ent.Op)=0
+			GTENT.Sens=T020.sens
+		endif
+		Piece_Recap_Init(0,Ent.TiCod,Ent.PiCod,True)
+		if EnListeTab=0
+			; Lecture des mouvements pour recalculer le Pied
+			gtfamz.Key=CleMouv(Picod) & ent.Dos & ent.TiCod & ent.Pino
+			Loop Hread(gtfamz,Mouvz)=0 and gtfamz.key < [gtfamz.lkey & ent.Dos & ent.TiCod & ent.PiNo & $FF]
+				if Art.ref <>Mouvz.ref | Seek_Art(Mouvz.Ref) | endif
+				Piece_Recap_Cumul(Mouvz,True,Ent.TiCod,Ent.PiCod)								
+			endloop
+		else
+			PingLocal("ug_G1T1_Recap",G1T1)
+			PingLocal("ug_Rowinfo_Recap",Rowinfo)
+			; Lecture des mouvements pour Recalculer le pied
+			AdrL =Condition(EnListeTab=1,XmeListGetAdressCurrent(IdMouv),ListGetAdressCurrent(IdMouv))
+			Condition(EnListeTab=1,XmeListBegin(IdMouv),ListBegin(IdMouv))
+			Loop (EnListeTab=1 and XmeListNext(IdMouv,G1T1)>0) or (EnListeTab=2 and ListNext(IdMouv,G1T1)>0)
+				if Art.ref <>G1T1.ref | Seek_Art(G1T1.Ref) | endif	
+				Piece_Recap_Cumul(G1T1.MOUV,True,Ent.TiCod,Ent.picod)				
+			endloop
+			;
+			Condition(EnListeTab=1,XmeListSetAdressCurrent(IdMouv,AdrL),ListSetAdressCurrent(IdMouv,AdrL))
+			PingLocalReceiveAndDelete("ug_G1T1_Recap",G1T1)
+			PingLocalReceiveAndDelete("ug_Rowinfo_Recap",Rowinfo)
+		endif
+		Piece_Recap_Fin(0,Ent.TiCod,Ent.PiCod)
+		ug_Xmt_Call(mz.MtCle,"ENT_REWRITE_AV")
+		if EnListeTab=0 | HRewrite(Gtfentz,Ent) | endif
+	endif	
+
+
+
+	; Liberation de la piece
+	if Resa=True
+		Lib_Ent(Ticod,Picod,Pino)
+	endif
+endp
+;*
+Public Procedure ug_Perimer_Piece(Ticod,Picod,Pino)
+;
+1 Ticod > gtfdd.dhsd Ticod
+1 Picod > gtfdd.dhsd Picod
+1 Pino  > gtfdd.dhsd Pino
+hfile gtfdd.dhsd gtfent gtfentz
+hfile gtfdd.dhsd gtfam gtfamz	openonuse
+hfile gtfdd.dhsd gtfvtl gtfvtlz openonuse
+
+record gtfdd.dhsd ent entz
+record gtfdd.dhsd mouv mouvz
+record gtfdd.dhsd mvtl mvtlz
+
+1 Lettre 1*4="HIJK"
+1 Pce 2*4="DVCDBLFA"
+1 clemax > ddsys.dhsd cle
+1 clemaxV > ddsys.dhsd cle
+1 AdrDesc 120
+beginp
+	if Ticod=" " or Picod=" " or Pino=0 | Preturn | endif
+
+	Loop Res_Ent(Ticod,picod,Pino)<>0
+	endLoop
+
+	; lecture des entetes
+	if Hseek(gtfentz,Entz,"I" & mz.Dos & Ticod & picod & pino)=0
+		Entz.Ce4='8'
+		entz.stres=1
+		; lecture des mouvements
+		gtfamz.Key=Lettre(Picod) & entz.dos & Ticod & Pino
+		Clemax = gtfamz.Key	&& $FF
+		Loop Hread(gtfamz,mouvz)=0 and clemax>gtfamz.Key
+			if dataDescriptor("Mouvz." & Pce(Picod) & "Ce4",AdrDesc)=0 | DataValue(AdrDesc)=8 | endif	
+			;ventilations
+			gtfvtlz.Key="A" & mouvz.Dos & mouvz.EnrNo
+			ClemaxV=gtfvtlz.Key && $FF
+			Loop Hread(gtfvtlz,Mvtlz)=0 and ClemaxV>gtfvtlz.Key
+				MVtlz.Ce3=' '
+				if Mvtlz.Sens=2
+					Mvtlz.StRes=1
+					Stock_Reservation_Annuler(Mvtlz.TicketRes,Mvtlz.Sens,False,False,Mvtlz.Ref,Mvtlz.Sref1,Mvtlz.Sref2,Mvtlz.Nst)
+					Mvtlz.TicketRes=' '
+					Mvtlz.Ce5=' '
+					Mvtlz.StQte=' '
+				endif
+				Hrewrite(gtfvtlz,mvtlz)
+			endloop
+
+			mouvz.stres=1
+			Hrewrite(gtfamz,mouvz)
+		endloop
+		;
+		Hrewrite(Gtfentz,Entz)
+	endif
+
+	Lib_ent(Ticod,Picod,Pino)
+endp
+;*
+Public Function int ug_Rechercher_Taux_TVA(Mode,Ticod,Donnee1,Donnee2,Dt)
+; ***** Mode 1 *****
+; Donnee1 = Tiers
+; Donnee2 = Article
+;  **** Mode 2 *****
+; Donnee1 = TvaT
+; Donnee2 = TvaR
+1 Mode    1,0=0
+1 Ticod 	 > gtfdd.dhsd Ticod
+1 Donnee1 > gtfdd.dhsd Tiers 
+1 Donnee2 > gtfdd.dhsd Ref
+1 Dt      > gtfdd.dhsd Pidt
+
+1 TvaT > gtfdd.dhsd TvaT
+1 TvaR > gtfdd.dhsd TvaR
+1 Taux > gtfdd.dhsd TvaP
+beginf
+	PingLocal("ug_Tiers1",Cli)
+	PingLocal("ug_Tiers2",Fou)
+	PingLocal("ug_Art",Art)
+	if Mode=1  ; Par Tiers et Article
+		if Art.Ref=Donnee2 or Hseek(gtfat,Art,"A" & mz.Dos & Donnee2)=0 | TvaR=Condition(Ticod='C',Art.TvaArt,Art.TvaArtA) | endif
+		if Ticod='C' 
+			if Cli.tiers=Donnee1 or Hseek(gtfpcf,Cli,"C" & mz.Dos & '3' & Donnee1)=0 |TvaT=Cli.TvaTie | endif
+		elsif Ticod='F'
+			if fou.tiers=Donnee1 or Hseek(gtfpcf,Fou,"C" & mz.Dos & '4' & Donnee1)=0 |TvaT=Fou.TvaTie | endif
+		endif
+	else
+		TvaT=Donnee1
+		TvaR=Donnee2
+	endif
+	; recherche du taux
+	if Lectab(3,TvaR & TvaT)=0
+	 	if dt<=Condition(T003.TvaFDt=' ','99991231',T003.TvaFDt)
+			Taux=T003.TvaP(1)
+		else
+			Taux=T003.TvaP(2)
+		endif
+	endif
+	PingLocalReceiveAndDelete("ug_Tiers1",Cli)
+	PingLocalReceiveAndDelete("ug_Tiers2",Fou)
+	PingLocalReceiveAndDelete("ug_Art",Art)
+
+	freturn (Taux)
+endf
+;*
+Public Function Char ug_Calculer_Date_Ouvree(CldCod,Datd,TpsOuvree,HeureRefOuvree)
+; Fonction de calcul de la journée ouvrée avec le tps que l'on rajoute
+; Retour de la date de fin
+1 CldCod         > gtfdd.dhsd cldcod
+1 Datd           > gtfdd.dhsd Datd
+1 TpsOuvree      N ; Temps en jours
+1 heureRefOuvree H6="100000" ; Heure de reference ouvrée
+1 DatF 			  > gtfdD.dhsd DatF
+1 vI 6,0
+1 PasStep 			2,0
+1 Depart 			6,0
+1 Fin					6,0
+beginf
+	DatF=DatD
+	if Abs(TpsOuvree)>0
+		PasStep=Condition(TpsOuvree<0,-1,1)
+		Depart = Condition(PasStep>0,1,-1)
+		Fin	 = Abs(TpsOuvree)
+		
+		if PasStep>0
+			For vI= 1 to TpsOuvree
+				DatF=Hdate(DatF,1)		
+				Loop Tester_Calendrier(CldCod,DatF & heureRefOuvree," ",0)<>0
+					DatF=Hdate(DatF,1)			
+				endloop
+			Next
+		else	 ; obligé car "step PasStep" est interdit
+			For vI= TpsOuvree to Depart Step -1
+				DatF=Hdate(DatF,-1)		
+				Loop Tester_Calendrier(CldCod,DatF & heureRefOuvree," ",0)<>0
+					DatF=Hdate(DatF,-1)			
+				endloop
+			Next
+		endif
+	else
+		Loop Tester_Calendrier(CldCod,DatF & heureRefOuvree," ",0)<>0
+			DatF=Hdate(DatF,1)			
+		endloop
+	endif
+	freturn (DatF)
+endf

@@ -1,0 +1,312 @@
+;*
+;*	Moulinette V5 vers V6
+;*
+
+;Module v5versv6.dhop
+Module ugtm_baseStd.dhop
+Module ysystemex.dhop
+
+1 RepV5 50="C:\har\sys"
+
+Const RepV6 ="C:\Divalto\sys"
+Const RacineRegistreV6 = "HKEY_CURRENT_USER\Software\Divalto\divalto.ini\"
+
+1 LstErr L
+1 Adr 16
+1 Err 50
+1 st X
+1 Rep L
+record ddsys.dhsd cles 
+record ddsys.dhsd EparamSI
+
+record * htdf fic
+
+
+;*
+;*	Procedure
+;*
+
+Procedure ug_Recup_Fimp
+;
+1 FichierV5 512
+1 FichierV5N 512
+1 FichierV6	512
+1 FichierV6D	512
+1 Fprinter 15="fimp"
+1 Fprinterv6 15="fprinters"
+1 Texte 512
+1 TexteN 512
+1 Section 50
+1 Buffer 2000
+1 Lst L
+
+record ddsys.dhsd eimp
+record * htdf fic
+
+1 LstIni L
+beginp
+	; Migration du fichier FIMP
+	FichierV5=RepV5 && "\" & Fprinter
+	FichierV5N=WinGetTempPath & "\" & FPrinter && ".hfi"
+	FichierV6=WinGetTempPath & "\" & FPrinterv6 && ".dhfi"
+	FichierV6D=WinGetTempPath & "\" & FPrinterv6 && ".dhfd"
+
+	fic.name=FichierV5
+	if Fopen(Fic,"P")<>0
+		RepV5="D:\Har\sys" 		
+		FichierV5=RepV5 && "\" & Fprinter
+	endif
+
+	ug_xmt_call("v5versv6.dhop","ChargeFichierParam")
+	;MoulineUnFichierVersV6(FichierV5N,FichierV6,LstErr,True)
+	HDeleteFile(FichierV6,st,abort=false)
+	; Creation du fichier HFI
+	DdHSiRead("ddsys.dhsd","fimp",Cles,EparamSI,Err,True)
+	HsiCreate(FichierV6,FichierV6D,'N',0,Cles,Status=St)
+
+	if GetAdressfunction("v5versv6.dhop","MoulineUnFichierVersV6",Adr)=0
+		FunctionCall(Adr,FichierV5 && "d",FichierV6D,LstErr,True)
+	endif
+	; Regeneration du fichier
+	ping("XREOF_FICHIER",FichierV6)
+	ping("XREOF_OPERATION",1)
+	ping("XREOF_MEMOIRE",65520)
+	ping("XREOF_MESSAGES",0)
+	ProgramCall("xreof.dhop",SW_HIDE)
+	; Copie du fichier dans le Repertoire 
+	if messagebox("Voulez vous copier le fichier Fprinter dans le repertoire ?" & RepV6 && "","Quesiton",mb_iconquestion+mb_yesno+mb_defbutton1)=idyes
+		HcopyFile(FichierV6D,GetHarmonyDirectory & "/sys/" & FileNameLastSegment(FichierV6D),NumerofichierErreur=st)
+		HcopyFile(FichierV6 ,GetHarmonyDirectory & "/sys/" & FileNameLastSegment(FichierV6 ),NumerofichierErreur=st)
+	endif
+	; Lecture du fichier pour remplacer les imprimantes
+	fic.name="fprinters.dhfi"
+	if fopen(fic,"P")=0
+		fic.Key="A"
+		Loop Hread(fic,Eimp)=0
+			if Fstring("U",eimp.Zivideo)="FIHIBM"
+				eimp.Zivideo="FIHPROP"
+				HRewrite(fic,Eimp)
+			endif
+		endloop
+	endif
+
+	; Lecture du fichier Harmony
+	Fic.Name = WinGetWindowsDirectory & "/" & "harmony.ini"
+	if Messagebox("Voulez vous récupérer les imprimantes de harmony.ini ?","Question",mb_iconquestion+mb_yesno+mb_defbutton1)=idyes and \
+		Hopen(Fic,"P")=0
+		Lst=ListGetId("Ug_Liste_des_imprimantes")
+		ListErase(Lst)
+		; lire le fichier 
+		Loop Hread(fic,Texte)=0
+			TexteN=Fstring("U",Texte)
+			if count("PRINTER-",TexteN)>0
+				ListAddEnd(Lst,Texte)
+			endif
+		endloop			
+		Hclose(fic)
+		; Lecture de la Liste des Imprimantes
+		ListBegin(Lst)
+		Loop ListNext(Lst,Texte)>0
+			TexteN=Modify("[","",Modify("]","",Texte)) | Section=TexteN
+			; analyse de la section
+			WinReadProfileSection(TexteN && "",fic.Name,Buffer)
+			Buffer=modify($00,"|",Buffer) | Buffer=Modify("||","|",Buffer)
+			LstIni=SplitList(Buffer,SeparateursNonRendus='|')
+			ListBegin(LstIni)
+			Loop ListNext(LstIni,Texte)>0 
+				TexteN=WinReadProfileString(Section,Texte,fic.Name)
+				WinRegWriteString(RacineRegistreV6 & "\" & Section && "",Texte,TexteN)
+			endloop
+ 			ListDestroy(LstIni)
+			Buffer=" "
+		endloop
+		; Destruction de la liste 
+		ListDestroy(Lst)
+	endif
+endp
+;*
+Procedure ug_Recup_FODBC
+;
+1 FichierV5 512
+1 FichierV5D 512
+1 FichierV6	512
+1 FichierV6D	512
+1 FODBC 15="fodbc"
+1 FODBCv6 15="fodbc"
+1 Texte 512
+1 TexteN 512
+1 Section 50
+1 Buffer 2000
+1 Lst L
+1 esource 508
+1 etable	 508
+
+record ddsys.dhsd eimp
+record * htdf fic
+
+1 LstIni L
+beginp
+	;Repv5=Condition(DebugMode=True,"C:\Divalto",Repv5)
+	; Migration du fichier FODBC
+	FichierV5=RepV5 && "\" & FODBC && ".hfi"
+	FichierV5D=RepV5 && "\" & FODBC && ".hfd"
+;	FichierV5N=WinGetTempPath & "\" & FODBC && ".hfi"
+	FichierV6=WinGetTempPath & "\" & FODBCv6 && ".dhfi"
+	FichierV6D=WinGetTempPath & "\" & FODBCv6 && ".dhfd"
+
+	fic.name=FichierV5
+	if Fopen(Fic,"P")<>0
+		RepV5="D:\Har\sys" 		
+		FichierV5=RepV5 && "\" & FODBC && ".hfi"
+	endif
+
+	ug_xmt_call("v5versv6.dhop","ChargeFichierParam")
+
+	;MoulineUnFichierVersV6(FichierV5N,FichierV6,LstErr,True)
+	HDeleteFile(FichierV6,st,abort=false)
+	; Creation du fichier HFI
+	;DdHSiRead("ddsys.dhsd",FODBC && "",Cles,EparamSI,Err,True)
+	Init Cles=$00
+	Cles.Lettrecle(1)="A"
+	Cles.Poscle(1,1)=2
+	Cles.Lgcle(1,1)=32
+	Cles.Lettrecle(2)="B" 
+	Cles.Positionce(2)=1
+	Cles.Testce(2)=0
+	Cles.Valeurce(2)='T'
+	Cles.Poscle(2,1)=2
+	Cles.Lgcle(2,1)=64
+	Cles.Lettrecle(3)="C"
+	Cles.Positionce(3)=1
+	Cles.Testce(3)=0
+	Cles.Valeurce(3)="S"
+	Cles.Poscle(3,1)=2
+	Cles.Lgcle(3,1)=32
+
+	HsiCreate(FichierV6,FichierV6D,'N',0,Cles,Status=St)
+
+	if GetAdressfunction("v5versv6.dhop","MoulineUnFichierVersV6",Adr)=0
+		FunctionCall(Adr,FichierV5D ,FichierV6D,LstErr,1)
+	endif
+	; Regeneration du fichier
+	ping("XREOF_FICHIER",FichierV6)
+	ping("XREOF_OPERATION",1)
+	ping("XREOF_MEMOIRE",65520)
+	ping("XREOF_MESSAGES",0)
+	ProgramCall("xreof.dhop",SW_HIDE)
+	; Copie du fichier dans le Repertoire 
+	if messagebox("Voulez vous copier le fichier FODBC dans le repertoire ?" & RepV6 && "","Question",mb_iconquestion+mb_yesno+mb_defbutton1)=idyes
+		HcopyFile(FichierV6D,GetHarmonyDirectory & "/sys/" & FileNameLastSegment(FichierV6D),NumerofichierErreur=st)
+		HcopyFile(FichierV6 ,GetHarmonyDirectory & "/sys/" & FileNameLastSegment(FichierV6 ),NumerofichierErreur=st)
+	endif
+	; Lecture du fichier pour remplacer les imprimantes
+	fic.name=filenamelastsegment(FichierV6)
+	if fopen(fic,"P")=0
+		fic.Key="C"
+		Loop Hread(fic,Esource)=0
+			esource=FromOemToAnsi(esource)
+			HRewrite(fic,eSource)
+		endloop
+		fic.Key="A"
+		Loop Hread(fic,Etable)=0
+			etable=FromOemToAnsi(etable)
+			HRewrite(fic,etable)
+		endloop
+	endif
+endp
+;*
+Procedure ug_CreerUnRaccourci(chemin,Fichier,NomRacourci,LigneCmd, fichiericon, iconindex,hotkey2,LieuRaccourci) 
+; Procedure pour creer un raccourci windows
+1		chemin  A		 ; chemin du "Demarrer Dans"
+1		chemin2 260
+1		aa	     260
+1		bb 	  260
+1		i		  x
+1		cmd 	  260
+1		item 	  260
+1		icon 	  260
+1		iconindex x=0
+1		dir  	  260
+1		rel  	  260
+1 		hotkey2 5,0 	=0
+1		hotkey  x=0
+1		show	  x
+1		arg     260
+1		des     260=""		;Commentaire
+
+1 fichier 50				; fichier ou dossier pour le raccourci
+1 NomRacourci 100  		; nom du raccourci
+1 LigneCmd 100				
+1 FichierIcon 100			; Icone
+1 LieuRaccourci 512=" " ; si vide bureau
+beginp
+	if chemin = " "
+		preturn
+	endif
+	
+	aa = WinShGetSpecialFolderLocation(CSIDL_DESKTOP)
+	aa = condition(LieuRaccourci=" ",aa,LieuRaccourci)
+	
+	bb = GETHARMONYDIRECTORY
+	chemin = fstring("L",chemin)
+	; d:\harmony -> d_harmony
+	; d:			 -> d
+	; \\js\toto  -> js_toto
+	; /harmoy/sys -> harmony_sys
+
+	chemin2 = chemin
+	chemin2 = modify(":\","_",chemin2)
+	chemin2 = modify(":/","_",chemin2)
+	chemin2 = modify(":","_",chemin2)
+	chemin2 = modify("//","_",chemin2)
+	chemin2 = modify("\\","_",chemin2)
+	chemin2 = modify("/","_",chemin2)
+	chemin2 = modify("\","_",chemin2)
+	if mid(chemin2,1,1) = "_" 
+		chemin2 = mid(chemin2 ,2)
+	endif
+
+	i = length(chemin2)
+	if mid(chemin2,i,1) = "_"
+		mid(chemin2,i,1) = " "
+	endif
+	if	hotkey2<>0 | hotkey=hotkey2 |	endif
+	cmd = chemin && "\" & fichier && $00  ;"\sys\x4.exe"
+	item = left(aa) & "\" & NomRacourci && ".lnk" & $00
+	;icon = left(bb) & "\sys\xexec4.exe" & $00
+	icon=fichiericon
+	;iconindex = 0
+	dir  = chemin && $00 ;left(bb) & "\sys" & $00
+	rel  = chemin && $00
+	;hotkey = 0
+	show = SW_SHOWNORMAL
+	arg  = LigneCmd && $00
+	des  = NomRacourci && $00
+	i = cm(1330,136,ptr(cmd),ptr(item),ptr(icon),iconindex,ptr(dir),hotkey,show,ptr(arg),ptr(rel),ptr(des) )	
+	
+endp
+
+
+
+;*
+;*	Programme Principal
+;*
+
+Main
+	LstErr=ListGetId("LstErr")
+
+	XmeTitle("Moulinette V5 vers v6")
+
+	if Messagebox("Voulez vous mouliner le fichiers imprimantes ?","V5versV6",mb_iconinformation+mb_yesno)=Idyes
+		ug_Recup_Fimp
+	endif
+
+	if MessageBox("Voulez vous mouliner le fichiers FODBC ?","Question",mb_iconinformation+mb_yesno)=Idyes
+		ug_Recup_FODBC	
+	endif
+
+	if (Rep:=MessageBox("Voulez vous creer le Raccourci Divalto|OUI pour tous les utilisateurs|NON pour l'utilisateur en cours","Question",mb_iconquestion+mb_yesnocancel+mb_defbutton3) in(idyes,idno))
+		ug_CreerUnRaccourci(RepV6,Repv6 & "\xrtdiva.exe","Divalto","Xlog,",repv6 & "\xrtdiva.Exe",1)
+	endif
+
+	Programgoto "xquit"

@@ -1,0 +1,1355 @@
+;* Module commun technique
+
+;*
+;20100323_001		| RTH			| Lors de l'initialisation, si pas de menu, affecte l'établissement et le dépot de l'utilisateur en plus du dossier.
+;20101008			| RTH			| Ajout création répertoire + modification création fichier pour prise en compte répertoire
+;*
+
+OverWrittenBy ugum_tech.dhop
+
+include gttc000.dhsp
+
+module a5pmfic.dhop
+module A5pmwin.dhop
+module ysystemex.dhop
+Module ugtm_baseStd.dhop
+
+
+
+Protected Hfile A5dd.Dhsd A5ftab A5ftab
+
+Protected record A5dd.dhsd mApplic
+
+public record a5dd.dhsd mz
+public record a5dd.dhsd muser
+
+public record ddsys.dhsd sql
+
+Extern record A5dd.dhsd m8
+
+Public record gtfdd.dhsd Soc
+
+public record ugd_outils.dhsd uge_Sel
+public record ugd_outils.dhsd uge_Trt
+public record ugd_outils.dhsd uge_input
+
+hfile ugd_outils.dhsd ugf_mess ugf_mess openonuse
+
+Const XME_Trace = "UGEE_TRACE.DHOF"
+Const XME_Input = "UGEE_INPUT.DHOF"
+1 Abandon_Trace 1,0=False
+
+; variable Dico
+1 LstDico L
+1 Nivo L=3 ; niveau du Dico
+
+1 EnregDico 55
+ 2 NomDicoE	50
+ 2 IdDicoE 	L
+
+Public Structure ugs_Rep  ;Structure de Repertoire
+	1 Rep 			512 ; Repertoire
+	1 RepParent 	512 ; Repertoire Parent
+	1 Type			1,0 ; 1 Repertoire 2 Fichiers	
+EndStructure
+
+;*
+;* MESSAGE
+;*
+
+;*
+public function char ug_Get_Message(Mess,p1,p2,p3,EcranImp)
+	;Mise en forme du message a afficher
+	;Retour : Message a afficher
+	1 Mess 1000	 				;Message
+	1 p1 100 = ""		 		;Paramètre 1
+	1 p2 100 = ""			  	;Paramètre 2
+	1 p3 100 = ""				;Paramètre 3
+
+	
+	record ugd_outils.dhsd uge_mess
+	1 NumMess > ugd_outils.dhsd ug_NumMess
+	1 EcranImp 1,0=1			; 1=Ecran 2=Impression
+
+beginf
+	if mess=" " | freturn(' ') | endif
+
+	if isnum(Mess)
+		NumMess = val(Mess)
+		if hseek(ugf_mess,uge_mess,GetKeyByName(ugf_mess,"UGI_NumMess") & NumMess,"F") <> 0
+			freturn("Message n° " & nospaces(NumMess) & " non retrouvé.")
+		endif
+		mess = uge_mess.ug_libmess
+	endif
+
+	if LcWinDivaltoReadString ("System", "CheminLangues")<>" " and Length(mess)<=100
+	 	mess=TranslateData(mess,EcranImp=EcranImp)
+	endif		
+		
+	mess = modify("$1",nospaces(p1),mess) 
+	mess = modify("$2",nospaces(p2),mess)
+	mess = modify("$3",nospaces(p3),mess)
+
+	freturn(nospaces(mess))
+
+endf
+
+;*
+public procedure ug_Info(Mess,p1,p2,p3)
+	;Affichage d'un message d'information
+	1 Mess 1000					;Message
+	1 p1 100 = ""		 		;Paramètre 1
+	1 p2 100 = ""			  	;Paramètre 2
+	1 p3 100 = ""				;Paramètre 3
+	1 Batch 1
+beginp
+	if Count("GTPP150",Fstring("U",GetStack))>0 or (PingLocalReceive("Batch",Batch)=0 and Batch=True)
+		PingLocal("Batch",Batch)
+		G3_Log_Ano(9999,ug_get_message(Mess,p1,p2,p3),nivalerte=9,Applic=mz.applic)
+	else
+		messagebox(ug_get_message(Mess,p1,p2,p3),"Message",mb_iconinformation)
+	endif
+endp
+
+;*
+public procedure ug_Alert(Mess,p1,p2,p3,Ressaisie)
+	;Affichage d'un message d'alerte
+	1 Mess 1000					;Message
+	1 p1 100 = ""		 		;Paramètre 1
+	1 p2 100 = ""			  	;Paramètre 2
+	1 p3 100 = ""				;Paramètre 3
+	1 Ressaisie B = false	;Ressaisir la donnée
+	1 Batch 1
+beginp
+	if Count("GTPP150",Fstring("U",GetStack))>0 or (PingLocalReceive("Batch",Batch)=0 and Batch=True)
+		PingLocal("Batch",Batch)
+		G3_Log_Ano(9999,ug_get_message(Mess,p1,p2,p3),Applic=mz.applic)
+	else
+		messagebox(ug_get_message(Mess,p1,p2,p3),"Attention",mb_iconexclamation)
+	endif
+	if ressaisie
+		harmony.retour = xmenext_ressaisie
+	endif
+
+endp
+;*
+Procedure M8_Write_Av
+;
+beginp
+	PingLocalReceiveAndDelete("ug_ErrNum",M8.Errnum)
+endp
+
+;*
+public procedure ug_log(Mess,p1,p2,p3)
+	;Ecriture dans le log Divalto
+	1 Mess 1000				 	;Message
+	1 p1 100 = ""		 		;Paramètre 1
+	1 p2 100 = ""			  	;Paramètre 2
+	1 p3 100 = ""				;Paramètre 3
+
+beginp
+
+	Pinglocal("ug_mz.mtcle_log",mz.mtcle)
+	mz.MtCle="ugtm_tech.dhop"
+	Pinglocal("ug_ErrNum",Val(Mess))
+	G3_LOG_ANO(9999,ug_get_message(Mess,p1,p2,p3),NivAlerte=2,Applic=mz.applic)
+
+
+	PinglocalReceiveAndDelete("ug_mz.mtcle_log",mz.mtcle)
+
+endp
+
+;*
+public procedure ug_Erreur(Mess,plog,p1,p2,p3,Quit)
+	;Affichage d'un message d'erreur
+	1 Mess 1000				 	;Message
+	1 pLog B = true			;Ecriture dans le journal
+	1 p1 100 = ""		 		;Paramètre 1
+	1 p2 100 = ""			  	;Paramètre 2
+	1 p3 100 = ""				;Paramètre 3
+	1 quit B = false			;Quitter le programme
+	1 batch 1
+beginp
+	if Count("GTPP150",Fstring("U",GetStack))>0 or (PingLocalReceive("Batch",Batch)=0 and Batch=True)
+		PingLocal("Batch",Batch)
+		G3_Log_Ano(9999,ug_get_message(Mess,p1,p2,p3),Applic=mz.applic)
+	else
+		messagebox(ug_get_message(Mess,p1,p2,p3),"Erreur",mb_iconerror)
+	endif
+	if pLog
+		ug_log(Mess,p1,p2,p3)
+	endif
+
+	if quit
+		programexit
+	endif
+
+endp
+
+;*
+public function int ug_OuiNon(Mess,DefButton,p1,p2,p3)
+	;Affichage d'un message de confirmation
+	;Retour : True = OUI, False = NON
+	1 Mess 1000					;Message
+	1 DefButton x = 2			;Bouton par défaut 1 = Oui, 2 = Non
+	1 p1 100 = ""		 		;Paramètre 1
+	1 p2 100 = ""			  	;Paramètre 2
+	1 p3 100 = ""				;Paramètre 3
+
+beginf
+
+	if defbutton = 1
+		defbutton = mb_defbutton1
+	else
+		defbutton = mb_defbutton2
+	endif
+
+	if messagebox(ug_get_message(Mess,p1,p2,p3),"Confirmation",mb_iconquestion+mb_yesno+defbutton) <> idyes
+		freturn(false)
+	else
+		freturn(true)
+	endif
+
+endf
+
+;*
+;* LISTE
+;*
+
+;*
+public function Long ug_Liste(NomListe,Erase,Abort,AffMess)
+	;Création d'une liste nommée
+	;Retour : Erreur = 0, autre = identifant de la liste
+	1 NomListe A						;Nom de la liste
+	1 Erase B = true					;Effacement	si existant
+	1 Abort B = true					;Abandon si erreur
+	1 AffMess B = true		 		;Afficher message si erreur
+
+	1 LstLoc L
+
+beginf
+
+	LstLoc = ListGetId(NomListe)
+
+	if LstLoc = 0
+		if Affmess
+			ug_alert(2,NomListe)
+		endif
+		if abort
+			programexit
+		endif
+	else	
+		if erase
+			ListErase(LstLoc)
+		endif
+	endif
+
+	freturn(LstLoc)
+
+endf
+
+;*
+;*	SQL
+;*
+
+;*
+public function long ug_SQL_Debut(dsn,usr,pwd)
+	;Ouverture d'un dialogue SQL
+	;Retour = 0 si erreur, id de la connection si réussi
+	1 dsn A							;DSN windows
+	1 usr A							;Code utilisateur Divalto
+	1 pwd A							;Mot de passe utilisateur Divalto
+
+	1 cn L
+
+beginf
+
+	if SQLOpen
+		ug_alert(21)
+		freturn(0)
+   endif
+
+	cn = SQLConnect(dsn,usr,pwd)
+	if cn = 0
+		ug_alert(22,dsn)
+		freturn(0)
+	endif
+
+	freturn(cn)
+
+endf
+
+;*
+public procedure ug_sql_fin
+beginp
+	sqlclose
+endp
+
+;*
+public function int ug_sql_requete(cn,req,p1,p2,p3,AffMess)
+	;Execution d'une requête SQL
+	;Retour = résultat de la requete
+	1 cn L
+	1 req 1000						;Texte de la requête SQL
+	1 p1 A = ""						;Paramètre 1
+	1 p2 A = ""						;Paramètre 2
+	1 p3 A = ""						;Paramètre 3
+	1 AffMess B = false
+
+	1 erreur 512
+	 2 erreur1 256
+	 2 erreur2 256
+
+beginf
+
+	if SQLExecDirect(cn,req) <> 0
+		if AffMess
+			SQLError(erreur1,erreur2)
+			ug_erreur(3,fstring("B",erreur1),fstring("B",erreur2))
+		endif
+		freturn(1)
+	endif
+
+	freturn(0)
+
+endf
+
+;*
+public function char ug_SQL(dsn,usr,pwd,req,p1,p2,p3,AffMess)
+	;Execution d'une fonction SQL de type "Select count()"
+	;Retour = Résultat de la requête
+	1 dsn A							;DSN windows
+	1 usr A							;Code utilisateur Divalto
+	1 pwd A							;Mot de passe utilisateur Divalto
+	1 req 1000						;Texte de la requête SQL
+	1 p1 A							;Paramètre 1
+	1 p2 A							;Paramètre 2
+	1 p3 A							;Paramètre 3
+	1 AffMess B = true			;Afficher message si erreur
+
+	1 cn L
+	1 erreur 512
+	 2 erreur1 256
+	 2 erreur2 256
+	1 Retour s = " "
+
+beginf
+
+	cn = ug_sql_debut(dsn,usr,pwd)
+	
+	req = modify("$1",p1,req)
+	req = modify("$2",p2,req)
+	req = modify("$3",p3,req)
+
+	if SQLExecDirect(cn,req) <> 0
+		goto Err
+	endif
+
+	loop 1
+		if SQLGetResult(cn) <> 0
+			goto Err
+		endif
+	
+		if sql.SQLtype = 1
+         if AffMess
+				retour = "Nombre de lignes mise à jour : " & sql.sqlnblig
+			endif
+			exitloop
+
+		elsif sql.SQLtype = 4 
+			retour = mid(SQLGetData,1,SQLGetDataSize)
+			exitloop
+
+		endif
+			
+	endloop
+
+	goto fin
+
+	label err
+
+		if AffMess
+			SQLError(erreur1,erreur2)
+			ug_erreur(3,fstring("B",erreur1),fstring("B",erreur2))
+		endif
+
+	label fin
+		
+		ug_sql_fin	
+
+		freturn(Retour)
+
+endf
+
+;*
+;* TRACE
+;*
+
+;*
+public procedure ug_Trace_Titre(Titre)
+	;Changement du titre de la fenêtre de trace
+	1 Titre A = " "  			;Nouveau titre
+
+beginp
+
+	xmetitle(Titre)
+
+endp
+
+;*
+public procedure ug_Trace_Debut(TxtFen,Abandon)
+	;Initialisation de la trace
+	1 TxtFen A = " "			;Titre de la fenêtre
+	1 Abandon B = true		;Affichage du bouton "Abandon" si True Abandon auto si 2 à vous de gerer un trace abandon dans votre procedure
+
+beginp
+
+	sethourglasscursor
+	GetBegin
+
+	xmeload(XME_Trace)
+	
+	Abandon_Trace=Abandon
+	if Abandon
+		
+		xmesetattribut("Abandon",an_visibilite,av_visible)
+	else
+		xmesetattribut("Abandon",an_visibilite,av_cache)
+	endif
+
+	xmedisp(XME_Trace,1,xme_mode_gosub)
+
+	ug_Trace_Titre(TxtFen)
+	XmeFlush
+endp
+
+;*
+public function int ug_Trace_Abandon(FinProg)
+	;Contrôle l'abandon 
+	;Retour = 0 si on abandonne, 1 sinon
+	1 FinProg 1,0=False
+beginf
+	if FinProg=True and Abandon_Trace<>True | Freturn(1) | endif
+	if getchar() 
+		;if harmony.Key = k_f9
+			if ug_OuiNon(26) = true
+				;Programexit
+				if FinProg=True
+					if ug_Xmt_Call(mz.MtCle,"Ugu_Trace_Abandon")<>'I'
+						G3_Fin_Prog()
+					endif
+				else
+					ProgramExit
+				endif
+				freturn(0)
+			endif
+		;endif
+	endif
+
+	freturn(1)
+
+endf
+
+
+
+;*
+public procedure ug_Trace_Sel(TxtSel)
+	;Affichage sélection dans la trace
+	1 TxtSel 100 = " " 			;Texte Sélection
+
+beginp
+
+	uge_Sel.lib100 = fstring("B",TxtSel)
+	xmedispv(XME_Trace,2,xme_mode_gosub)
+	xmeret
+	xmeflush	
+
+	ug_Trace_Abandon()
+endp
+
+;*
+public procedure ug_Trace_Trt(TxtTrt,IdemSel)
+	;Affichage traitement dans la trace
+	1 TxtTrt 100 = " "			;Texte Traitement
+	1 IdemSel B = true			;Texte identique a la selection si vide
+
+beginp
+
+	if TxtTrt = system.Esp 
+		if IdemSel
+			uge_trt.Lib100 = uge_sel.Lib100
+		endif
+	endif
+
+	uge_Trt.lib100 = fstring("B",TxtTrt)
+	xmedispv(XME_Trace,3,xme_mode_gosub)
+	xmeret
+	xmeflush	
+
+	ug_Trace_Abandon()
+endp
+
+;*
+public procedure ug_Trace_Fin
+	;Fermeture de la fenêtre trace
+
+beginp
+
+	setnormalcursor
+	GetEnd
+
+	xmeret
+
+endp
+
+;*
+;* RESERVATION
+;*
+
+;* 
+public function ptr ug_share(&Fic,Valeur,code,AffMess,NbEssai)
+	;Gestion d'une réservation
+	;Retour : 0 = pas d'erreur, autre = erreur
+	record * htdf fic	 			;TDF
+	1 Valeur S						;Valeur à réserver
+	1 code 1							;Code "P", "R", "F", "L"
+	1 AffMess B = true			;Afficher un message pour réessayer
+	1 NbEssai 5,0 = 1000			;Nombre d'essai avant de refuser la resa
+
+	1 St X=1
+	1 vI 5,0 = 0
+
+beginf
+	NbEssai=Condition(NbEssai=0,1,NbEssai)
+	Loop vI < 1000 and st <> 0
+		st = Hshare(fic," " & Valeur,code)
+		vI++
+		if vI = NbEssai and st <> 0 and code <> "L"
+			if AffMess
+				if ug_OuiNon(4,1,nospaces(valeur))			
+					vI = 0
+				endif
+			endif
+		endif
+	endloop
+			
+	freturn(st)	
+
+endf
+
+;*
+;*	DIVISION
+;*
+
+;*
+public function int ug_Divise(N1,N2,Div1,AffMess)
+	;Effectue la division de deux chiffres
+	;Retour : Résultat de la division
+	1 N1 17,9	 					;Nombre à diviser
+	1 N2 17,9						;Diviseur
+	1 Div1 B = true				;Divise par 1 si diviseur = 0
+	1 AffMess B = false			;Affiche un	message lorsque le diviseur vaut 0
+
+beginf
+
+	if n2 = 0 and div1
+		n2 = 1
+	endif
+
+	if n2 = 0
+		if AffMess
+			ug_alert(12)
+		endif
+		freturn(0)
+	else
+		freturn(N1/N2)
+	endif
+
+endf
+
+;*
+;*	Initialisation programme
+;*
+
+;*
+public procedure ug_Init(Menu,Masque,BO,Page)
+	;Initialisation d'un programme
+	1 Menu B = true				;Appel depuis un menu
+	1 Masque B = true				;Gestion d'un masque écran
+	1 BO B = true					;Présence barre d'outils MAIN
+	1 Page 2,0 = 1					;Page principale pour chargement barre d'outils et caractéristiques
+
+	1 idBO L
+	1 MasqueDebut B=True
+beginp
+	masquedebut=masque
+	PingLocal("ug_mz",mz)
+	if menu
+		if pingreceive("ZECHANGE",mz) <> 0
+			ug_erreur(5,false)
+			programexit
+		endif
+	else
+		masque = false				;Impossible de gérer un masque si pas de menu
+		if pingreceive("ZECHANGE",mz) = 0
+			masque=condition(mz.mecle<>" ",True,False)
+		elsif seek_muser(system.user) <> 0
+			ug_erreur(10,false,system.user)
+			programexit
+		else
+			PingLocalreceiveAndDelete("ug_mz",mz)
+			mz.dos = muser.dos
+			mz.Etb = muser.Etb 			;20100323_001
+			mz.Depo = muser.depo			;20100323_001
+			mz.titre2="Programme " & system.znomprog
+		endif
+	endif
+
+	seek_soc(mz.dos)
+	XmeTitle(Soc.Nom && Condition(mz.Titre2," - ","") & mz.Titre2 && "")
+
+	ProgramSetComment(mz.Titre2)
+	
+	if mz.Etb <> system.Esp				;20100323_001
+		seek_ets(mz.Etb)					;20100323_001
+	endif										;20100323_001
+
+	if masque  or (masquedebut=True and mz.MeCle<>" ")
+		if mz.mecle<>" "
+			xmeload(mz.mecle)
+			xmeinfopage(mz.mecle,page)
+			XmeSetWindowSize(mz.mecle,page,harmony.opara3,harmony.opara4)
+			;xmetitle(mz.titre2)
+			XmeTitle(Soc.Nom && Condition(mz.Titre2," - ","") & mz.Titre2 && "")
+	
+			if BO
+				idbo = xmetoolbargetid(mz.mecle,"MAIN",true)
+				xmetoolbarsetwindow(idbo,mz.mecle,page)
+			endif
+		endif
+	endif
+
+endp
+;*
+Public Procedure ug_Affiche_Masque(BO,Page)
+; Utilise le Mz.mecle pour l'affichage du menu
+	1 BO B = true					;Présence barre d'outils MAIN
+	1 Page 2,0 = 1					;Page principale pour chargement barre d'outils et caractéristiques
+
+	1 idBO L
+beginp
+	xmeload(mz.mecle)
+	xmeinfopage(mz.mecle,page)
+	XmeSetWindowSize(mz.mecle,page,harmony.opara3,harmony.opara4)
+	xmetitle(mz.titre2)
+
+	if BO
+		idbo = xmetoolbargetid(mz.mecle,"MAIN",true)
+		xmetoolbarsetwindow(idbo,mz.mecle,page)
+	endif
+endp
+
+;*
+public function int ug_Controle_Cles(Dico,Fic,AffMess)
+	;Vérification des clés d'un fichier entre le dictionnaire et le fichier physique
+	;Retour : 0 si correct, 1 en cas d'anomalie
+	1 Dico S												;Nom du dictionnaire (Ex : GTFDD.DHSD)
+	1 Fic S												;Nom du fichier a tester dans ce dictionnaire (Ex : GTFENT)
+	1 AffMess B = true								;Affiche un message en cas d'anomalie
+
+	record ddsys.dhsd cles clesD
+	record ddsys.dhsd cles clesF
+	1 idDico L
+	1 Retour 8096
+	1 cr x = 0
+	1 NomFic 256
+	1 NomData 256
+	1 Status x
+	 
+beginf
+
+  	if DDInterface(DD_OPEN,idDico,Dico,retour,1) <> 0
+  		cr = 1
+	else
+		
+		if DDInterface(DD_FILEFIND,idDico,Fic,retour) <> 0
+		 	cr = 1
+		else
+			
+			NomFic = HmpSeek(Retour,"NomFichier")
+
+	 		if DDInterface(DD_HSIREAD,idDico,,clesD) <> 0
+				cr = 1
+			else
+		
+				if HsiRead(NomFic,nomdata,clesF,status,abort=false) <> 0
+					cr = 1
+				else
+				 	if ClesF <> ClesD 
+						cr = 1						
+					endif
+				endif
+			endif
+		endif
+		  	
+  		DDInterface(DD_CLOSE,idDico,Dico,retour,1)
+  	endif
+
+	if cr = 1 and AffMess
+	  	ug_alert(13,Fic)
+	endif	
+
+	freturn(cr)
+
+endf
+;*
+Public function Long ug_Ouvrir_Dico(NomDico)
+; Ouverture Du dico
+; Retour IdDico
+1 NomDico 50
+1 IdDico L
+1 Buffer S
+beginf
+	SetHourGlassCursor
+	LstDico=ug_Liste("ug_Liste_Dico_Ouvert",False)
+
+	NomDico=Fstring("U",NomDico)
+
+	ListBegin(LstDico)
+	if ListFind(LstDico,1,Size(NomDicoE),NomDico,EnregDico)=0
+		if DDInterface(DD_OPEN,IdDico,NomDico,Buffer,Nivo)=0
+			EnregDico=" "
+			NomDicoE=NomDico
+			IdDicoE=IdDico
+			ListAddEnd(LstDico,EnregDico)
+		endif	
+	else
+		IdDico=IdDicoE
+	endif
+	SetNormalCursor
+
+	freturn(IdDico)
+endf
+;*
+Public Procedure ug_Fermer_Dico(NomDico)
+; Fermeture du Dico precedemment ouvert
+1 NomDico 50
+
+1 Buffer S
+beginp
+	SetHourGlassCursor
+	LstDico=ug_Liste("ug_Liste_Dico_Ouvert",False)
+
+	NomDico=Fstring("U",NomDico)
+
+	ListBegin(LstDico)
+	if ListFind(LstDico,1,Size(NomDicoE),NomDico,EnregDico)>0
+		DDInterface(DD_CLOSE,IdDicoE,NomDico,Buffer,Nivo)
+		ListDelete(LstDico)
+	endif
+	SetNormalCursor
+endp
+;*
+Public Function Char ug_Lancer_Cmd_Dico(NomDico,Cmd,Parametre)
+;
+1 NomDico 50
+1 Cmd     3,0 ; Ex : DD_TABLEFIND
+1 Parametre S
+
+1 Buffer S
+beginf
+	LstDico=ug_Liste("ug_Liste_Dico_Ouvert",False)
+
+	NomDico=Fstring("U",NomDico)
+
+	ListBegin(LstDico)
+	if ListFind(LstDico,1,Size(NomDicoE),NomDico,EnregDico)>0
+		DDInterface(Cmd,IdDicoE,Parametre,Buffer,Nivo)
+	endif
+	freturn (Buffer)
+endf
+
+
+;*
+;* FICHIER ET REPERTOIRE
+;*
+
+Public Function Long ug_Parcourir_Rep(Rep)
+; Lecture d'un Repertoire "ug_Liste_FichierRepertoire"
+1 Rep S
+1 Lst L
+beginf
+	Lst=ug_Liste("ug_Liste_FichierRepertoire",false)
+
+
+
+	freturn (Lst)
+endf
+
+
+
+
+;*
+public procedure ug_Select_Fichier_Divalto(&result,pfiltre,open)
+	;Ouvre la fenêtre de sélection d'un fichier existant (DIVALTO)
+	;Retour : Result contient le nom du fichier sélectionné
+	1 Result	1000					;Nom du fichier a ouvrir 
+	1 pFiltre 256 = "*.*"		;Filtre (par exemple "Excel|*.xls;*xlsx"
+	1 open B = false				;Ouverture du fichier (shell)
+
+	record ddsys.dhsd efilebox ef
+beginp
+	
+	ef.fbtitre = "Ouverture de fichier"
+	ef.fbfiltre = pfiltre
+	ef.fbifiltre = 1
+	ef.fbop = HAR_FOR_OPEN
+	ef.fbflags = HAR_FILEMUSTEXIST
+	ef.fbtri = SORT_BY_NAME
+	
+	if filebox(ef,nospaces(result))
+		if open
+			winshellexecute("open",result,,,SW_SHOWMINIMIZED)
+		endif		
+	endif
+
+endp
+
+;*
+public procedure ug_Select_Fichier(&Result,pFiltre,open)
+	;Ouvre la fenêtre de sélection d'un fichier existant (WINDOWS)
+	;Retour : Result contient le nom du fichier sélectionné
+	; Prise en compte des clients leger
+	1 Result	1000					;Nom du fichier a ouvrir 
+	1 pFiltre 256 = "*.*"		;Filtre (par exemple "Excel|*.xls;*xlsx"
+	1 open B = false				;Ouverture du fichier (shell)
+
+	1 Bufopen 700
+	 2 Flags L 
+	 2 Filtre 256 
+	 2 IndexFiltre X 
+	 2 IndexNom X 
+	 2 IndexExtension X 
+	 2 RepertoireInitial 256 
+	 2 Titre 80 
+	 2 ExtensionDefaut 4
+
+	1 FicArrivee 1000
+	1 FicDepart 1000
+		 
+beginp
+
+	Bufopen = " "
+	Filtre = pFiltre 
+	IndexFiltre = 1
+	Titre = "Ouverture de fichier"
+	Flags = OFN_EXPLORER + OFN_FILEMUSTEXIST 
+	
+	if WinGetOpenFileName(Bufopen,Result)
+		if ServiceModeTransport>0
+			FicDepart=Result
+			FicArrivee=WinGetTempPath & "\" & FileNameLastSegment(FicDepart)
+			if LCWinUpload(Result,FicArrivee,False,ToujoursCreer=True)=0
+		 		Result=FicArrivee
+			else
+				MessageBox(WinGetTextError(LCWinGetLastError),"Erreur",mb_iconstop)
+			endif
+			if open
+				LcWinShellExecute("open",FicDepart,,,SW_SHOWMINIMIZED)
+			endif		
+		else
+			if open
+				winshellexecute("open",result,,,SW_SHOWMINIMIZED)
+			endif		
+		endif
+	endif
+
+endp
+;*
+public function char ug_Select_Fichier_SPE(vFiltre,vTitre,vFlags,vIndexFiltre,vRepertoireInitial,vExtensionDefaut,open,SelectWin)
+	;Ouvre la fenêtre de sélection d'un fichier existant (WINDOWS)
+	;Retour : Result contient le nom du fichier sélectionné
+	; Prise en compte des clients leger
+	1 Result	1000					;Nom du fichier a ouvrir 
+	1 vFiltre 256 = "*.*"		;Filtre (par exemple "Excel|*.xls;*xlsx"
+	1 open B = false				;Ouverture du fichier (shell)
+
+	1 Bufopen 700
+	 2 Flags L 
+	 2 Filtre 256 
+	 2 IndexFiltre X 
+	 2 IndexNom X 
+	 2 IndexExtension X 
+	 2 RepertoireInitial 256 
+	 2 Titre 80 
+	 2 ExtensionDefaut 4
+	
+	1 vFlags L=OFN_EXPLORER + OFN_FILEMUSTEXIST ; OFN_* pour Divalto HAR_*
+	1 vTitre 80="Ouverture de fichier"			  ; Titre du Message
+	1 vIndexFiltre X=1								  ; IndexFiltre
+	1 vRepertoireInitial 256=" "					  ; Repertoire
+	1 vExtensionDefaut 4=" "	 					  ; Extension par defaut
+	1 SelectWin 1,0=True								  ; True pour Affichage Windows - False pour Affichage Divalto
+	1 FicArrivee 1000
+	1 FicDepart 1000
+beginf
+	if SelectWin=True
+		Bufopen = " "
+		Filtre = vFiltre 
+		IndexFiltre = vIndexFiltre
+		Titre = vTitre
+		Flags = vFlags
+		ExtensionDefaut=vExtensionDefaut
+		RepertoireInitial=vRepertoireInitial
+		
+		if WinGetOpenFileName(Bufopen,Result)
+			if ServiceModeTransport>0
+				FicDepart=Result
+				FicArrivee=WinGetTempPath & "\" & FileNameLastSegment(FicDepart)
+				if LCWinUpload(Result,FicArrivee,False,ToujoursCreer=True)=0
+			 		Result=FicArrivee
+				else
+					MessageBox(WinGetTextError(LCWinGetLastError),"Erreur",mb_iconstop)
+				endif
+				if open
+					LcWinShellExecute("open",FicDepart,,,SW_SHOWMINIMIZED)
+				endif		
+			else
+				if open
+					winshellexecute("open",result,,,SW_SHOWMINIMIZED)
+				endif		
+			endif
+
+		endif
+	else																			  
+		result=Win_Dialogue_Fichier_Ouvrir(vRepertoireInitial, vExtensionDefaut, vfiltre, vExtensionDefaut, vTitre, vFlags)
+	endif
+	Freturn(Result)
+endf
+
+
+
+;*
+public function char ug_Select_Rep
+	;Selection d'un répertoire
+
+	1 Result 256
+
+beginf
+
+	if WinShBrowseForFolder(0,"","Sélectionner un répertoire", "Veuillez choisir un répertoire", BIF_STATUSTEXT,result)
+		freturn(result)
+	endif
+
+	freturn("")
+
+endf
+;*
+
+public function char ug_Select_Rep_Spe(Racine,Repertoire,Titre,TexteIntFenetre,Options,SelectWin)
+	;Selection d'un répertoire
+	; 
+	;Option Ouverture  	Windows
+	;BIF_DONTGOBELOWDOMAIN	; Ne pas montrer les machines du voisinage réseau
+	;BIF_STATUSTEXT  			; Affichage du répertoire courant dans la fenêtre
+	;BIF_EDITBOX  				; En version 7.41 l'utilisateur peut saisir son choix au clavier.
+	;							Divalto
+	;HAR_NOCHANGEDIR 		;L'utilisateur n'a pas le droit de changer de répertoire. Le bouton Aller Vers ainsi que le bouton permettant de remonter dans le répertoire parent est caché.
+	;HAR_FILEMUSTEXIST	;Le répertoire retourné par la fonction doit obligatoirement exister.
+	;HAR_NOBUTTONIMPLI	;Le bouton permettant de modifier les chemins implicites est caché.
+	;HAR_NOCREATEBUTTON	;Le bouton permettant de créer un répertoire est caché.
+	;HAR_CHANGEIMPLIONLY	;L'utilisateur doit choisir un répertoire dans la liste de ses répertoires implicites. Le bouton Aller Vers est caché.
+	1 Result 256
+	1 Racine L=0 ;CSIDL_... pour afficher des repertoire speciaux 
+	1 Repertoire 500 =" " ; Repertoire initial
+	1 Titre 100="Selectionner un Repertoire"
+	1 TexteIntFenetre 100="Veuillez choisir un répertoire"  ; Texte Interieur Fenetre
+	1 Options L	=0 ; (par defaut) BIF_STATUSTEXT    Si Divalto  HAR_NOCHANGEDIR	+(par defaut) 
+	1 SelectWin 1,0=True ; Selection Dossier Windows ou Divalto
+	record ddsys.dhsd eDirBox
+beginf
+
+	if SelectWin=True
+		options=Condition(options=0,BIF_STATUSTEXT,options)
+		;BIF_DONTGOBELOWDOMAIN	; Ne pas montrer les machines du voisinage réseau
+ 		;BIF_STATUSTEXT  			; Affichage du répertoire courant dans la fenêtre
+ 		;BIF_EDITBOX  				; En version 7.41 l'utilisateur peut saisir son choix au clavier.
+
+		if WinShBrowseForFolder(Racine,Repertoire,Titre,TexteIntFenetre , Options,result)
+			freturn(result)
+		endif
+	else
+		;HAR_NOCHANGEDIR 		;L'utilisateur n'a pas le droit de changer de répertoire. Le bouton Aller Vers ainsi que le bouton permettant de remonter dans le répertoire parent est caché.
+		;HAR_FILEMUSTEXIST	;Le répertoire retourné par la fonction doit obligatoirement exister.
+		;HAR_NOBUTTONIMPLI	;Le bouton permettant de modifier les chemins implicites est caché.
+		;HAR_NOCREATEBUTTON	;Le bouton permettant de créer un répertoire est caché.
+		;HAR_CHANGEIMPLIONLY	;L'utilisateur doit choisir un répertoire dans la liste de ses répertoires implicites. Le bouton Aller Vers est caché.
+
+		options=Condition(options=0,HAR_FILEMUSTEXIST,options)
+
+
+		eDirBox.Dbflags =options
+		eDirBox.Dbiimpli=" "
+		eDirBox.Dbrep	 =" "
+		eDirBox.Dbrepdep=Repertoire
+		eDirBox.Dbtitre =Titre
+		if DirectoryBox(eDirBox,Result)
+		 	freturn(result)
+		endif
+	endif
+
+	freturn("")
+
+endf
+
+
+;*
+public function int ug_Creer_Repertoire(Rep,AffMess)
+	;Création d'un répertoire
+	;Retour = 0 si création OK, 1 si erreur lors de la création.
+	1 rep 1000
+	1 AffMess B = false
+	1 i 2,0 = 0
+
+beginf
+
+	loop i < 10 and not winsetcurrentdirectory(nospaces(rep))
+		wincreatedirectory(nospaces(rep))
+		i++
+	endloop
+
+	if not winsetcurrentdirectory(nospaces(rep))
+		if AffMess
+			ug_alert(20,nospaces(rep))
+		endif
+		freturn(1)
+	endif
+
+	freturn(0)
+
+endf
+
+;*
+public function long ug_Creer_Fichier(NomFic,Select)
+	;Création d'un fichier. Select permet d'ouvrir la boite de dialogue afin de préciser le lieu
+	;Retour : Identifiant du fichier ou 0 si erreur
+	1 NomFic 1000					;Nom du fichier a créer
+	1 Select B = false			;Selectionner le répertoire de création
+
+	1 Bufopen 700
+	 2 Flags L 
+	 2 Filtre 256 
+	 2 IndexFiltre X 
+	 2 IndexNom X 
+	 2 IndexExtension X 
+	 2 RepertoireInitial 256 
+	 2 Titre 80 
+	 2 ExtensionDefaut 4
+	1 idFic L
+	1 rep 1000
+	
+beginf
+
+	if select
+
+		Bufopen = " " 
+		IndexFiltre = 1
+		Titre = "Création de fichier"
+		Flags = OFN_EXPLORER
+
+		if not WinGetOpenFileName(Bufopen,nospaces(NomFic))
+			freturn(0)
+		endif
+	endif
+
+	;Création du répertoire si inexistant
+	rep = filenamebase(nomfic)
+	if ug_Creer_Repertoire(rep) <> 0
+		freturn(0)
+	endif
+
+	idfic = wincreatefile(NomFic && $00,generic_write,file_share_write,0,Create_Always,0,0)
+
+	if idfic <= 0
+		ug_alert(8,NomFic)
+	endif
+
+	freturn(idfic)
+		
+endf
+;*
+
+Public Function Char_TDF ug_Creation_Fichier(Nomfichier,Type,EraseFichier,OuvertureFichier)
+; Creation d'un fichier
+; Retour par Pinglocal(Ug_Fic,Fic)
+1 Nomfichier       S
+1 OuvertureFichier 1,0=True
+1 EraseFichier 1,0=True
+1 Type 1="U" ; U ou N 
+Record * htdf fic
+beginf
+	fic.Name=Nomfichier	
+	Loop Fopen(fic,"P")<>0
+		HcreateFile(fic.Name,Type)	
+	endloop
+	if OuvertureFichier=False	
+		FClose(Fic)
+	endif
+	if EraseFichier=True
+		Herase(fic)
+	endif
+	PingLocal("ug_Fic",Fic)
+	freturn (fic)
+endf
+
+
+;*
+public procedure ug_Fichier_Format_Windows(&fic)
+	;Converti un chemin Divalto en chemin Windows
+	1 fic 256
+	1 resultat 256
+	1 serveur 32
+	1 extension 6
+	1 nom 256
+	1 st L
+	record * htdf ficA
+beginp
+
+	st = filenameanalyse(nospaces(fic),resultat,serveur,nom,extension)
+	if extension<>" "
+		ficA.name=fic
+		if Fopen(ficA,"F")=0
+			fic=GetSystemFileName(ficA)		
+			fclose(ficA)
+		endif		
+	endif
+	switch st
+		case 0			;Local
+			fic = resultat
+		case -1			;Serveur XLAN
+			fic = "//" & nospaces(serveur) & nospaces(resultat)
+			fic = modify("/","\",fic)
+		default 			;RAS
+	endswitch
+	Mid(fic,3)=Modify("\\","\",Mid(fic,3))
+endp
+;*
+Public function char ug_Lire_Fichier(NomFichier,SeparateurLigne)
+; Lecture d'un fichier
+; le separateur des lignes est $ODOA
+; Retour du Texte du fichier
+1 NomFichier A
+1 SeparateurLigne 1=$0d0a
+Record * htdf fic
+1 Texte S
+1 Ligne 10000
+beginf
+	fic.Name=Nomfichier
+	if hopen(fic,"P")=0
+		Loop Hread(fic,Ligne)=0
+			if Ligne <>" "
+				Texte &=Ligne && SeparateurLigne
+			endif
+		endloop
+		Texte=Left(Texte,Length(Texte)-1)
+		hclose(fic)
+	endif
+	freturn (Texte)
+endf
+
+;*
+;* INPUTBOX
+;*
+
+;*
+public procedure ug_Input_init(&uge_input_W,titre,lib,type,zoom)
+	;Initialise l'enregistrement et charge les paramètres nécessaires a la saisie de l'input
+	record ugd_outils.dhsd uge_input uge_input_W
+	1 titre > ugd_outils.dhsd ug_input_t = "Saisie d'une valeur"
+	1 Lib > ugd_outils.dhsd ug_input_l = "Veuillez saisir la valeur"
+	1 Type > ugd_outils.dhsd ug_input_type = " "		;(A)lpha, (N)umérique, (D)ate, (L)iste, (P)assword 
+	1 zoom > ugd_outils.dhsd ug_input_zoom = 0
+
+beginp
+
+	init uge_input_W = " "
+
+	uge_input_W.ug_input_T = titre
+	uge_input_W.ug_input_L = lib
+	uge_input_W.ug_input_Type = type
+	uge_input_W.ug_input_zoom = zoom
+
+endp
+
+;*
+procedure ug_input_charger_liste(uge_input_W)
+	;Transfère le tableau dans la liste input
+	record ugd_outils.dhsd uge_input uge_input_W
+
+	1 Lst_input L
+	1 i 3,0
+
+beginp
+
+	lst_input = ug_liste("LST_INPUT")
+
+	i = 1
+	loop i <= 50 and uge_input_W.ug_input_Lst(i) <> system.Esp
+		listaddend(lst_input,uge_input_w.ug_input_Lst(i))
+		i++
+	endloop
+ 
+endp
+
+;*
+public function int ug_input_saisie(&uge_input_W)
+	;Gère la saisie de l'input
+	;La valeur de retour est transmise par l'enregistrement (Alpha,Num,Date et Alpha pour liste !)
+	;Retour : 0 = Validé, 1 = abandon, 2 = Anomalie
+	record ugd_outils.dhsd uge_input uge_input_W
+
+	1 Page 2,0
+	1 fini 1,0 = 0
+	1 idbo L
+
+beginf
+
+	;Choisi la page en fonction du type 
+	switch fstring("U",uge_input_w.ug_input_type)
+		case "A" | page = 1
+		case "N" | page = 2
+		case "D" | page = 3
+		case "L"
+			page = 4
+			ug_input_charger_liste(uge_input_W)				;Charge la liste avec les éléments
+		case "P"	| page =5
+		default
+			page = 0
+	endswitch
+
+	;Input inconnu
+	if page = 0							
+		freturn(2)
+	endif
+
+	;Affecte à la variable publique
+	uge_input = uge_input_W
+
+	;Saisie
+	xmeload(XME_INPUT)
+  	idbo = xmetoolbargetid(XME_INPUT,"Main",true)
+	xmetoolbarsetwindow(idbo,XME_INPUT,Page)
+	
+	;Titre
+	xmedispv(XME_INPUT,page,xme_mode_gosub)
+ 	XmeTitle(uge_input.ug_input_t)
+
+	;Gérer le zoom ?
+	xmetoolbarenablebutton(idbo,"zoom",condition(uge_input_w.ug_input_zoom = 0,false,true))
+	
+	xmeinput(XME_INPUT,page,1,XME_MODE_SETCURRENT)
+	do
+		switch harmony.key
+	
+			case k_f8
+				zoom_call(uge_input_w.ug_input_zoom)
+				harmony.Retour = xmenext_ressaisie
+
+			case k_f9
+				fini = 2
+
+			case k_f10
+				uge_input_W = uge_input
+				fini = 1
+
+			default
+				harmony.Retour = xmenext_point_sequence
+				harmony.Cplretour = 1
+
+		endswitch
+
+	while fini = 0
+		xmenext(harmony.Retour,harmony.Cplretour)
+	wend
+
+	xmeret 				;Page gosub
+
+	freturn(fini-1)
+
+endf
+;*
+Public Function char ug_Appli_Valeur(RetourApplic,P1)
+; RetourApplic=1 recherche le code appli par debut du dico
+; RetourApplic=0 recherche le prefixe dico par le code Appli
+; RetourApplic=2 recherche le code appli par le code appli des version 6
+
+1 RetourApplic 1,0=True ; True="DAV etc .." False="A5 GT CC etc .."
+1 P1           A
+
+1 Pnum 3,0
+1 Retour > A5dd.dhsd Applic
+beginf
+	if RetourApplic=True
+		P1=Fstring("U",Left(P1,2))
+		A5fTab.Key="L"
+		Loop Next_MAPPLIC('',A5ftab.Key)=0
+			if P1 = mApplic.Prefixe
+				freturn(mApplic.Applic)
+			endif
+		endloop
+	elsif RetourApplic=False
+		if Seek_mApplic(p1)=0		
+			freturn(mApplic.Prefixe)
+		endif
+	elsif RetourApplic=2
+		pNum=val(p1)/10 T
+		Switch pNum
+			case 0 | Retour="DAV"
+			case 1 | Retour="DCPT"
+			case 2 | Retour="DPAIE"
+			case 3 | Retour="DRT"
+			case 4 | Retour="DREG"
+			case 5 | Retour="COMMUN"
+			case 6 | Retour="DDOC"
+			case 7 | Retour="DAFF"
+			case 8 | Retour="DSP"
+			case 9 | Retour="DQUAL"
+			default
+				
+		endswitch
+	endif
+	freturn (Left(Retour))
+endf
+;*
+Public Function char Ug_Get_NomBase_AvecTable(Table,Applic)
+; Retour du nom de la base Utilisé (par les records SQL)
+; 
+1 table 50=" " ; Si vide retour de la base uniquement
+1 Applic > A5dd.dhsd Applic="DAV" ; DAV DCPT
+
+1 nom 50 
+
+recordsql gtrsdos.dhoq Dossier
+recordsql gtrsdos.dhoq Dos_Prod
+recordsql gtrsdos.dhoq Dos_Rt
+recordSql gtrsdos.dhoq Dos_Aff
+beginf
+	; A COMPLETER
+	Switch Applic
+		case "DAV"
+			Dossier.GetInfo(RSQL_DATABASE_NAME,nom)	
+		Case "DRT"
+			Dos_Rt.GetInfo(RSQL_DATABASE_NAME,nom)
+	endswitch
+	if Table<>" "
+		nom = "[" && fstring("U",nom) && "].[dbo].[" && fstring("U",table) && "]"
+	endif
+	freturn nospaces(nom) 
+
+endf
+
+
+;*
+;main
+;	pinglocal("batch",1)
+;	ug_alert(10118)

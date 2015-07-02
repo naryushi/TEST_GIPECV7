@@ -1,0 +1,1182 @@
+;>xwinobj      dictionnaire
+[Dictionnaire]
+Version=6,,,20120424082352,ROOT                
+Nom=gtfdd.dhsd,/v63/achat-vente/source/dav/gtfdd.dhsd,1
+[CHAMP]
+Version=1,20110531142309,GIPEC               ,20110531143013,GIPEC               
+Nom=Des1,Désignation 1,1
+Gel=1
+Nature=40
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20110531142323,GIPEC               ,20110531143017,GIPEC               
+Nom=Des2,Désignation 2,1
+Gel=1
+Nature=40
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20110810105958,ROOT                ,20120227161041,ROOT                
+Nom=ug_achat,En Commande fournisseur,1
+DateM=82F637BF5DF5CC01
+Gel=1
+Nature=20,D2
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120313164935,ROOT                ,20120313164935,ROOT                
+Nom=ug_Aff,Affichage de la zone,1
+Gel=1
+Nature=1,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120319172125,ROOT                ,20120319172125,ROOT                
+Nom=ug_AffBobineFinie,Affichage des Bobines Finie,1
+Gel=1
+Nature=1,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120423173942,ROOT                ,20120423173942,ROOT                
+Nom=ug_AffCliche,Aucun Affichage car Cliclé,1
+Gel=1
+Nature=1,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120319140923,ROOT                ,20120319140923,ROOT                
+Nom=ug_AffDecoupe,Affichage des Decoupes,1
+Gel=1
+Nature=1,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120320094637,ROOT                ,20120320094637,ROOT                
+Nom=ug_AffNegoce,Aucun Affichage car Negoce,1
+Gel=1
+Nature=1,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120228150514,ROOT                ,20120228150514,ROOT                
+Nom=ug_BonFab,Bon de Fabrication,1
+Gel=1
+Nature=32
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120227154009,ROOT                ,20120227154009,ROOT                
+Nom=ug_Cdqte,En commande Client,1
+Gel=1
+Nature=20,D2
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120228165127,ROOT                ,20120228165127,ROOT                
+Nom=ug_Code,Code,1
+Gel=1
+Nature=8
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20110601151448,GIPEC               ,20110601151639,GIPEC               
+Nom=ug_code_tiers,Code tiers concurrent,1
+Gel=1
+Nature=8
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120319165730,ROOT                ,20120319165730,ROOT                
+Nom=ug_CodeE,Code Pour l'entete,1
+Gel=1
+Nature=8
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120402114938,ROOT                ,20120402114938,ROOT                
+Nom=ug_CodeEpaisseur,Code Epaisseur,1
+Gel=1
+Nature=8
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120217102554,ROOT                ,20120217102554,ROOT                
+Nom=ug_CodEvt,Code Evenement Visite,1
+Gel=1
+Nature=8
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20110621101621,ROOT                ,20120227105459,ROOT                
+Nom=ug_coe,Coefficient spécifique,1
+DateM=6EF343DE35F5CC01
+Gel=1
+Nature=6,2
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120402163142,ROOT                ,20120402163142,ROOT                
+Nom=ug_Com,Commentaire Tarif,1
+Gel=1
+Nature=60
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120227140440,ROOT                ,20120227140440,ROOT                
+Nom=ug_conf_tar,Confidentialité pour saisir tarif < au PV3,1
+Gel=1
+Nature=4
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20110614173016,ROOT                ,20110614173016,ROOT                
+Nom=ug_cpt_bqe,Compte de banque,1
+Gel=1
+Nature=8
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20110601165818,GIPEC               ,20110601165818,GIPEC               
+Nom=ug_date,Date de modif,1
+Gel=1
+Nature=D8
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120319113123,ROOT                ,20120319113123,ROOT                
+Nom=ug_Decoupe,Decoupe,1
+Gel=1
+Nature=1,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20110614115525,ROOT                ,20110614115525,ROOT                
+Nom=ug_departle,Depart le,1
+Gel=1
+Nature=15
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120217095636,ROOT                ,20120217095636,ROOT                
+Nom=ug_der_vis,Date de Derniere visite,1
+Gel=1
+Nature=D8
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20110810105942,ROOT                ,20120227154215,ROOT                
+Nom=ug_dispo,Stock disponible,1
+DateM=F07578FF5DF5CC01
+Gel=1
+Nature=20,D2
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120319104222,ROOT                ,20120319104222,ROOT                
+Nom=ug_Ean,Ean Etiquette,1
+Gel=1
+Nature=13
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120313104040,ROOT                ,20120313104040,ROOT                
+Nom=ug_faceimp,Face Impression (Recto / verso / les deux,1
+Gel=1
+Nature=1,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120217121826,ROOT                ,20120217121826,ROOT                
+Nom=ug_flag_Ignorer,Ignorer dans Detail des Ventes,1
+Gel=1
+Nature=1,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120417154724,ROOT                ,20120417154724,ROOT                
+Nom=ug_FlagNewXls,Une Nouvelle Feuille par Ligne,1
+Gel=1
+Nature=1,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120202162612,ROOT                ,20120202162612,ROOT                
+Nom=ug_Fonc,Fonction du Contact,1
+Gel=1
+Nature=8
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120319170636,ROOT                ,20120319170636,ROOT                
+Nom=ug_ImgBobineFini,Bobine Fini,1
+Gel=1
+Nature=25
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120312170529,ROOT                ,20120312170529,ROOT                
+Nom=ug_ImgSensImp,Image Sens Impression,1
+Gel=1
+Nature=25
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120319164231,ROOT                ,20120319164310,ROOT                
+Nom=ug_Info_Ent,Information Entete,1
+DateM=D204E4FCE605CD01
+Gel=1
+Nature=110
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120319164352,ROOT                ,20120402150502,ROOT                
+Nom=ug_Info_Mouv,Information mouvement,1
+DateM=10B15637D110CD01
+Gel=1
+Nature=450
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120202104002,ROOT                ,20120202104002,ROOT                
+Nom=ug_Infotrans,Information Transpoteur,1
+Gel=1
+Nature=30*2
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120228165748,ROOT                ,20120320171410,ROOT                
+Nom=ug_LibTb,Tableau de Lib,1
+DateM=09C7AB7BB406CD01
+Gel=1
+Nature=40*30
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120417122445,ROOT                ,20120417122613,ROOT                
+Nom=ug_NbCoul,Nombre de Couleur,1
+DateM=EA50D183841CCD01
+Gel=1
+Nature=3,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120217095702,ROOT                ,20120217111652,ROOT                
+Nom=ug_nbj_vis,Nombre de jours en Visite,1
+DateM=CA5C80445DEDCC01
+Gel=1
+Nature=4,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120320171000,ROOT                ,20120320171000,ROOT                
+Nom=ug_nbLang,Nombre de Langues,1
+Gel=1
+Nature=2,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120228165333,ROOT                ,20120228165333,ROOT                
+Nom=ug_NoAffListe,Numero d'affichage dans la liste,1
+Gel=1
+Nature=3,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120227155047,ROOT                ,20120227155047,ROOT                
+Nom=ug_OptiQte,Qte Optimale de Reapro,1
+Gel=1
+Nature=20,D2
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20110616140416,ROOT                ,20110616160254,ROOT                
+Nom=ug_pa,Prix d'achat spé,1
+DateM=45917D162E2CCC01
+Gel=1
+Nature=12,3
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20110601151634,GIPEC               ,20110601151634,GIPEC               
+Nom=ug_prix,Prix du concurrent,1
+Gel=1
+Nature=12,3
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120217095716,ROOT                ,20120217095716,ROOT                
+Nom=ug_proc_vis,Date de Prochaine visite,1
+Gel=1
+Nature=D8
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120319102319,ROOT                ,20120319102319,ROOT                
+Nom=ug_PtVert,Pt Vert,1
+Gel=1
+Nature=1,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20110616140512,ROOT                ,20110616142906,ROOT                
+Nom=ug_pv_cod,Code tarif vente spé,1
+DateM=2F6AECFB202CCC01
+Gel=1
+Nature=8*10
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20110616174812,ROOT                ,20110616174812,ROOT                
+Nom=ug_pv_cod2,Code tarif vente spé 2,1
+Gel=1
+Nature=8*5
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20110616140538,ROOT                ,20110616140559,ROOT                
+Nom=ug_pv_prix,Prix tarif vente spé,1
+DateM=F27E25C11D2CCC01
+Gel=1
+Nature=12,3*8
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120227161023,ROOT                ,20120227161023,ROOT                
+Nom=ug_Pxachat,Prix d'achat,1
+Gel=1
+Nature=12,2
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20110601151612,GIPEC               ,20110601151612,GIPEC               
+Nom=ug_qte,Quantité anuelle consommée,1
+Gel=1
+Nature=13,D2
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120202171836,ROOT                ,20120202171836,ROOT                
+Nom=ug_Remise,Remise,1
+Gel=1
+Nature=6,2*5
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120227155017,ROOT                ,20120227155017,ROOT                
+Nom=ug_SecuQte,Stock de Securité,1
+Gel=1
+Nature=20,D2
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120312161742,ROOT                ,20120312161750,ROOT                
+Nom=ug_SensImp,Sens Impression Face A/B,1
+Gel=1
+Nature=1,0*2
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120319104006,ROOT                ,20120319104006,ROOT                
+Nom=ug_Serie,Numero de Serie,1
+Gel=1
+Nature=8
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120227153921,ROOT                ,20120227153921,ROOT                
+Nom=ug_stk,Stock,1
+Gel=1
+Nature=20,D2
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120228165051,ROOT                ,20120228165051,ROOT                
+Nom=ug_TabNo,Table N°,1
+Gel=1
+Nature=2,0
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120217171434,ROOT                ,20120217171434,ROOT                
+Nom=ug_tacod,code Tarif,1
+Gel=1
+Nature=8
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120227135744,ROOT                ,20120319143403,ROOT                
+Nom=ug_Tacod_Mini,Tarif de reference Minimum,1
+DateM=22B464F3D405CD01
+Gel=1
+Nature=8*3
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120217171419,ROOT                ,20120217172102,ROOT                
+Nom=ug_tacodTb,Tableau de Tacod,1
+DateM=1C79F02390EDCC01
+Gel=1
+Nature=8*5
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120402164123,ROOT                ,20120402170410,ROOT                
+Nom=ug_TexCod,Code Texte Preenregistrée,1
+DateM=846899DBE110CD01
+Gel=1
+Nature=11*2
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120202171710,ROOT                ,20120202171710,ROOT                
+Nom=ug_tiers,Tiers,1
+Gel=1
+Nature=8
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120424082350,ROOT                ,20120424082350,ROOT                
+Nom=ug_TxtBF,Texte de bon de fabrication,1
+Gel=1
+Nature=100*4
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120423194427,ROOT                ,20120423194427,ROOT                
+Nom=ug_TxtEmailTar,Texte Email Tarif,1
+Gel=1
+Nature=250
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120423194524,ROOT                ,20120423194524,ROOT                
+Nom=ug_TxtEmailTarTb,Texte email tarif ,1
+Gel=1
+Nature=50*5
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20110609155630,TEST                ,20110609155630,TEST                
+Nom=ug_typ_mach,Code type de machine,1
+Gel=1
+Nature=20
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120319171750,ROOT                ,20120319171750,ROOT                
+Nom=ug_TypBobine,Recto / verso ,1
+Gel=1
+Nature=8*2
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20110616141423,ROOT                ,20110616152907,ROOT                
+Nom=ug_type_tarif,Type de tarif spé,1
+DateM=4C3B9F5E292CCC01
+Gel=1
+Nature=1,0*5
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120319090958,ROOT                ,20120319090958,ROOT                
+Nom=ug_TypImp,Type d'impression,1
+Gel=1
+Nature=8
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120227154210,ROOT                ,20120227154210,ROOT                
+Nom=ug_VenQte,Quantite Vendue pour un an,1
+Gel=1
+Nature=20,D2
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120313164916,ROOT                ,20120320171453,ROOT                
+Nom=ugtb_Aff,Tableau d'affichage des zones,1
+DateM=7D1E9E95B406CD01
+Gel=1
+Nature=1,0*30
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120319121119,ROOT                ,20120319121119,ROOT                
+Nom=ugtb_Code10,Tableau de 10 Code,1
+Gel=1
+Nature=8*10
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120312154244,ROOT                ,20120402150447,ROOT                
+Nom=ugtb_Code10_2,Table de Code,1
+DateM=04591E2ED110CD01
+Gel=1
+Nature=8*20*2
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120320112106,ROOT                ,20120320173037,ROOT                
+Nom=ugtb_Code10Bis,Tableau de ug_code,1
+DateM=076638C8B606CD01
+Gel=1
+Nature=8*20
+Flags=n,1,n,n,n,n,n,n
+[CHAMP]
+Version=1,20120417122650,ROOT                ,20120417122650,ROOT                
+Nom=ugtb_nbCoul,Tableau de nombre de couleur,1
+Gel=1
+Nature=3*2
+Flags=n,1,n,n,n,n,n,n
+[CHAMPR]
+nom=Des
+[CHAMPL]
+Nom=Des1,1,0,0,N,1
+Nom=Des2,41,0,0,N,1
+[/CHAMPL]
+nom=UArt
+[CHAMPL]
+Nom=ug_pa,1,0,0,N,1
+Nom=ug_pv_prix,13,0,0,N,1
+Nom=ug_type_tarif,109,0,0,N,1
+Nom=ug_pv_cod,114,0,0,N,1
+Nom=ug_pv_cod2,194,0,0,N,1
+Nom=ug_TypImp,234,0,0,N,1
+Nom=ug_CodeEpaisseur,242,0,0,N,1
+[/CHAMPL]
+nom=UCli
+[CHAMPL]
+Nom=ug_TexCod,1,0,0,N,1
+[/CHAMPL]
+nom=UEnt
+[CHAMPL]
+Nom=ug_departle,1,0,0,N,1
+Nom=ug_Infotrans,16,0,0,N,1
+Nom=ug_Info_Ent,76,0,0,N,1
+[/CHAMPL]
+nom=UG6T9
+[CHAMPL]
+Nom=ug_stk,1,0,0,N,1
+Nom=ug_achat,21,0,0,N,1
+Nom=ug_Cdqte,41,0,0,N,1
+Nom=ug_dispo,61,0,0,N,1
+Nom=ug_VenQte,81,0,0,N,1
+Nom=ug_SecuQte,101,0,0,N,1
+Nom=ug_OptiQte,121,0,0,N,1
+Nom=ug_Pxachat,141,0,0,N,1
+[/CHAMPL]
+nom=ug_Info_Ent
+[CHAMPL]
+Nom=ugtb_Code10,1,0,0,N,1
+Nom=ug_SensImp,81,0,0,N,1
+Nom=ug_faceimp,83,0,0,N,1
+Nom=ug_TypImp,84,0,0,N,1
+Nom=ug_Decoupe,92,0,0,N,1
+Nom=ug_TypBobine,93,0,0,N,1
+[/CHAMPL]
+nom=ug_Info_Mouv
+[CHAMPL]
+Nom=ugtb_Code10_2,1,0,0,N,1
+Nom=ug_PtVert,321,0,0,N,1
+Nom=ug_Serie,322,0,0,N,1
+Nom=ug_Ean,330,0,0,N,1
+Nom=ugtb_nbCoul,343,0,0,N,1
+Nom=ug_nbLang,349,0,0,N,1
+[/CHAMPL]
+nom=ug_LibTb
+[CHAMPL]
+Nom=Lib,1,0,0,N,1
+[/CHAMPL]
+nom=ug_tacodTb
+[CHAMPL]
+Nom=ug_tacod,1,0,0,N,1
+[/CHAMPL]
+nom=ug_TxtEmailTar
+[CHAMPL]
+Nom=ug_TxtEmailTarTb,1,0,0,N,1
+[/CHAMPL]
+nom=UGR001T1
+[CHAMPL]
+Nom=ug_der_vis,1,0,0,N,1
+Nom=ug_nbj_vis,9,0,0,N,1
+Nom=ug_proc_vis,13,0,0,N,1
+[/CHAMPL]
+nom=UGT041T1
+[CHAMPL]
+Nom=ug_tiers,1,0,0,N,1
+Nom=ug_Remise,9,0,0,N,1
+[/CHAMPL]
+nom=ugtb_Aff
+[CHAMPL]
+Nom=ug_Aff,1,0,0,N,1
+[/CHAMPL]
+nom=ugtb_Code10
+[CHAMPL]
+Nom=ug_CodeE,1,0,0,N,1
+[/CHAMPL]
+nom=ugtb_Code10_2
+[CHAMPL]
+Nom=ug_Code,1,0,0,N,1
+[/CHAMPL]
+nom=ugtb_Code10Bis
+[CHAMPL]
+Nom=ug_Code,1,0,0,N,1
+[/CHAMPL]
+nom=ugtb_nbCoul
+[CHAMPL]
+Nom=ug_NbCoul,1,0,0,N,1
+[/CHAMPL]
+nom=UMouv
+[CHAMPL]
+Nom=ug_typ_mach,1,0,0,N,1
+[/CHAMPL]
+nom=URcl
+[CHAMPL]
+Nom=ug_code_tiers,1,0,0,N,1
+Nom=ug_qte,9,0,0,N,1
+Nom=ug_prix,22,0,0,N,1
+Nom=ug_date,34,0,0,N,1
+[/CHAMPL]
+nom=USoc
+[CHAMPL]
+Nom=ug_cpt_bqe,1,0,0,N,1
+Nom=ug_Fonc,9,0,0,N,1
+Nom=ug_tacodTb,17,0,0,N,1
+Nom=ug_Tacod_Mini,57,0,0,N,1
+Nom=ug_conf_tar,81,0,0,N,1
+[/CHAMPL]
+nom=USocCrm
+[CHAMPL]
+Nom=ug_CodEvt,1,0,0,N,1
+[/CHAMPL]
+nom=Ut012
+[CHAMPL]
+Nom=ug_flag_Ignorer,1,0,0,N,1
+[/CHAMPL]
+nom=Ut036
+[CHAMPL]
+Nom=ug_BonFab,1,0,0,N,1
+Nom=ug_FlagNewXls,33,0,0,N,1
+[/CHAMPL]
+nom=UTar
+[CHAMPL]
+Nom=ug_pv_prix,1,0,0,N,1
+Nom=ug_coe,97,0,0,N,1
+Nom=ug_Com,103,0,0,N,1
+[/CHAMPL]
+nom=UXQ
+[CHAMPL]
+Nom=Lib80,1,0,0,N,1
+[/CHAMPL]
+[/CHAMPR]
+[TABLEU]
+Version=1,1989 1230000,MJV ,20100222151020,DEMO                
+Nom=Art,Article,1
+DateM=45917D162E2CCC01
+[TABLEU]
+Version=1,199911 90000,MJV ,20070702172924,DEMO                
+Nom=Ba,En-tête de production,1
+DateM=15214BC5BDBCC701
+[TABLEU]
+Version=1,1989 1240000,MJV ,20070702172402,DEMO                
+Nom=Cli,Client,1
+DateM=8C25C53968FECA01
+[TABLEU]
+Version=1,1989 5130000,MJV ,20050109105044,MARIE JO            
+Nom=Eart,Articles externes fournisseur,1
+DateM=637ECAAD3D07C701
+[TABLEU]
+Version=1,1989 1230000,MJV ,20070702165912,DEMO                
+Nom=Ent,En-tête de pièce,1
+DateM=62FABAF3E805CD01
+[CHAMPS]
+[ZoneVirtuelle]
+[/ZoneVirtuelle]
+[/CHAMPS]
+[TABLEU]
+Version=1,200010 90000,PB  ,20060905162126,MARIE JO            
+Nom=G5,Prog Interro tiers,1
+DateM=011CDC48B4F1CA01
+[TABLEU]
+Version=1,200010230000,PB  ,20060905162152,MARIE JO            
+Nom=G5t3,Prog Interro tiers articles,1
+DateM=3E98871E3007C701
+[TABLEU]
+Version=1,199011140000,MJV ,20050113135544,MARIE JO            
+Nom=G6,Enreg de travail nomenclature,1
+DateM=5B953B4BE898C901
+[TABLEU]
+Version=1,199911 90000,MJV ,20050113135545,MARIE JO            
+Nom=G6t1,Tableau nomenclature,1
+DateM=254E553CD7BACA01
+[TABLEU]
+Version=1,2000 5 30000,LM  ,20050519131900,LM                  
+Nom=G6t4,Tableau en-tête OF,1
+DateM=2823CA17F3BACA01
+[TABLEU]
+Version=1,2000 6260000,MJV ,20090218161233,MARIE JO            
+Nom=G6t6,Tableau lignes OF,1
+DateM=F333C689DB91C901
+[TABLEU]
+Version=1,2001 1220000,ROOT,20100521143525,DEMO                
+Nom=G6t8,Tableau ligne trace,1
+DateM=6330A416E2F8CA01
+[TABLEU]
+Version=1,200110 10000,LM  ,20100120084755,DEMO                
+Nom=G6t9,Tableau trace cbn,1
+DateM=F07578FF5DF5CC01
+[TABLEU]
+Version=1,20030825181838,LM                  ,20060905161957,MARIE JO            
+Nom=G8t3,Prog Interro article numéro série,1
+DateM=802F90C4A76BC301
+[TABLEU]
+Version=1,1994 9140000,PB  ,20060905162310,MARIE JO            
+Nom=Ge,Prog Interro statistiques,1
+DateM=518FED990873C801
+[TABLEU]
+Version=1,20030327152511,RR                  ,20030327152511,RR
+Nom=GR001T1,Enregistrement PCFIDX du programme GRPP001,1
+DateM=CA5C80445DEDCC01
+[TABLEU]
+Version=1,20050720084536,AM                  ,20071114140438,DEMO                
+Nom=Gt011,Prog Import/Export articles,1
+DateM=C499B3E9BE26C801
+[TABLEU]
+Version=1,20090109082839,DEMO                ,20090218154523,MARIE JO            
+Nom=GT041T1,Prog Impression Tarifs,1
+DateM=4269D59C30B5CA01
+[TABLEU]
+Version=1,20070723164806,DEMO                ,20070723164806,DEMO                
+Nom=GT299T3,Prog recherche avancée article,1
+DateM=8B15CBFB5FCFC701
+[TABLEU]
+Version=1,20050414152527,DJ                  ,20090720105908,LK                  
+Nom=Gt530,Prog génération des bons de préparation,1
+DateM=011CDC48B4F1CA01
+[TABLEU]
+Version=1,20050427151530,AM                  ,20070702170829,DEMO                
+Nom=GT531VTL,Prog Administration des bons de prépa tableau des ventilations,1
+DateM=0799E9A0A0D4C901
+[TABLEU]
+Version=1,20051124143856,DEMO                ,20060905162505,MARIE JO            
+Nom=GT539,Prog Liste de colisage,1
+DateM=6DE222D2188DC901
+[TABLEU]
+Version=1,20110126153039,LK                  ,20110126153208,LK                  
+Nom=GT780,Controle reception,1
+DateM=1F0F8D5C45C1CB01
+[TABLEU]
+Version=1,2001 4230000,LM  ,2002 5130000,LM
+Nom=Gt850,Prog Liste ABC,1
+DateM=1E86288A3B07C701
+[TABLEU]
+Version=1,20060118133439,WEB                 ,20060905162833,MARIE JO            
+Nom=GTWeb120T2,Web Panier Liste des lignes de panier,1
+DateM=76D39BBC3107C701
+[TABLEU]
+Version=1,20040120171656,PHB                 ,20041010161456,MARIE JO            
+Nom=GvT1,Tableau lignes d'inventaire,1
+DateM=093E87A53B07C701
+[TABLEU]
+Version=1,20061207141123,DEMO                ,20081201114755,DEMO                
+Nom=GvTx,Table des écarts d'inventaire,1
+DateM=98792C2FE61DC701
+[TABLEU]
+Version=1,1989 1230000,MJV ,20070702170307,DEMO                
+Nom=Mouv,Mouvement,1
+DateM=5AC5496FCA10CD01
+[CHAMPS]
+[ZoneVirtuelle]
+[/ZoneVirtuelle]
+[/CHAMPS]
+[TABLEU]
+Version=1,2000 1250000,MJV ,20070702170753,DEMO                
+Nom=Mvtl,Ventilation,1
+DateM=0799E9A0A0D4C901
+[CHAMPS]
+[ZoneVirtuelle]
+[/ZoneVirtuelle]
+[/CHAMPS]
+[TABLEU]
+Version=1,199912220000,MJV ,20070702172335,DEMO                
+Nom=Rcl,Article Référencement client,1
+DateM=D00611085E20CC01
+[TABLEU]
+Version=1,1989 1250000,MJV ,20050106165610,MARIE JO            
+Nom=Soc,Société,1
+DateM=E2B7037FE010CD01
+[TABLEU]
+Version=1,20021019101415,MJV ,20050106165606,MARIE JO            
+Nom=SocCrm,Dossier pour le module CRM,1
+DateM=0750E94035C7C901
+[TABLEU]
+Version=1,1999 4280000,MJV ,20050119150808,MARIE JO            
+Nom=T012,Famille statistique article,1
+DateM=6326D6AA3B07C701
+[TABLEU]
+Version=1,1999 9 30000,MJV ,20050107085715,MARIE JO            
+Nom=T036,Nature produit,1
+DateM=6326D6AA3B07C701
+[TABLEU]
+Version=1,1989 2 30000,MJV ,20081210094415,DEMO                
+Nom=Tar,Tarif de vente,1
+DateM=6EF343DE35F5CC01
+[TABLE]
+Version=1,20110208155753,ROOT                ,20110208155753,ROOT                
+Nom=uge_dos,table des données complémentaires,1
+DateM=846899DBE110CD01
+Taille=10000,10000
+Pack=0,0
+[CHAMPS]
+Nom=Ce1,1,2,N,0,0,N,1
+Nom=Ce2,2,2,N,0,0,N,1
+Nom=Ce3,3,2,N,0,0,N,1
+Nom=Ce4,4,2,N,0,0,N,1
+Nom=Ce5,5,2,N,0,0,N,1
+Nom=Ce6,6,2,N,0,0,N,1
+Nom=Ce7,7,2,N,0,0,N,1
+Nom=Ce8,8,2,N,0,0,N,1
+Nom=Ce9,9,2,N,0,0,N,1
+Nom=CeA,10,2,N,0,0,N,1
+Nom=Dos,11,2,N,0,0,N,1
+Nom=UserCr,14,2,N,0,0,N,1
+Nom=UserCrDh,34,2,N,0,0,N,1
+Nom=UserMo,48,2,N,0,0,N,1
+Nom=UserMoDh,68,2,N,0,0,N,1
+Nom=Note,82,2,N,0,0,N,1
+Nom=CeNote,90,2,N,0,0,N,1
+Nom=ug_TexCod,91,2,N,0,0,N,1
+Nom=ug_TxtEmailTar,113,2,N,0,0,N,1
+Nom=ug_TxtBF,363,2,N,0,0,N,1
+[/CHAMPS]
+[TABLE]
+Version=1,20120402122932,ROOT                ,20120402135729,ROOT                
+Nom=uge_Mouv,Mouvement supplementaires,1
+DateM=7451C99C841CCD01
+Taille=3000,3000
+Pack=0,0
+CE=Ce1,C
+[CHAMPS]
+Nom=Ce1,1,2,N,0,0,N,1
+Nom=Ce2,2,2,N,0,0,N,1
+Nom=Ce3,3,2,N,0,0,N,1
+Nom=Ce4,4,2,N,0,0,N,1
+Nom=Ce5,5,2,N,0,0,N,1
+Nom=Ce6,6,2,N,0,0,N,1
+Nom=Ce7,7,2,N,0,0,N,1
+Nom=Ce8,8,2,N,0,0,N,1
+Nom=Ce9,9,2,N,0,0,N,1
+Nom=CeA,10,2,N,0,0,N,1
+Nom=CeB,11,2,N,0,0,N,1
+Nom=CeC,12,2,N,0,0,N,1
+Nom=CeD,13,2,N,0,0,N,1
+Nom=CeE,14,2,N,0,0,N,1
+Nom=CeF,15,2,N,0,0,N,1
+Nom=Dos,16,2,N,0,0,N,1
+Nom=EnrNo,19,2,N,0,0,N,1
+Nom=CdEnrNo,28,2,N,0,0,N,1
+Nom=GrRef,37,2,N,0,0,N,1
+Nom=DvNo,78,2,N,0,0,N,1
+Nom=CdNo,86,2,N,0,0,N,1
+Nom=BlNo,94,2,N,0,0,N,1
+Nom=FaNo,102,2,N,0,0,N,1
+Nom=UserCr,110,2,N,0,0,N,1
+Nom=UserMo,130,2,N,0,0,N,1
+Nom=UserTrace,150,2,N,0,0,N,1
+Nom=ug_Info_Ent,178,2,N,0,0,N,1
+Nom=Filler,288,2,N,0,106,N,1
+Nom=ug_Info_Mouv,394,2,N,0,0,N,1
+Nom=Filler,844,2,N,0,332,N,1
+Nom=Note,1176,2,N,0,0,N,1
+Nom=CeNote,1184,2,N,0,0,N,1
+Nom=TxtNote,1185,2,N,0,0,N,1
+Nom=TxtCod,1193,2,N,0,0,N,1
+[/CHAMPS]
+[TABLE]
+Version=1,20120228165553,ROOT                ,20120313100044,ROOT                
+Nom=uge_T000,Table Parametrage Général,1
+DateM=09C7AB7BB406CD01
+Taille=2048,2048
+Pack=0,0
+CE=CeBin,255
+[CHAMPS]
+Nom=Ce1,1,2,N,0,0,N,1
+Nom=Ce2,2,2,N,0,0,N,1
+Nom=Ce3,3,2,N,0,0,N,1
+Nom=Ce4,4,2,N,0,0,N,1
+Nom=Ce5,5,2,N,0,0,N,1
+Nom=Ce6,6,2,N,0,0,N,1
+Nom=Ce7,7,2,N,0,0,N,1
+Nom=Ce8,8,2,N,0,0,N,1
+Nom=Ce9,9,2,N,0,0,N,1
+Nom=CeA,10,2,N,0,0,N,1
+Nom=Dos,11,2,N,0,0,N,1
+Nom=CeBin,14,2,N,0,0,N,1
+Nom=Filler,15,2,N,0,25,N,1
+Nom=ug_LibTb,40,2,N,0,0,N,1
+Nom=UserCr,1240,2,N,0,0,N,1
+Nom=UserMo,1260,2,N,0,0,N,1
+Nom=UserTrace,1280,2,N,0,0,N,1
+Nom=CeNote,1308,2,N,0,0,N,1
+Nom=Note,1309,2,N,0,0,N,1
+Nom=ug_ImgSensImp,1317,2,N,0,0,N,1
+Nom=ug_faceimp,1342,2,N,0,0,N,1
+Nom=ug_ImgBobineFini,1343,2,N,0,0,N,1
+[/CHAMPS]
+[TABLE]
+Version=1,20120228164939,ROOT                ,20120313163318,ROOT                
+Nom=uge_T001,Table Parametrage,1
+DateM=219B799D2E01CD01
+Taille=512,512
+Pack=0,0
+CE=CeBin,001
+[CHAMPS]
+Nom=Ce1,1,2,N,0,0,N,1
+Nom=Ce2,2,2,N,0,0,N,1
+Nom=Ce3,3,2,N,0,0,N,1
+Nom=Ce4,4,2,N,0,0,N,1
+Nom=Ce5,5,2,N,0,0,N,1
+Nom=Ce6,6,2,N,0,0,N,1
+Nom=Ce7,7,2,N,0,0,N,1
+Nom=Ce8,8,2,N,0,0,N,1
+Nom=Ce9,9,2,N,0,0,N,1
+Nom=CeA,10,2,N,0,0,N,1
+Nom=Dos,11,2,N,0,0,N,1
+Nom=CeBin,14,2,N,0,0,N,1
+Nom=ug_TabNo,15,2,N,0,0,N,1
+Nom=ug_Code,17,2,N,0,0,N,1
+Nom=Filler,25,2,N,0,15,N,1
+Nom=Lib80,40,2,N,0,0,N,1
+Nom=UserCr,120,2,N,0,0,N,1
+Nom=UserMo,140,2,N,0,0,N,1
+Nom=UserCrDh,160,2,N,0,0,N,1
+Nom=UserMoDh,174,2,N,0,0,N,1
+Nom=CeNote,188,2,N,0,0,N,1
+Nom=Note,189,2,N,0,0,N,1
+Nom=ug_NoAffListe,197,2,N,0,0,N,1
+[/CHAMPS]
+[TABLE]
+Version=1,20120313163305,ROOT                ,20120313163334,ROOT                
+Nom=uge_T002,Table des Type d'impression,1
+DateM=7D1E9E95B406CD01
+Taille=1024,1024
+Pack=0,0
+CE=CeBin,002
+[CHAMPS]
+Nom=Ce1,1,2,N,0,0,N,1
+Nom=Ce2,2,2,N,0,0,N,1
+Nom=Ce3,3,2,N,0,0,N,1
+Nom=Ce4,4,2,N,0,0,N,1
+Nom=Ce5,5,2,N,0,0,N,1
+Nom=Ce6,6,2,N,0,0,N,1
+Nom=Ce7,7,2,N,0,0,N,1
+Nom=Ce8,8,2,N,0,0,N,1
+Nom=Ce9,9,2,N,0,0,N,1
+Nom=CeA,10,2,N,0,0,N,1
+Nom=Dos,11,2,N,0,0,N,1
+Nom=CeBin,14,2,N,0,0,N,1
+Nom=Filler,15,2,N,0,2,N,1
+Nom=ug_Code,17,2,N,0,0,N,1
+Nom=Filler,25,2,N,0,13,N,1
+Nom=Lib80,38,2,N,0,0,N,1
+Nom=UserCr,118,2,N,0,0,N,1
+Nom=UserMo,138,2,N,0,0,N,1
+Nom=UserCrDh,158,2,N,0,0,N,1
+Nom=UserMoDh,172,2,N,0,0,N,1
+Nom=CeNote,186,2,N,0,0,N,1
+Nom=Note,187,2,N,0,0,N,1
+Nom=ug_NoAffListe,195,2,N,0,0,N,1
+Nom=ugtb_Aff,198,2,N,0,0,N,1
+Nom=ug_AffDecoupe,228,2,N,0,0,N,1
+Nom=ug_AffBobineFinie,229,2,N,0,0,N,1
+Nom=ug_AffNegoce,230,2,N,0,0,N,1
+Nom=ug_AffCliche,231,2,N,0,0,N,1
+[/CHAMPS]
+[TABLE]
+Version=1,20110609155459,TEST                ,20110609155459,TEST                
+Nom=uge_typ_mach,Type de machine,1
+DateM=F66B48D2AC26CC01
+Taille=500,500
+Pack=0,0
+[CHAMPS]
+Nom=Ce1,1,2,N,0,0,N,1
+Nom=Ce2,2,2,N,0,0,N,1
+Nom=Ce3,3,2,N,0,0,N,1
+Nom=Ce4,4,2,N,0,0,N,1
+Nom=Ce5,5,2,N,0,0,N,1
+Nom=Ce6,6,2,N,0,0,N,1
+Nom=Ce7,7,2,N,0,0,N,1
+Nom=Ce8,8,2,N,0,0,N,1
+Nom=Ce9,9,2,N,0,0,N,1
+Nom=CeA,10,2,N,0,0,N,1
+Nom=Dos,11,2,N,0,0,N,1
+Nom=ug_typ_mach,14,2,N,0,0,N,1
+Nom=UserCr,34,2,N,0,0,N,1
+Nom=UserMo,54,2,N,0,0,N,1
+Nom=UserTrace,74,2,N,0,0,N,1
+Nom=CeNote,102,2,N,0,0,N,1
+Nom=Note,103,2,N,0,0,N,1
+Nom=Lib,111,2,N,0,0,N,1
+[/CHAMPS]
+[TABLE]
+Version=1,20120320111749,ROOT                ,20120320111749,ROOT                
+Nom=ugt_Etiq,Enreg de travail pour les etiquette,1
+DateM=EA50D183841CCD01
+Taille=2048,2048
+Pack=0,0
+[CHAMPS]
+Nom=ugtb_Code10Bis,1,2,N,0,0,N,1
+Nom=ug_Serie,161,2,N,0,0,N,1
+Nom=ug_PtVert,169,2,N,0,0,N,1
+Nom=ug_nbLang,170,2,N,0,0,N,1
+Nom=ug_NbCoul,172,2,N,0,0,N,1
+[/CHAMPS]
+[TABLE]
+Version=1,20120402141701,ROOT                ,20120402141701,ROOT                
+Nom=ugt_G1T1,Enreg Travail,1
+DateM=7451C99C841CCD01
+Taille=6000,6000
+Pack=0,0
+[CHAMPS]
+TableInsere=uge_mouv,1,3000,0,1
+Nom=Cle,3001,2,N,0,0,N,1
+Nom=EnrNoV,3257,2,N,0,0,N,1
+[/CHAMPS]
+[TABLE]
+Version=1,20110616101215,ROOT                ,20110616101215,ROOT                
+Nom=ugt_Vte,Detail des Vente,1
+DateM=5AC5496FCA10CD01
+Taille=3000,3000
+Pack=0,0
+[CHAMPS]
+TableInsere=MOUV,1,2200,0,1
+Nom=ug_code_tiers,2201,2,N,0,0,N,1
+Nom=ug_qte,2209,2,N,0,0,N,1
+Nom=ug_prix,2222,2,N,0,0,N,1
+Nom=ug_date,2234,2,N,0,0,N,1
+[/CHAMPS]
+[TABLEU]
+Version=1,1999 4 80000,PB  ,20100330094506,SN                  
+Nom=Xq,Jobqueue,1
+DateM=089C45389B9BCB01
+[BASEU]
+Version=1,198910120000,PB  ,20100118105546,SN                  
+Nom=GtfAm,Mouvement,1
+DateM=9250DB672498CA01
+DateMIndex=6CCC2528F6F5CC01
+[TABLES]
+[/TABLES]
+[BASE]
+Version=1,20111109115305,ROOT                ,20111109115305,ROOT                
+Nom=ugf_dos,Dossier Donnée complementaire,1
+DateM=041643C2CD9ECC01
+Fichier=I,0,ugf_dos.dhfi
+[TABLES]
+Nom=uge_dos,0
+[/TABLES]
+[BASE]
+Version=1,20120402123351,ROOT                ,20120402123351,ROOT                
+Nom=ugf_Mouv,Mouvement,1
+DateM=3C056F18BC10CD01
+Fichier=I,0,ugf_mouv.dhfi
+DateMIndex=BABB8260BD10CD01
+[TABLES]
+Nom=uge_Mouv,0
+[/TABLES]
+[BASE]
+Version=1,20120228164655,ROOT                ,20120228164655,ROOT                
+Nom=ugf_tab,Table de parametrage,1
+DateM=EA1BA53230F6CC01
+Fichier=I,0,ugf_tab.dhfi
+DateMIndex=E85FB6693501CD01
+[TABLES]
+Nom=uge_T000,0
+Nom=uge_T001,0
+Nom=uge_T002,0
+[/TABLES]
+[BASE]
+Version=1,20110609155025,TEST                ,20110609155025,TEST                
+Nom=ugf_typ_mach,Type de machine,1
+DateM=D6C7692FAC26CC01
+Fichier=I,0,ugf_typ_mach.dhfi
+Versionbase=6.3
+DateMIndex=CAB2658FAD26CC01
+[TABLES]
+Nom=uge_typ_mach,0
+[/TABLES]
+[INDEX]
+Version=1,20110616104541,ROOT                ,20110616104541,ROOT                
+Nom=ugi_FactTiers,Facture Tiers ,1
+DateM=66D1F7C5012CCC01
+CLE=GtfAm, ,Ce8,2,1,n,1,n
+Alias=UGI_FACTTIERS
+[CHAMPS]
+Nom=Dos,1,0,
+Nom=Tiers,4,0,
+Nom=FaDt,12,0,
+Nom=Ref,20,0,
+Nom=Sref1,45,0,
+Nom=Sref2,53,0,
+[/CHAMPS]
+[/INDEX]
+[INDEX]
+Version=1,20110616163558,ROOT                ,20110616163558,ROOT                
+Nom=ugi_FactTiersRef,Facture Tiers Grref,1
+DateM=DED4E3B4322CCC01
+CLE=GtfAm, ,Ce8,2,1,n,1,n
+Alias=UGI_FACTTIERS_REF
+[CHAMPS]
+Nom=Dos,1,0,
+Nom=Tiers,4,0,
+Nom=Ref,12,0,
+Nom=Sref1,37,0,
+Nom=Sref2,45,0,
+Nom=FaDt,53,0,
+[/CHAMPS]
+[/INDEX]
+[INDEX]
+Version=1,20120228095035,ROOT                ,20120228095240,ROOT                
+Nom=ugi_Portefeuille_Cde,Portefeuille par article,1
+DateM=A82ADD53F6F5CC01
+CLE=GtfAm, ,CdCe4,2,1,n,4,n
+Alias=UGI_PORTEFEUILLE_REF
+[CHAMPS]
+Nom=Dos,1,0,
+Nom=TiCod,4,0,
+Nom=Ref,5,0,
+Nom=Sref1,30,0,
+Nom=Sref2,38,0,
+Nom=Tiers,46,0,
+Nom=CdDt,54,0,
+[/CHAMPS]
+[/INDEX]
+[INDEX]
+Version=1,20111109115337,ROOT                ,20111109120242,ROOT                
+Nom=ugi_dos,Cle par Dossier,1
+DateM=46383A1ACF9ECC01
+CLE=ugf_dos, ,,1,032,n,1,n
+Alias=ugi_dos
+[CHAMPS]
+Nom=Dos,1,0,
+[/CHAMPS]
+[/INDEX]
+[INDEX]
+Version=1,20120402124254,ROOT                ,20120402124254,ROOT                
+Nom=ugi_Index_A,Par Enrno,1
+DateM=FC89625CBD10CD01
+CLE=ugf_Mouv,A,,1,032,n,1,n
+[CHAMPS]
+Nom=Dos,1,0,
+Nom=EnrNo,4,0,
+[/CHAMPS]
+[/INDEX]
+[INDEX]
+Version=1,20120228165905,ROOT                ,20120312095750,ROOT                
+Nom=ugi_Index_A_T000,Par Dossier,1
+DateM=4E6D0E342E00CD01
+CLE=ugf_tab,A,CeBin,2,255,o,1,n
+[CHAMPS]
+Nom=Dos,1,0,
+Nom=CeBin,4,0,
+Nom=Filler,5,0,25
+[/CHAMPS]
+[/INDEX]
+[INDEX]
+Version=1,20120228170019,ROOT                ,20120228170724,ROOT                
+Nom=ugi_Index_A_T001,Cle par code,1
+DateM=5601510F33F6CC01
+CLE=ugf_tab,A,CeBin,2,001,o,1,n
+[CHAMPS]
+Nom=Dos,1,0,
+Nom=CeBin,4,0,
+Nom=ug_TabNo,5,0,
+Nom=ug_Code,7,0,
+Nom=Filler,15,0,15
+[/CHAMPS]
+[/INDEX]
+[INDEX]
+Version=1,20120312152326,ROOT                ,20120312152326,ROOT                
+Nom=ugi_Index_B,Cle par numero d'ordre d'affichage,1
+DateM=76B328B05B00CD01
+CLE=ugf_tab,B,CeBin,2,001,n,1,n
+[CHAMPS]
+Nom=Dos,1,0,
+Nom=ug_TabNo,4,0,
+Nom=ug_NoAffListe,6,0,
+[/CHAMPS]
+[/INDEX]
+[INDEX]
+Version=1,20120313163927,ROOT                ,20120313172128,ROOT                
+Nom=ugi_Index_C,Cle par Code,1
+DateM=5A42EC573501CD01
+CLE=ugf_tab,C,,1,032,n,0,n
+[CHAMPS]
+Nom=Dos,1,0,
+Nom=CeBin,4,0,
+Nom=ug_Code,5,0,
+[/CHAMPS]
+[/INDEX]
+[INDEX]
+Version=1,20120313164303,ROOT                ,20120313172158,ROOT                
+Nom=Ugi_Index_D,Cle par Numero d'ordre,1
+DateM=E85FB6693501CD01
+CLE=ugf_tab,D,,1,032,n,0,n
+[CHAMPS]
+Nom=Dos,1,0,
+Nom=CeBin,4,0,
+Nom=ug_NoAffListe,5,0,
+[/CHAMPS]
+[/INDEX]
+[INDEX]
+Version=1,20110609160002,TEST                ,20110609160002,TEST                
+Nom=ugi_typ_mach,Type de machine,1
+DateM=2C893F87AD26CC01
+CLE=ugf_typ_mach,A,,1,032,n,1,n
+[CHAMPS]
+Nom=Dos,1,0,
+Nom=ug_typ_mach,4,0,
+[/CHAMPS]
+[/INDEX]
+[INDEXL]
+Nom=GtfAm,Mouv,ugi_FactTiers,0
+Nom=GtfAm,Mouv,ugi_FactTiersRef,0
+Nom=GtfAm,Mouv,ugi_Portefeuille_Cde,0
+Nom=ugf_dos,uge_dos,ugi_dos,0
+Nom=ugf_Mouv,uge_Mouv,ugi_Index_A,0
+Nom=ugf_tab,uge_T000,ugi_Index_A_T000,0
+Nom=ugf_tab,uge_T001,ugi_Index_A_T001,0
+Nom=ugf_tab,uge_T001,ugi_Index_B,0
+Nom=ugf_tab,uge_T002,ugi_Index_C,0
+Nom=ugf_tab,uge_T002,Ugi_Index_D,0
+Nom=ugf_typ_mach,uge_typ_mach,ugi_typ_mach,0
+[/INDEXL]

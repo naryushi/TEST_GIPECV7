@@ -1,0 +1,33 @@
+;* Include gestion des objets graphiques
+
+;*
+;20110614			| RTH			| Version initiale
+;*
+
+;*
+structure Elem_X
+	1 Nom 40
+	1 PosX 6,0
+	1 PasX 6,0
+endstructure
+
+;*
+structure Elem_Y
+	1 Nom 40
+	1 PosY 6,0
+	1 PasY 6,0
+endstructure
+
+;*
+structure Elem_G
+	1 AxeDX 40
+	1 AxeFX 40
+	1 AxeDY 40
+	1 AxeFY 40
+	1 PcXD 6,2			;Pourcentage de la valeur début X
+	1 PcXF 6,2			;Pourcentage de la valeur fin	X
+	1 PcYD 6,2			;Pourcentage de la valeur début Y
+	1 PcYF 6,2			;Pourcantage de la valeur fin Y
+	1 Id 6,0				;Identifiant NUMERIQUE de l'objet graphique
+	1 Bulle 100			;Info bulle a afficher
+endstructure

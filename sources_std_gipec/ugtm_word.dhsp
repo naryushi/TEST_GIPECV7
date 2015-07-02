@@ -1,0 +1,64 @@
+;* Gestion WORD
+
+OverWrittenBy ugum_word.dhop
+
+;*
+;20100329			| RTH			| Version initiale
+;*
+
+module ugtm_tech.dhop
+module yoffice.dhop
+
+1 RETSERV x
+
+;*
+public function int UG_Word_Connect(ficWord)
+	;Connection a Word
+	;Retour = 0 si connection établie, 1 si anomalie
+	1 FicWord 256
+
+	1 SERVEUR 40
+	1 TOPIC 256
+
+beginf
+
+  	;Création de la liaison avec le document Word actif
+   if DDEOPEN = 0
+      ug_alert("Impossible de mettre en place les liens DDE.")
+      freturn(1)
+   endif
+
+   SERVEUR = "WinWord"
+   TOPIC = '"' && ficWord && '"'			;Attention a mettre le nom du fichier entre ""
+   if (RETSERV := DDECONNECT(SERVEUR,TOPIC)) = 0 
+      DDECLOSE
+      ug_alert("Word non ouvert.")
+      freturn(1)
+   endif
+
+	freturn(0)
+
+endf
+
+;*
+public procedure ug_Word_Deconnect
+	;Quitte la liaison
+
+beginp
+
+	DDEDECONNECT(RETSERV)
+	DDECLOSE
+
+endp
+
+;*
+public procedure ug_Word_Ecrire(signet,valeur)
+	;Ecrit la valeur dans le signet défini
+	1 signet 50   			;Nom du signet dans Word
+	1 valeur 50   			;Valeur à écrire dans Word
+
+beginp
+
+	DDEPOKE(RETSERV,signet,valeur) 
+
+endp

@@ -1,0 +1,744 @@
+;* Exemple d'utilisation des modules spécifiques
+
+include ugin_000.dhsp
+include ugin_graph.dhsp
+
+
+Module ugtm_ProdStd.dhop
+Module ygraph.dhop
+module gtpm000.dhop
+module gtpmfic.dhop
+module gtpmficsql.dhop
+module ugtm_graph.dhop
+Module ugtm_baseStd.dhop
+Module ugtm_trace.dhop
+Module ugtm_ZoomStd.dhop
+module ugtt_integration_gtfi.dhop
+Module ugtm_lstEnreg.Dhop
+Module ugtm_Sql.dhop
+
+Module ugtm_ftp.dhop
+
+const ug_pass="zzz"
+
+Module yoffice.dhop
+
+;hfile gtfdd.dhsd gtfat tdfat
+
+public record a5dd.dhsd mz
+
+public record gtfdd.dhsd art
+public record gtfdd.dhsd sart
+Public record gtfdd.dhsd cli
+
+Public record gtfdd.dhsd T007
+
+Public record A5dd.dhsd A1
+
+Public RecordSql gtrsart.dhoq Article
+Public recordSql Gtrsart.dhoq Article ArtSql
+
+1 st x
+1 dossier > gtfdd.dhsd dos = 1
+1 NumeroNote > a5dd.dhsd note
+
+;*
+Procedure ug_Test_ZoomCombo(NumTest)
+;
+1 NumTest 1,0=0
+RecordSql gtrsart.dhoq Article ArtSql
+1 Lst L
+1 RdSel L
+record gtfdd.dhsd Art
+1 MAsque 50="gtempce000.dhof"
+RecordSqlPtr PtrSql
+record ddsys.dhsd Zoom
+beginp
+	mz.Dos=998
+
+	XmeLoad(Masque)
+	XmeDispv(Masque,3,Xme_Mode_Gosub)
+	XmeFlush
+	XmeInput(masque,3,0,Xme_Mode_Gosub)
+
+	if NumTest=0
+		Lst=ug_Liste("LstTest")
+		ArtSql.Init()
+		RdSel=ArtSql.ReaderSelect()
+		Loop ArtSql.ReaderNext(RdSel)=True
+			ListInsert(Lst,ArtSql.ART)
+		endloop
+		ug_ZoomCombo_Liste(Lst,ug_init_PosLgTri_ZoomCombo(Ptr(Art),Ptr(Art.Ref),Size(Art.Ref),Ptr(Art.Des),Size(Art.Des)),nbLigAff=5,ColTrad=2)
+	else
+		init Zoom=' '
+		
+		Ping("Zechange",mz)
+		
+		Zoom.Modtrait="gttz000_sql.dhop"
+		Zoom.Enreg="Article"
+		ZoomCombo(Zoom,"<C>REF<C>DES",True)	
+	endif
+endp
+
+
+;*
+procedure ug_Ex_Note
+beginp
+
+	mz.dos = 998
+	seek_soc(mz.dos)
+
+	;On écrit une note dans un fichier RTF
+	if ug_Note_Debut() = 0
+		ug_Note_Ecrire("Ceci est un test d'écriture d'une nouvelle note")
+		ug_note_Saut_ligne(1)
+		ug_Note_Ecrire("Note en gras",true)	
+		ug_note_Saut_ligne(1)
+		ug_Note_Ecrire("Note en italique",false,true)	
+		ug_note_Saut_ligne(1)
+		ug_Note_Ecrire("Note en gras + italique",true,true)	
+		ug_note_Saut_ligne(1)
+		ug_Note_Ecrire("Note en gras + italique + souligne",true,true,true)	
+		ug_note_Saut_ligne(1)
+		ug_Note_Ecrire("Note en GIS + taille + vert",true,true,true,80,"VERT")	
+		ug_note_Saut_ligne(1)
+		ug_Note_Fin
+	endif
+
+	;On met a jour le fichier GTFNOTE.dhfi sans supprimer le fichier RTF
+	NumeroNote = ug_note_MAJ_Fichier(0,false)
+	if NumeroNote = 0
+		ug_info("Erreur exemple création note")
+		preturn
+	endif
+		
+	;Pour l'exemple, on met a jour la note du premier article
+	if seek_art("ALB0001") = 0
+		if res_art(art.ref) = 0
+			art.cenote = 2
+			art.note = NumeroNote
+			rewrite_art
+			lib_art(art.ref)
+		endif
+	endif
+
+endp
+
+;*
+procedure ug_ex_sql
+	1 Ret S
+
+beginp
+
+	ret = ug_SQL("SQL","ROOT","","Select count(*) as result from art where art.reference between '$1' and '$2'","ALB","COC","")
+	
+	if ret <> ""
+		messagebox("Résultat = " & nospaces(ret),"Message")
+	endif
+
+endp
+
+;*
+procedure ug_ex_trace
+	1 i 5,0
+
+beginp
+
+	ug_trace_debut("Initialisation avec bouton abandon",true)
+
+	sleep(500)
+
+	ug_trace_titre("Modification du titre")
+
+	sleep(500)
+
+	for i = 1 to 10000
+		ug_trace_sel(i)
+		ug_trace_trt(i)
+	next
+
+	ug_trace_titre("Fin de la trace")
+
+	sleep(500)
+
+	ug_trace_fin
+
+endp
+
+;*
+procedure ug_ex_message
+beginp
+
+	ug_info("Info")
+
+	ug_info(1)
+
+	ug_info(99999999)
+
+endp
+
+;*
+procedure ug_ex_fic
+	1 Fic 1000
+
+beginp
+
+	ug_Select_Fichier(fic,"*.xls",false)
+	
+	ug_Select_Fichier(fic,"*.xls",true)
+
+	ug_Creer_Fichier("essai.txt",true)
+
+	ug_info(ug_select_rep)
+	
+endp
+
+;*
+procedure ug_excel
+beginp
+
+	ug_XL_Init_Export
+
+	ug_xl_ecrire(1,1,"Normal")
+	ug_xl_ecrire(2,1,"Gras",bold = true)
+	ug_xl_ecrire(3,1,"Italic",italic = true)
+	ug_xl_ecrire(4,1,"Couleur police",coulpolice = "ROUGE")
+	ug_xl_ecrire(5,1,"Couleur fond",coulfond = "VERT")
+	ug_xl_ecrire(6,1,"Taille 10",taillep = 10)
+	ug_xl_ecrire(7,1,"Taille 20",taillep = 20)
+
+	ug_XL_End(true)
+
+endp
+;*
+Procedure ug_excel_save
+;
+beginp
+	Office_Begin
+	Office_Open("C:\","a.xlsx")
+	Office_Write(2,1,Time(7))
+	
+	;ug_ole_execute("Excel.ActiveWorkBook.Close True")
+	Office_Close(True)
+
+	Office_Quit
+
+	Office_End
+	ProgramGoto("Xquit")
+endp
+
+;*
+procedure ug_input
+	record ugd_outils.dhsd uge_input
+  	1 i 3,0
+
+beginp
+
+	;Valeur Alpha sans zoom
+	ug_Input_init(uge_input,"titre A","Valeur Alpha sans zoom","A",0)
+	if ug_input_saisie(uge_input) = 0
+		ug_info(uge_input.ug_input_A)
+	endif
+
+	;Idem avec zoom article
+	mz.Dos = 998
+	seek_soc(mz.Dos)
+	ug_Input_init(uge_input,"titre A + Zoom","Valeur Alpha avec zoom","A",9000)
+	if ug_input_saisie(uge_input) = 0
+		ug_info(uge_input.ug_input_A)
+	endif
+
+	;Valeur num
+	ug_Input_init(uge_input,"titre N","Valeur Num","N",0)
+	if ug_input_saisie(uge_input) = 0
+		ug_info(uge_input.ug_input_N)
+	endif
+
+	;Valeur date
+	ug_Input_init(uge_input,"titre D","Valeur date","D",0)
+	if ug_input_saisie(uge_input) = 0
+		ug_info(uge_input.ug_input_D)
+	endif
+
+	;Liste
+	ug_Input_init(uge_input,"titre L","Valeur liste","L",0)
+	for i = 1 to 50
+		uge_input.ug_input_Lst(i) = "Elément " & i
+	next
+	if ug_input_saisie(uge_input) = 0
+		ug_info(uge_input.ug_input_A)
+	endif
+
+	;Mot de passe
+	ug_Input_init(uge_input,"titre P","password ?","P",0)
+	if ug_input_saisie(uge_input) = 0
+		ug_info(uge_input.ug_input_A)
+	endif
+
+endp
+
+;*
+procedure ug_ex_sql_Access
+	hfile gtfdd.dhsd gtfat gtfat
+	record gtfdd.dhsd art
+	1 Ret S
+	1 cn L
+
+beginp
+
+	;Il faut définir une source de donnée appelée Divalto_Access qui pointe vers une base Access
+	cn = ug_sql_debut("DIVALTO_ACCESS","","")
+	
+	if cn
+		if ug_sql_requete(cn,"Create table ART (REF TEXT(25), DES TEXT(80))") = 0
+			ug_trace_debut("Intégration des articles")
+			gtfat.Key = "A998"
+			loop hread(gtfat,art) = 0 and art.Dos = 998
+				ug_trace_sel(art.Ref)
+				ug_sql_requete(cn,"Insert into ART values ('" & nospaces(art.Ref) & "','" & nospaces(art.Des) & "')")
+			endloop
+		endif
+		ug_sql_fin
+	endif
+
+endp
+
+;*
+procedure ug_lancement_auto
+beginp
+
+	ug_init(false)
+
+;	ug_Lance_Compteurs_Article(true)
+
+;	ug_Lance_Encours_Livraison(true)
+
+;	ug_Lance_Affectation_Couts_Revients(true)
+
+;	ug_Lance_Calcul_CMP(true,true)
+
+;	ug_Lance_Actualisation_Reservations(true)
+
+;	ug_Lance_Generation_Statistiques(true)
+
+;	ug_Lance_Encours_Comptables(true)
+
+;	ug_Lance_CBN(true,true)
+
+	ug_Lance_Calcul_couts_standards
+
+endp
+;*
+Procedure ug_Graph2
+;
+beginp
+	mz.MeCle="ugee_exemple.dhoe"
+	XmeLoad(mz.MeCle)
+
+	XmeDispv(mz.MeCle,1,Xme_Mode_Goto)
+	XmeFlush
+
+	;GraphFlashOn(10,RIGHT_BUTTON,SIMPLE_CLICK)
+
+	ug_Graph_init(1,10,10,True,"AffERR","STD")
+	ug_Graph_Rectangle(1,50,50,50,1,"STD","LIGNE+",Bulle="Premier Carré<t>Titre;i;b",ValPosLgEnPixel=True)
+	ug_Graph_Rectangle(50,1,50,50,2,"STD","LIGNE+",Bulle="Deuxieme Carré<t>Titre;i;b",ValPosLgEnPixel=True)
+
+	ug_Graph_Text(60,10,20,50,"Valeur du texte",ValPosLgEnPixel=True,Id=2)
+	
+
+	Getbchar(True)
+
+	GraphFlashOff
+endp
+
+;*
+procedure ug_graph
+	recorddiva elem_G elem_G
+	recorddiva elem_X elem_X
+	recorddiva elem_Y elem_Y
+	1 LstX L
+	1 LstY L
+	1 LstG L
+	1 i 3,0
+
+beginp
+
+	lstX = ug_liste("LST_X")
+	lstY = ug_liste("LST_Y")
+	lstG = ug_liste("LST_GRAPH")
+
+	;Base
+	elem_x.Nom = sdate(today)
+	listinsert(lstX,elem_x)
+	elem_y.Nom = "0"
+	listinsert(lstY,elem_Y)
+
+	;Incrément de 10
+	for i = 1 to 10
+		elem_x.Nom = nospaces(sdate(hdate(today,i)))
+		listinsert(lstX,elem_x)
+		elem_y.Nom = str(i*10)
+		listinsert(lstY,elem_Y)
+	next
+	
+	mz.MeCle = "ugee_exemple.dhoe"
+	xmeload(mz.MeCle)
+	
+	ug_Init_Graph(1,"LST_X","LST_Y")
+
+	;Renseigne des valeurs de graphique
+
+	;J a J+5 sur la ligne 20 : 100% X et Y
+	init elem_G = system.Esp
+	elem_G.Id = 1
+	elem_G.Bulle = "J a J+5 sur la ligne 20 : 100% X et Y"
+	elem_g.AxeDX = sdate(today)
+	elem_g.AxeDY = "20"
+	elem_g.AxeFX = sdate(hdate(today,5))
+	elem_g.AxeFY = "20"
+	listinsert(lstG,elem_g)
+	
+	;J+3 a J+3 sur les lignes 40 à 50 : 100% X et Y
+	init elem_G = system.Esp
+	elem_G.Id = 2
+	elem_G.Bulle = "J+3 a J+3 sur les lignes 40 à 50 : 100% X et Y"
+	elem_g.AxeDX = sdate(hdate(today,3))
+	elem_g.AxeDY = "40"
+	elem_g.AxeFX = sdate(hdate(today,3))
+	elem_g.AxeFY = "50"
+	listinsert(lstG,elem_g)
+
+	;J+5 a J+5 sur les lignes 40 à 50 : 100% X et 30% sur début Y, 50 % sur fin Y
+	init elem_G = system.Esp
+	elem_G.Id = 3
+	elem_G.Bulle = "J+5 a J+5 sur les lignes 40 à 50 : 100% X et 30% sur début Y, 50 % sur fin Y"
+	elem_g.AxeDX = sdate(hdate(today,5))
+	elem_g.AxeDY = "40"
+	elem_g.AxeFX = sdate(hdate(today,5))
+	elem_g.AxeFY = "50"
+	elem_G.PcYD = 30
+	elem_G.PcYF = 50
+	listinsert(lstG,elem_g)
+
+	;J+2 à J+7 sur la ligne 70: 30 % sur Début X, 50% sur fin X, 100% sur Y 
+	init elem_G = system.Esp
+	elem_G.Id = 4
+	elem_G.Bulle = "J+2 à J+7 sur la ligne 70: 30 % sur Début X, 50% sur fin X, 100% sur Y"
+	elem_g.AxeDX = sdate(hdate(today,2))
+	elem_g.AxeDY = "70"
+	elem_g.AxeFX = sdate(hdate(today,7))
+	elem_g.AxeFY = "70"
+	elem_g.PcXD = 30
+	elem_g.PcXF = 50
+	listinsert(lstG,elem_g)
+
+	;J à J sur ligne 0 : 25 % sur tous les ratios
+	init elem_G = system.Esp
+	elem_G.Id = 5
+	elem_G.Bulle = "J à J sur ligne 0 : 25 % sur tous les ratios"
+	elem_g.AxeDX = sdate(today)
+	elem_g.AxeDY = "0"
+	elem_g.AxeFX = sdate(today)
+	elem_g.AxeFY = "0"
+	elem_g.PcXD = 25
+	elem_g.PcXF = 25
+	elem_G.PcYD = 25
+	elem_G.PcYF = 25
+	listinsert(lstG,elem_g)						 
+	
+	;J+10 ligne 0 à 100, 100%
+	init elem_G = system.Esp
+	elem_G.Id = 6
+	elem_G.Bulle = "J+10 ligne 0 à 100, 100%"
+	elem_g.AxeDX = sdate(hdate(today,10))
+	elem_g.AxeDY = "0"
+	elem_g.AxeFX = sdate(hdate(today,10))
+	elem_g.AxeFY = "100"
+	listinsert(lstG,elem_g)
+
+	ug_Dessin_Graph_Histo("LST_GRAPH")
+
+	getbchar(true)
+
+endp
+;*
+Procedure ug_Seek_tbl
+;
+beginp
+	mz.Dos=998
+	ugtm_fonc.ug_Seek_Table("gtfdd.dhsd","gtfat","Sart","ALB0001",Sart)
+	ugtm_fonc.ug_Seek_Table("gtfdd.dhsd","gtfpcf","cli","C0000001",Cli)
+	ugtm_fonc.ug_Seek_Table("gtfdd.dhsd","gtftab","T007","EUR",T007)
+endp
+;*
+Procedure ug_Note_Blob_Creation
+;
+beginp
+	mz.Dos=998
+	if Seek_Art('CAC0003')=0 and Art.CeNote<>2
+		ug_Note_Debut()
+		UG_Note_Ecrire("Test Note Article")
+		ug_Note_Saut_Ligne(1)
+		UG_Note_Ecrire(Art.Ref)		
+		UG_Note_Fin	
+		Art.Note=ug_Note_Maj_Fichier("DAV",True,Art.Note,"UG_NOTE_ART")	
+		Art.CeNote=Condition(Art.Note>0,2,1)
+		Rewrite_Art
+	endif
+endp
+;*
+Procedure ug_Gestion_Blat_MultiLigne
+;
+beginp
+	;ug_Envoi_Email_Blat("hduriez@gipec.fr","Email Test envoyé à " & SDateDh(Time(7)),"Ligne1|Ligne2|Ligne3|Ligne4","D:\NewCli.txt",AdresseFrom="hduriez@gipec.fr",GestionLog=True)
+
+	;ug_Envoi_Email_Blat("hduriez@gipec.fr","Email Test envoyé à " & SDateDh(Time(7)),ug_Note_Lire("DAV",245,"|","UG_NOTE_BLAT"),"D:\NewCli.txt",AdresseFrom="hduriez@gipec.fr",GestionLog=True)
+
+	ug_Envoi_Email_Blat("hduriez@gipec.fr","Email Test envoyé à " & SDateDh(Time(7)),ug_Note_Lire("COMMUN",46,"|","UG_NOTE_BLAT"),"D:\NewCli.txt",AdresseFrom="hduriez@gipec.fr",GestionLog=True)
+endp
+;*
+Procedure ug_remplacer_champ_specifique
+;
+1 AdrDesc 120
+beginp
+	if DataCompute(A1.EnregChampNom,A1.EnregChampContenu)=0
+
+	elsif DataDescriptor(A1.EnregChampNom,AdrDesc)=0
+		A1.EnregChampContenu=DataValue(AdrDesc)
+	Else
+		A1.EnregChampContenu=" "		
+	endif
+endp
+;*
+Procedure ug_Integration_Piece
+;
+record gtfdd.dhsd xz G3xz
+recorddiva ugtt_integration_gtfi.ugs_Result_Gtfi gtfR
+
+1 Lst L
+beginp
+	ug_Init(false,false)
+
+	ug_Ipar("C","I",3,Piref="Test " & SdateDh(Time(7)))
+	ug_Ent(Today,"C0000001",Op="JI")	
+	Sleep 2000
+	ug_Ipar("C","I",3,Piref="Test " & SdateDh(Time(7)))
+	ug_Ent(Today,"C0000001",Op="JI")	
+
+	Ug_Integration(G3xz)
+
+	Lst=ug_Liste("ug_Liste_Recup_Gtfi",False)
+	ListBegin(Lst)
+	Loop ListNext(Lst,GtfR)>0
+		Messagebox(GtfR,"Piece Generée")
+	endloop
+endp
+;*
+Procedure ug_Ftp_NC
+;
+1 FichierTrouve 512
+beginp
+	ug_Lister_un_Repertoire_FTP("ftpperso.free.fr","xpprofrcom",ug_pass,"/","*","ftp.txt",sw_normal,ncftp=True)	
+	;ug_Lister_un_Repertoire_FTP("192.168.234.200","gipec","gipec","/","*","ftp.txt",sw_normal,ncftp=True)	
+	;ug_Lister_un_Fichier_FTP("ftpperso.free.fr","xpprofrcom",ug_pass,"/","index.htm","ftp.txt",FichierTrouve,True,True)
+
+	;ugtm_ftp_nc.ug_Supprimer_un_Fichier_FTP("ftpperso.free.fr","xpprofrcom",ug_pass,"/","testpwhdu.ps1",sw_normal,True)
+endp
+;*
+Procedure ug_test_Module
+;
+beginp
+	MessageBox(ug_Rechercher_Dernier_Module,"go")	
+endp
+;*
+Function Char ug_Seek_RecordSql(NomModule,NomFonction,Param)
+;
+1 NomModule   S
+1 NomFonction S
+1 Param S
+1 Enreg S
+RecordSqlPtr Rdes
+beginf
+	Switch NomModule	
+		case "GTPMFICSQL.DHOP" and NomFonction="SEEK_ARTICLE"
+			Seek_Article(ArtSql,Param)
+;			Seek_Article(Rdes,Param)
+;			Ptr(ArtSql.ART)
+;			Size(ArtSql.ART)
+			Enreg=ArtSql.ART
+		default
+			
+	endswitch
+	freturn (Enreg)
+endf
+;*
+Procedure ug_Test_LstEnreg
+;
+beginp
+	ug_Init_Seek_Liste("GtpmficSql.dhop","Seek_Article",ug_init_PosLgTri(Ptr(Art),PTr(Art.Ref),Size(Art.Ref)))
+	ug_Seek_Lst("gtpmficSql.dhop","Seek_Article","ALB0001",Art,ug_ReCordSql=True)
+	ug_Seek_Lst("gtpmficSql.dhop","Seek_Article","ALB0001",Art,ug_ReCordSql=True)
+endp
+;*
+Procedure ug_Test_SelectRecordSql
+;
+1 RdSel L
+beginp
+	RdSel=ug_Select_RecordSql(ArtSql,"ART.REF LIKE 'ALB%' AND ART.PRODNAT LIKE '1%'",True,2,"ART.DES")
+	Loop ArtSql.ReaderNext(RdSel)=True
+		Print ArtSql.Des && " " & ArtSql.Ref
+	endloop
+endp
+;*
+Procedure ug_Seek_Lst_Record
+;
+recordSql gtrsart.dhoq Article ArtSql
+beginp
+	ug_Init(false,false)
+
+	ug_Init_SeekRecordSql_Liste("gtpmficSql.dhop","Seek_Article",ArtSql.ART,ug_init_PosLgTri(Ptr(ArtSql.ART),Ptr(ArtSql.Ref),Size(ArtSql.Ref)))
+	
+	ug_Seek_LstRecordSql("gtpmficSql.dhop","Seek_Article",'ALB0001',ArtSql)
+	ug_Seek_LstRecordSql("gtpmficSql.dhop","Seek_Article",'ALB0002',ArtSql)
+	ug_Seek_LstRecordSql("gtpmficSql.dhop","Seek_Article",'ALB0001',ArtSql)
+endp
+;*
+Procedure ug_Test_Creation_Of
+;
+beginp
+	mz.Dos=997
+	Seek_Soc(mz.Dos)
+	Seek_SocGP(mz.Dos)
+	ug_Creation_Of_Auto_Import(1,'PF000001',Left(Time(2),4)," ",Hdate(Today,"D") & "170000")
+
+	;ug_Creation_Of_Auto("PF000001",Left(Time(2),4)," ","20140731120000",Depo="1")
+endp
+;*
+Procedure ug_Parcourir_Rep_Ajout_Av
+;
+RecordDiva ugtm_tech.ugs_Rep
+beginp
+	PingLocalReceive("ugs_Rep",ugs_Rep)
+	Print [Condition(ugs_Rep.Type=1,Rept(ugs_Rep.Niveau," ") & "[" & ugs_Rep.Nom && "]",Rept(ugs_Rep.Niveau," ") & ugs_Rep.Nom)]
+endp
+;*
+Procedure ug_Test_SQLSelect
+;
+1 Cn 3,0
+beginp
+	Cn=ug_SQL_Select(	"Select A.REF,A.DES,S.SREF1,S.SREF2 " & \
+						"From ART A " & \
+						"LEFT JOIN SART AS S " & \
+						"ON A.DOS=S.DOS AND A.REF=S.REF " & \
+						"Order By REF,SREF1,SREF2")
+	;Messagebox(ug_SQL_Fetch(Cn,True)," ",0)
+	ug_XL_Init_Export
+
+	
+	ug_SQL_Deconnexion(Cn)
+endp
+;*
+main
+ 
+	mz.Dos=998
+	mz.MtCle=System.Znomprog
+
+	;ug_ex_Note
+	
+	;ug_ex_sql
+
+	;ug_ex_trace
+
+	;ug_ex_message
+
+	;ug_ex_fic
+
+	;ug_Controle_EAN13("3411031401327")
+	;ug_Controle_EAN13("3411031401328")
+
+	;ug_Controle_cles("gtfdd.dhsd","gtfam")
+
+	;ug_excel
+
+	;ug_input
+
+	;ug_ex_sql_Access
+
+	;ug_lancement_auto
+
+	;ug_graph
+	;ug_graph2
+
+	;ug_excel_save
+
+	;ug_Seek_tbl
+	
+	;Messagebox("HDU","TEST")
+
+	;ug_Envoi_Email_Blat("duriez.herve@free.fr","Envoie d'un email blat","Libelle de l'email","D:\menu.7z,D:\newcli.txt","duriezherve@free.fr","duriez.herve@gmail.com",Show=SW_SHOWMinimized)
+
+	; AJouter des commentaires
+;	ug_XL_Begin
+;	ug_XL_Charger_Feuille(1)
+;	ug_XL_Inserer_Commentaire(5,1,'Texte du commentaire depuis Divalto',False)
+;	ug_XL_Inserer_Commentaire(5,2,'Texte du commentaire depuis Divalto',True)
+;	ug_XL_End
+
+
+	; Trace Barre
+;	1 vI 3,0
+;	ug_Trace_Debut("Selection Graphique",False)
+;	For vI=1 to 75
+;		Ug_Trace_Barre_Trt(15+vI,100,TypeBarre=4)
+;		Sleep 500
+;	Next
+;	ug_Trace_Fin()
+	
+;	Messagebox(ug_Note_Lire('DAV',362),"Note Article")
+;	Messagebox(ug_Note_Lire('COMMUN',46),"Note flash")
+
+;	ug_Note_Blob_Creation
+
+;	ug_Gestion_Blat_MultiLigne
+
+;	mz.Dos=998
+;	if Seek_Cli("C0000001")=0
+;		Ug_A5_Flash_Envoi("DAV_CREER_CLI",mz.Etb,mz.Depo,system.Znomprog)
+;	endif
+
+;	ug_Confid("CE$","DEMO")
+;	ug_Confid("CEm","DEMO")
+
+
+;	ug_Integration_Piece
+
+;	ug_Ftp_NC
+
+;	mz.Applic='DAV'
+;	ug_ITxt(1,1,1,"",361)
+
+
+;	ug_Envoi_Mail_Complet("test hdu exemple","Test Body","hduriez@gipec.fr",TypeMess=99,FichierIni="email.ini")
+	
+;	ug_Test_ZoomCombo(True)
+
+;	ug_Test_Module
+;	MessageBox(ug_Rechercher_Dernier_Module,"go")	
+
+	; Test Seek_Lst avec Record
+;	ug_Test_LstEnreg
+
+
+;	ug_Test_SelectRecordSql
+
+;	ug_Seek_Lst_Record
+
+;	ug_Test_Creation_Of
+
+;	ug_Parcourir_Rep("C:\Divalto\")
+
+;	Messagebox("ok","ok")
+;	Messagebox(ug_Select_Fichier_SPE()," ")
+
+	ug_Test_SQLSelect

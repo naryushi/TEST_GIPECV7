@@ -1,0 +1,424 @@
+;*
+;* GLE : 26/03/2014 
+;* Librairie permettant de transferer des fichiers en FTP
+;* TODO : refactor init_data_connexion
+;*
+
+Module ugtm_tech.dhop
+
+1 sock L	
+1 dataSock L
+1 dataSockFichier L
+
+define size_buffer = 500					 ; Taille du buffer permettant de lire le fichier à envoyer
+1 data size_buffer							 ; Buffer permettant de lire sur le socket
+1 dataFichier size_buffer					 ; Buffer permettant de lire le fichier que l'on va envoyer 
+1 st L
+record * htdf tdf 							 ; table définition fichier	
+
+1 FlagDataConnexion 1,0=False
+
+Define ug_NomListe_Ftp="ug_Liste_fichierDossier"
+Define ug_CodErr = Left(data,3)
+
+Define ModeBavard=True
+
+Public Structure ugs_RetourListe
+	1 Nom 50 ; nom du fichier ou dossier
+	1 IsDossier 1,0
+	1 Taille 14,0 ; Taille en octet
+	1 DroitLecture 1,0  ; True/False
+	1 DroitEcriture 1,0 ; True/False
+	1 DroitExecuter 1,0 ; True/False
+endStructure
+
+;*
+Public Procedure ug_Display(Texte)
+;
+1 Texte S
+record * htdf fic
+beginp
+	display Texte
+	fic.Name=GetHarmonyDirectory & "/" & "TraceFtp.txt"
+	Loop Fopen(fic,'P')<>0
+		HcreateFile(Fic.Name,'U')
+	endloop
+	Hwrite(Fic,Texte)
+	Fclose(fic)
+endp
+;* Procédure chargée de lire le buffer 
+procedure ug_FTP_Read_Buffer()
+;
+
+beginp
+	data = System.Esp
+	do
+		st =SocketReceive(sock,data)	
+	while st = size_buffer
+	wend	
+
+	if ModeBavard=True
+		ug_Display "|" & data && ""
+	endif
+endp
+;*
+Function char ug_FTP_Read_Data()
+;
+1 Retour S
+1 vI 5,0=0
+beginf
+	do
+		dataFichier = System.Esp
+		st =SocketReceive(datasock,dataFichier)	
+	while st <> 0 and vI<=1000
+		vI++
+		Retour &=DataFichier	
+	wend	
+	Freturn(Retour)
+endf
+
+;* Procédure envoyant la commande 
+procedure ug_FTP_Send_Command(cmd)
+;
+1 cmd S
+
+beginp
+	socketsend(sock,nospaces(cmd)& chr(13) & chr(10))
+	Sleep 200
+	ug_FTP_read_buffer()
+	Sleep 300
+endp
+
+;* Fonction initialisation une connexion data	
+Function int ug_FTP_Init_Data_Connexion(&DataSock)
+; Retour 0=Ok
+;	Fonction se chargeant de traiter les informations envoyées par le serveur
+;   lors du passage en mode passif, la chaine reçu est de la forme "227 Entering Passive Mode (h1,h2,h3,h4,p1,p2)"
+1 infos size_buffer	; Chaine de la forme "227 Entering Passive Mode (h1,h2,h3,h4,p1,p2)"
+						
+1 IP  S  	= ""	   ; IP sur laquelle va s'effectuer la connexion
+1 port 5,0  = 0		; Port sur lequel va s'effectuer la connexion
+1 retour 1,0=False
+1 dataSock L
+beginf
+	if FlagDataConnexion=False
+
+		ug_FTP_send_command("PASV")
+		if data<>" "
+			infos = mid(nospaces(data),28,length(nospaces(data)))	
+		
+			IP = Splitword(infos,,,",") & "."	
+			IP &= Splitword(infos,,,",") & "."
+			IP &= Splitword(infos,,,",") & "."
+			IP &= Splitword(infos,,,",")
+				
+			port =  Val(Splitword(infos,,,",")) * 256
+			port += Val(Splitword(infos,,,","))
+		
+			dataSock = SocketNew()
+			if ( not SocketConnect(dataSock,IP,port) = true)	
+				Retour=1
+			endif
+		else
+			retour=1
+		endif
+	endif
+	freturn(Retour)																				 
+endf
+
+;* Procédure envoyant le fichier passé en paramétre
+Public Function int ug_FTP_Envoi_Fichier(chemin)
+;	Procédure envoyant le fichier passé en paramétre
+;  Il est nécessaire d'initialiser la connexion avant
+1 chemin S				 ; Chemin du fichier que l'on souhaite envoyer	  
+beginf
+	tdf.Name = 	chemin
+	if ( fopen(tdf,"P")	=0 )
+		ug_FTP_send_command("TYPE A")
+
+		;Initialisation de la connexion data
+		if ug_FTP_init_data_connexion(dataSockFichier)=0
+
+			; Si le fichier est ouvert correctement, on passe en mode binaire	et on envoie la commande de storage	  
+			
+			ug_FTP_send_command("STOR " & mid(tdf.Name,stringr("/",tdf.Name) + 1)) 
+			if ug_CodErr='150'	  ;data
+				do									  
+					; Lecture du fichier en mode octet, le fichier étant envoyé en mode binaire
+					;  ceci évite des problémes d'encodage lors de l'envoie
+					st = FReadst(tdf,dataFichier)
+				while st = 0											  
+					SocketSend(dataSockFichier, left(dataFichier,tdf.SizeLast))	
+				wend
+		
+				; Fermeture de la connexion et du fichier
+				SocketClose(dataSockfichier)
+			endif
+			fclose(tdf)
+			ug_FTP_read_buffer()
+		else
+			Freturn(True)
+		endif
+	endif			
+	freturn(condition(ug_CodErr=425,True,False))
+endf
+
+;* Procédure telechargeant le fichier passé en paramétre
+Public Function char ug_FTP_Recevoir_Fichier(filename,Rep)
+;	Procédure envoyant le fichier passé en paramétre
+;  Il est nécessaire d'initialiser la connexion avant
+; retour du nom du fichier
+1 filename S				 ; Chemin du fichier que l'on souhaite envoyer	
+1 Rep 	 S=' ' 			 ; si vide c'est de dossier temporaire  
+1 RepD	 S
+1 NumFic 1,0
+beginf
+	RepD=Rep
+	Rep=Condition(Rep=' ' or left(Rep,2) in('//','\\'),WinGetTempPath ,Rep)
+	tdf.Name = Rep & "/" & filename
+	
+	WinDeleteFile(tdf.Name)
+	Loop Fopen(tdf,"P")<>0 
+		HcreateFile(tdf.Name,'U')
+	endloop
+	Herase(tdf)
+	Fclose(tdf)
+	Sleep 50
+	if ( fopen(tdf,'R') = 0 )
+
+		ug_FTP_send_command("TYPE I")
+		;Initialisation de la connexion data
+		if ug_FTP_init_data_connexion(dataSockFichier)=0
+
+			; Si le fichier est ouvert correctement, on passe en mode binaire	et on envoie la commande de récupération	  
+			
+			ug_FTP_send_command("RETR " & filename)
+			st=0 		
+			do									  
+				; Lecture sur le socket des donées en mode binaire pour pouvoir les réécrire avec la fonction  FWritst
+				st = SocketReceive(dataSockFichier,dataFichier)
+			while st <> 0 and st<=Size(datafichier)
+				FWritst(tdf,left(dataFichier,st))	
+			wend
+			FPclose(tdf)
+	
+			; Fermeture de la connexion et du fichier
+			SocketClose(dataSockFichier)
+			fclose(tdf)
+		else
+			freturn(' ')
+		endif
+	endif
+	if RepD<>" " and WinCopyFile(tdf.name && $00, RepD && "\" & FileNameLastSegment(Tdf.Name) && $00,False)=false
+		Hcopyfile(tdf.name,RepD && "\" & FileNameLastSegment(Tdf.Name),NumeroFichierErreur=Numfic)
+	else
+		WinDeleteFile(tdf.name && $00)
+		Tdf.Name=RepD && "\" & FileNameLastSegment(Tdf.Name) && $00
+	endif
+	freturn(tdf.Name)		
+endf
+;*
+Public procedure ug_FTP_Close_connexion()
+;	Procédure terminant la connexion en envoyant la commande QUIT au serveur
+;   et fermant le socket utilisé 
+beginp
+	SocketClose(dataSock)
+	Socketsend(sock,"QUIT"& chr(13) & chr(10))
+	Socketclose(sock)	
+endp
+
+;*
+Public function int ug_FTP_Connexion(IP ,PORT ,user ,password)		
+; Fonction initialisation la connexion
+; Return true si la connexion s'est bien passée, false sinon
+1 IP       S
+1 PORT     L
+1 user     S
+1 password S
+1 IpTrouve S
+beginf
+	sock = SocketNew()
+	if (IpTrouve:=SocketGetHostByName(Ip && ""))<>" "
+		Ip=IpTrouve
+	endif
+	; Connexion au serveur
+	if ( SocketConnect(sock,nospaces(IP),PORT) = true)	
+		ug_FTP_read_buffer()
+
+		; Envoie des identifiants
+		ug_FTP_send_command("USER " & nospaces(user))
+		if ug_CodErr<>331
+			ug_FTP_Close_connexion
+			freturn(false)
+		endif
+		ug_FTP_send_command("PASS " & nospaces(password))
+
+		if ug_CodErr=530	; data
+			ug_FTP_Close_connexion
+		 	freturn false
+		endif
+		if ug_CodErr=230 | ug_FTP_send_command("TYPE A") | endif
+
+		freturn True
+
+	else
+		ug_FTP_Close_connexion
+		freturn false
+	endif
+endf
+;*
+Public Function Long ug_FTP_Lister_Fichiers
+; Retour de la liste des fichiers et repertoire
+1 Fic S
+1 Lst L
+1 LstRep L
+1 RetourA 50000
+1 RetourB 50000
+1 Retour 250
+1 vI 5,0
+recorddiva ugs_RetourListe ugs_rep
+beginf
+	LstRep=ug_Liste(ug_NomListe_Ftp)
+
+	if ug_FTP_Init_Data_Connexion(dataSock)<>0
+		Freturn(LstRep)
+	endif
+
+	ug_FTP_send_command("LIST")
+	
+	if ug_CodErr<>550
+		fic=ug_FTP_read_data
+
+		fic=Modify($0d0a,"|",fic)
+		Lst=SplitList(Fic,SeparateursNonRendus="|")
+		; lecture de la liste des fichiers
+		ListBegin(Lst)
+		Loop ListNext(Lst,RetourA)>0
+			RetourB=RetourA
+			ugs_Rep=' '
+			Retour=SplitWord(RetourB,SeparateursNonRendus=" ")
+			ugs_Rep.IsDossier		=Condition(Mid(Retour,1,1)="d",true,False)
+			ugs_Rep.DroitLecture	=Condition(Mid(Retour,2,1)<>'-',True,False)
+			ugs_Rep.DroitEcriture=Condition(Mid(Retour,3,1)<>'-',True,False)
+			ugs_Rep.DroitExecuter=Condition(Mid(Retour,4,1)<>'-',True,False)
+			
+			RetourB=NoSpaces(RetourB)
+
+		  	For vI = 1 to Length(RetourA)
+				if Fstring('l',Mid(RetourB,vI,3)) in ("jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec") and Mid(RetourB,vI-1,1)=" " and Mid(RetourB,vI+3,1)=" "
+					RetourB=Mid(RetourB,vI-6)
+					ExitFor
+				endif
+			Next
+			ugs_Rep.Taille			=Mid(RetourB,1,5)
+
+			ugs_Rep.Nom				=Mid(RetourB,14+6)				
+			
+			ListInsert(LstRep,ugs_Rep)
+		endloop
+		
+		ListDestroy(Lst)
+	endif
+
+	SocketClose(DataSock)
+
+	Freturn(LstRep)
+endf
+;*
+Public Function int ug_FTP_Charger_Repertoire(Repertoire)
+; Retour 0=OK
+1 Repertoire A ; attention respecter la case si serveur ftp linux
+beginf
+	ug_FTP_send_command("CWD " & Repertoire)
+	if Left(data,3)<>250
+		ug_FTP_send_command("CWD /" & Modify("//","/", Repertoire && "/"))	
+	endif
+	freturn (Condition(Left(data,3)<>250,1,0))
+endf
+;*
+Public Function int ug_FTP_Creer_Repertoire(Repertoire)
+; Retour 0=OK
+1 Repertoire A	 ; attention respecter la case si serveur ftp linux
+beginf
+	ug_FTP_send_command("MKD " & Repertoire)
+	if Left(data,3)<>257
+		ug_FTP_send_command("MKD /" & Modify("//","/", Repertoire && "/"))	
+	endif
+	freturn (Condition(ug_CodErr<>257,1,0))
+endf
+;*
+Public Function int ug_FTP_Renommer_Fichier(Fichier,FichierDest)
+; Renommer ou Deplacer fichier dans un dossier FTP	  (attention le fichier destination doit avoir des "/" au lieu des "\" )
+1 Fichier A
+1 FichierDest A ; attention respecter la case si serveur ftp linux
+beginf
+	ug_FTP_send_command("RNFR " & Fichier)
+	if ug_CodErr in(350,226) ; data
+		ug_FTP_send_command("RNTO " & FichierDest)
+	endif
+
+	freturn (Condition(ug_CodErr<>250,1,0))
+endf
+;*
+Public Function int ug_FTP_Suprimer_Repertoire(Repertoire)
+; Retour 0=OK
+1 Repertoire A	 ; attention respecter la case si serveur ftp linux
+beginf
+	ug_FTP_send_command("RMD " & Repertoire)
+	if ug_CodErr<>250
+		ug_FTP_send_command("RMD /" & Modify("//","/", Repertoire && "/"))	
+	endif
+	freturn (Condition(ug_CodErr<>250,1,0))
+endf
+;*
+Public Function int ug_FTP_Supprimer_Fichier(Fichier)
+;
+1 Fichier A	 ; attention respecter la case si serveur ftp linux
+beginf
+	ug_FTP_send_command("DELE " & Fichier)
+
+	freturn (Condition(ug_CodErr<>250,1,0))
+endf
+
+;* MAIN
+main				 
+;	if (init_connexion("82.216.111.9",21,"morgane.mathieu","") = true)	 
+;		;Envoie du fichier
+;		send_file("C:\Users\Gregory\Pictures\wallpaper.zip")
+;		download_file("wallpaper.zip")
+;		close_connexion()		
+;	else
+;		messagebox("nok","")
+;	endif
+;
+;programexit
+	1 Rep S
+
+	Rep="Test" & Time(7)
+
+;	ug_FTP_Connexion('192.168.0.15',21,'gipec','gipec')
+;	ug_FTP_Lister_Fichiers
+;	ug_FTP_Charger_Repertoire("inetpub/logs/")
+;	ug_FTP_Charger_Repertoire("/")
+;	ug_FTP_Creer_Repertoire(Rep)
+;	ug_FTP_Renommer_Fichier("vcredist.bmp","/" & Rep & "/vcredist.bmp")
+;	ug_FTP_Renommer_Fichier("/" & Rep & "/vcredist.bmp","/vcredist.bmp")
+;	ug_FTP_Charger_Repertoire("/")	
+;	ug_FTP_Recevoir_Fichier("vcredist.bmp","C:\")
+;	ug_FTP_Charger_Repertoire(Rep)
+;	ug_FTP_Envoi_Fichier("C:\DivaltoIni.txt")
+;	ug_FTP_Envoi_Fichier("C:\vcredist.bmp")
+;	
+;	;ug_FTP_Supprimer_Fichier("DivaltoIni.txt")
+;	ug_FTP_Charger_Repertoire("/")
+;	;ug_FTP_Suprimer_Repertoire("testhdu")
+;	ug_FTP_close_connexion
+	1 Lst L
+	recorddiva ugs_retourliste retlst
+
+	if ug_FTP_Connexion("ftpperso.free.fr","21","xpprofr","odbc200m0")=true
+	;if ug_FTP_Connexion("ftpperso.free.fr","21","xpprofrcom","odbc2000")=true
+		Lst=ug_FTP_Lister_Fichiers
+		ug_FTP_Recevoir_Fichier("HDU.jpg","c:\")	
+		ug_FTP_Close_connexion
+	endif

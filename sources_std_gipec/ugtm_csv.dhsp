@@ -1,0 +1,252 @@
+;*
+;*	Module pour la lectures fichiers de type CSV
+;*
+
+
+1 LstCSV L
+
+record * htdf ficCsv
+1 FichierTmp S	; fichier Csv Client Leger
+
+1 SeparateurCsv S
+
+
+
+;*
+;*	Procedures
+;*
+
+Public Function int ug_CSV_Open(Fichier,Separateur)
+; retour 0 si ok
+; Retour 1 si ko
+1 Fichier    S	  		; fichier de type windows ou harmony
+1 Separateur S=';'	; Separateur
+
+
+1 Texte 50000
+1 Retour 1,0=0
+
+beginf
+	SeparateurCSV=Separateur
+	LstCSV=ListGetId("ug_Liste_Csv") | ListErase(LstCSV)
+	if ServiceModeTransport=0 and Fichier<>' '
+		if Mid(fichier,1,2) in ("//","\\")
+			ficCsv.Name=Modify("/","\",WinGetTempPath & "\" & FileNameLastSegment(Fichier))
+			;if (ServiceModeTransport=1 and LCWinUpload(Fichier,Fic.Name)=0) or WinCopyFile(Fichier,Fic.Name,True)=True
+			if WinCopyFile(Fichier,ficCsv.Name,false)=True
+			else
+				FicCSV.Name=Fichier	
+			endif
+		else
+			ficCSV.Name=Fichier
+		endif
+	elsif Fichier<>' '
+		; Gestion Client Leger
+		FichierTmp=WinGetTempPath & "\" & FileNameLastSegment(Fichier) && $00
+		WinDeleteFile(FichierTmp)
+		if LCWinUpload(Fichier && $00,FichierTmp,ToujoursCreer=True)=0
+			FicCsv.Name=FichierTmp
+		endif
+		FichierTmp=Fichier
+	endif
+	if Fichier=' '	; si pas de nom alors creation du fichier
+		Fichier=WinGetTempPath & "\ug_Csv" & Time(7) & ".csv"
+		ficCSV.Name=Fichier
+		Loop Fopen(FicCsv,'P')<>0
+			HcreateFile(FicCsv.Name,'U')
+		endloop
+		Fclose(FicCsv)
+	endif
+
+	; ouverture de fichier
+	if Fopen(ficCsv,"P")=0	
+		Fichier=GetSystemFileName(FicCsv)
+		Fclose(ficCsv)
+		if (Fic:=WinCreateFile(Fichier,GENERIC_READ,FILE_SHARE_READ,0,OPEN_EXISTING,0,0))<>-1
+			Loop WinReadFileRecord(Fic,Texte,FicCsv.SizeLast,FinFic,0)=True and FinFic=False
+				ListInsert(LstCsv,Texte)	
+			endloop
+			WinCloseHandle(Fic)
+		else
+			Loop Hread(ficCsv,Texte)=0
+				ListInsert(LstCsv,Texte)	
+			endloop
+			Fclose(ficCsv)
+		endif
+		Fopen(ficCsv,'P')
+	else
+		retour=1		
+	endif
+	freturn(Retour)
+endf
+;*
+Public Function int ug_CSV_Close
+;									 
+1 Rep X									  
+1 Err L
+beginf
+	Rep=fclose(ficCsv)
+	if ServiceModeTransport<>0
+		FicCsv.Name=Modify("/","\",FicCsv.Name)
+		LCWinDeleteFile(FichierTmp)
+		if (Err:=LCWinDownload(FicCsv.Name && $00,FichierTmp,NePasModifierNomFichierArrivee=True))<>0
+			MessageBox(WinGetTextError(Err),"Erreur",Mb_iconexclamation)			
+		endif
+	endif
+	freturn (Rep)
+endf
+;*
+Public Function Char ug_CSV_Lire(Lig,Col)
+; Lecture d'une colonne et d'une ligne pour un fichier CSV
+1 Lig 9,0
+1 Col 9,0
+1 Texte 50000
+1 Lst L
+1 TexteRetour 50000
+beginf
+	if ListExist("ug_Liste_Csv")=True
+		if ListIndex(LstCsv,Texte,Lig)>0
+			Texte=Modify("'",condition(SeparateurCsv = '§',"µµµ", "§§§"),Texte)
+			Lst=SplitList(Texte,SeparateursNonRendus=SeparateurCsv)
+			ListIndex(Lst,TexteRetour,Col)
+			TexteRetour=Modify(condition(SeparateurCsv = '§',"µµµ", "§§§"),"'",TexteRetour)
+			TexteRetour=Modify('"','',TexteRetour)
+			ListDestroy(Lst)	
+		endif
+
+	endif
+	freturn (TexteRetour && "")
+endf
+;*
+Function Char ug_Csv_Contruire_Ligne(Lst)
+; La liste avec les colonnes doit être chargé
+1 Lst L
+1 TexteTrouve 50000
+1 Texte 50000
+beginf
+
+	ListBegin(Lst)	
+	Loop ListNext(Lst,TexteTrouve)>0
+		Texte &=Condition(Count(SeparateurCsv,TexteTrouve)>0,'"','') & TexteTrouve  && Condition(Count(SeparateurCsv,TexteTrouve)>0,'"','') && SeparateurCsv		
+	endloop
+	freturn (Texte)
+endf
+;*
+Public Function Char ug_Csv_Ecrire(Lig,Col,TexteAEcrire)
+; Ecrire dans le fichier CSV
+1 Lig   9,0
+1 Col   9,0
+1 TexteAEcrire S
+
+1 Texte 50000
+1 TexteRetour 50000
+1 Lst L 
+1 NbLigne L
+1 vI 9,0
+beginf
+	if ListExist("ug_Liste_Csv")=True
+		; recherche de la ligne
+		if ListIndex(LstCsv,Texte,Lig)>0
+			Lst=SplitList(Texte,SeparateursNonRendus=SeparateurCsv)
+			; recherche de l'element dans la colonne
+			if ListIndex(Lst,TexteRetour,Col)>0
+				ListModify(Lst,TexteAEcrire)					
+			else
+				NbLigne=ListCount(Lst)
+				For vI= ListCount(Lst) to Col
+					
+					if ListCount(Lst)+1=Col
+						ListAddEnd(Lst,TexteAEcrire)
+					else
+						ListAddEnd(Lst," ")
+					endif
+				next
+
+			endif
+			Texte=ug_Csv_Contruire_Ligne(Lst)
+			ListModify(LstCsv,Texte)
+			ListDestroy(Lst)	
+		else
+			;Creation des lignes
+			For vI=ListCount(LstCsv) to Lig-1
+				ListAddEnd(LstCsv," ")
+			next
+			ug_Csv_Ecrire(Lig,Col,TexteAEcrire)
+		endif
+
+	endif
+	freturn (0)
+endf
+;*
+Public Procedure ug_Csv_Save
+;
+1 Texte 50000
+1 Err L
+beginp
+	Herase(ficCsv)
+	ListBegin(LstCsv)
+	Loop ListNext(LstCsv,Texte)>0
+		Hwrite(Ficcsv,Texte)		
+	endloop
+	Hpclose(ficCsv)
+	; Client Leger
+	if ServiceModeTransport<>0
+		Fclose(FicCsv)
+		if (Err:=LCWinDownload(ficCsv.Name && $00,FichierTmp,NePasModifierNomFichierArrivee=True))<>0
+			MessageBox(WinGetTextError(Err),"Erreur",Mb_iconexclamation)
+		endif
+		Fopen(FicCsv,"P")
+	endif
+endp
+;*
+Public Procedure ug_Csv_SaveAs(Fichier)
+; Enregistre dans le fichier
+1 Fichier S
+1 Texte 50000
+Record * htdf ficCsvS
+1 NumFic 1,0
+1 Err L
+beginp
+	;creation du fichier
+	ficCsvS.Name=WinGetTempPath & "\"  & Rtime & ".csv"
+	Loop Fopen(ficCsvS,'P')<>0
+		HcreateFile(ficCsvS.Name,'U')
+	endloop
+
+	Herase(ficCsvS)
+	ListBegin(LstCsv)
+	Loop ListNext(LstCsv,Texte)>0
+		Hwrite(FiccsvS,Texte)		
+	endloop
+	Fclose(ficCsvS)
+
+	if ServiceModeTransport=0
+		if WinMoveFile(FicCsvS.Name && $00,Fichier && $00)=False and Hcopyfile(FicCsvS.Name,Fichier,NumeroFichierErreur=Numfic)<>0
+			Messagebox("Erreur lors de la copie du fichier|"  & WinGetTextError(winGetLastError),"Erreur",mb_iconexclamation)
+		endif
+	else
+		Fichier = Fichier && $00
+		if (Err:=LCWinDownload(ficCsvS.Name && $00,Fichier,NePasModifierNomFichierArrivee=True))<>0
+			Messagebox(WinGetTextError(Err),"Erreur",Mb_Iconexclamation)
+		endif
+	endif
+endp
+
+
+;*
+main
+;	messagebox("ok","ok",0)
+;	ug_CSV_Open(Fichier='c:\tempsRT.Csv')
+;	messagebox(ug_CSV_Lire(10,2),"")
+;	ug_Csv_Ecrire(149,2,"Client")
+;	ug_Csv_Ecrire(205,2,"Client;")
+;	ug_Csv_SaveAs("\\srvdivalto\Developpement\test.csv")
+	1 Fichier S
+
+	Fichier="C:\TempsRT.csv"
+	if ServiceModeTransport=1
+		LCWinDownload("c:\tempsRT.csv",Fichier,,True)
+		messagebox(fichier,"ok",0)
+		LCWinDownload("c:\tempsRT.csv",Fichier,,false)
+		messagebox(fichier,"ok",0)
+	endif

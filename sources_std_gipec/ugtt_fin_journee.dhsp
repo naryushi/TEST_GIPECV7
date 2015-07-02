@@ -1,0 +1,118 @@
+;*
+;*	Procedure de fin de Journée (fiche d'intervention à faire
+;*
+
+include ugtm_zoomstd.dhsp
+
+Module gtpm000.dhop
+Module A5pmfic.dhop
+Module gtpmfic.dhop
+
+1 Serveur 50="SRV-PROGINOR"
+1 ServeurWeb 50="Extranet.gipec.fr"
+1 Implicite 50="ug_fin_journee.txt"
+1 Param S
+1 Adr 60
+
+Public record grfdd.Dhsd Gr1
+Public record grfdd.dhsd Evttiers
+
+;Public record A5dd.Dhsd mz
+;Public record A5dd.dhsd Muser
+
+;*
+;*	Procedures
+;*
+
+function int ug_Test_Connexion_Serveur(Serveur,Port)
+; Procedure pour test de la connexion vers un serveur ou une adresse http
+1 Serveur A
+1 Port L=80
+1 Sock L
+1 Ip 15
+1 retour 1,0
+beginf
+	Sock=SocketNew()
+	ip=SocketGetHostByName(Serveur && "")
+	if SocketConnect(Sock,Ip && "",Port)=True 
+		retour=0
+	elsif SocketConnect(Sock,Serveur && "",Port)=True
+		retour=0
+	else
+		retour=1
+	endif
+	SocketClose(Sock)
+	freturn(retour)
+endf
+;*
+function int ug_Seek_Xlogf(User)
+1 user > gtfdd.dhsd user
+record * Htdf fic
+record ddsys.Dhsd Elogf Elogf
+1 St X
+beginf
+	fic.Name="xlog.dhfi"
+	if Hopen(fic,"P")=0
+		st=Hseek(fic,Elogf,"A" & User)
+		Hclose(fic)
+		if st<>0
+			Messagebox("Utilisateur " & User && " Inexistant","Erreur",mb_iconstop)
+		endif
+	endif
+	freturn(st)
+endf
+;*
+;*
+Public Procedure Soc_Seek_Ap
+;
+1 Id 50
+1 Valeur 256
+1 Adr 120
+
+beginp
+	if Zoom.Scevaleur<>" " and HmpVerify(Zoom.Scevaleur)=True			 ; <CLI.TIERSGRP>C0000001
+	 	Loop HmpRead(Zoom.Scevaleur,ID,Valeur)=0
+			if DataDescriptor(Id,Adr)=0
+				DataValue(Adr)=Valeur
+			endif
+		endloop
+	endif
+endp
+
+;*
+;*	Programme Principal
+;*
+
+main
+	param=GetEnv("HARMONY_PARAM")
+
+	param=Condition(Param=" ","HDU",Fstring("U",Param))
+	if ug_Seek_Xlogf(param)<>0
+		Programgoto("xquit")
+	endif
+
+	system.User=Param
+	
+
+	if ug_Test_Connexion_Serveur(Serveur,139)=0 
+		ListImplicitesLoad(Implicite,AutoriseAffichage=True)
+		if Seek_Muser(System.User)=0
+			Mz.dos=Muser.dos
+			mz.depo=Muser.depo
+			mz.Etb=Muser.etb
+			mz.MtCle=system.Znomprog
+		endif
+		Seek_Soc(mz.dos)
+		EVTTIERS.EVTDH= Time(1) & "000000"
+		XmeLoad("Grez003.Dhoe")
+		GetAdressProcedure("grez003.dhoe","Champ_EvtDh_1_Ap",Adr)
+		ProcedureCall(Adr)
+		Ug_Zoom_Call_SPE(z=30003,True,SceSaisie=Zoom_Pas_Premiere,SceNoCle=6,SceSens=Zoom_Sens_Inverse,SceValeur="<GR1.USER>" & System.user && "<EVTTIERS.EVTDH>" & Time(1) & "000000<EVTTIERS.CALDH>" & EVttiers.CalDh)
+		;G3_Zoom_Call(30003)
+	elsif ug_Test_Connexion_Serveur(ServeurWeb,80)=0
+	 	WinShellExecute("OPEN","http://" & ServeurWeb && "/",ModeAffichage=SW_NORMAL)
+	else
+	  	MessageBox("Vous n'avez aucune connexion au serveur Divalto + serveur Web Divalto||Veuillez lancé 'http://" & serveurweb && "/'","Fiche Intervention",mb_iconexclamation)
+	endif
+
+	ProgramGoto "xquit"	

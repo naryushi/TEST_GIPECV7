@@ -1,0 +1,28 @@
+;>xwin4obj                              7.0       20120213222745      
+[masque]
+ utilisateur="ROOT"
+ date_modification="13/02/2012"
+ feuille_style="fstylewpf.dhfi"
+ dernier_id=1
+ dernier_id_page=1
+[defaut]
+ [aide_page]
+  aide=0
+[enregistrements]
+[page]
+ numero=1
+ libelle="Exemple"
+ fond="STD"
+ nature=double
+ type=fenetre
+ titre="Exemple"
+ efface=complet
+ nb_lig=25
+ nb_col=90
+ offset_lig=8
+ offset_col=7
+ ident_unique=1
+[diva]
+[/diva]
+[diva_base]
+[/diva]

@@ -1,0 +1,35 @@
+
+;*
+;*	Programme de lancement des regularisations des entrées forcées
+;*
+
+Module gtpmfic.dhop
+Module gtpm000.dhop
+Module A5pmfic.dhop
+Module ugtm_tech.dhop
+Module ugtm_fonc.dhop
+
+Public record A5dd.dhsd mz
+Public record A5dd.dhsd muser
+Public record gtfdd.dhsd Soc
+
+;*
+;*	Procedure
+;*
+
+
+
+
+
+;*
+;*	Programme Principal
+;*
+
+Main
+
+	ug_init(false,false)
+	
+	ug_Lance_Regularisation_EntreeForcee(True)
+
+	Programgoto("Xquit")
+	

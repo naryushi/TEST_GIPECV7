@@ -1,0 +1,137 @@
+;*
+;*	Moulinette pour deplacer les fichiers joints dans leur nouveaux repertoires
+;*
+
+Module Gtpm000.dhop
+Module A5pm000.dhop
+Module A5pmfic.dhop
+Module ugtm_tech.dhop
+Module gtpmficSql.dhop
+
+
+Public record A5dd.dhsd mz
+Public record A5dd.dhsd xq A5xq
+
+Public record A5dd.dhsd mjoint
+public record A5dd.dhsd mdos
+public record A5dd.dhsd mchemin
+
+recordSQL A5rsppjoint.dhoq DocJoint mJointSQL
+
+
+;*
+;*	Procedures
+;*
+
+Function Long ug_Tri_Chemin(&a,&b)
+;
+record A5dd.Dhsd mjoint a
+record A5dd.Dhsd mjoint b
+beginf
+	
+	freturn (SortCompare(a.Fic,b.Fic))
+endf
+
+
+;*
+Public Procedure ug_Deplace
+;
+1 vI 3,0
+1 NumFic 1
+1 CodeJointA 2*9="  5000301020809060"
+ 2 CodeJoint 2,0
+
+1 Adr_JOINT_READ 16
+1 Adr_JOINT_KEY 16
+1 Adr_JOINT_VERIFICATION 16
+1 Adr_JOINT_REWRITE 16
+1 Adr 16
+
+1 LstFic L
+
+record A5dd.dhsd mjoint mjoint_Trouve	
+
+1 Rd_Sel L
+
+beginp
+;	GetAdressFunction("A5PM000.DHOP","JOINT_READ",Adr_JOINT_READ)
+;	GetAdressProcedure("A5PM000.DHOP","JOINT_KEY",Adr_JOINT_KEY)
+;	GetAdressFunction("A5PM000.DHOP","JOINT_VERIFICATION",Adr_JOINT_VERIFICATION)
+;	GetAdressProcedure("A5PM000.DHOP","JOINT_REWRITE",Adr_JOINT_REWRITE)
+	if A5xq.Choix(1)<>2 | Preturn | endif
+
+	LstFic=ListGetID("ug_Liste_Chemin")
+	GetAdressFunction(system.Znomprog,"ug_Tri_Chemin",Adr)
+	ListMode(LstFic,1,Adr)
+
+	ug_Trace_Debut
+
+;	For vI=2 to 9
+;		if A5xq.Choix(vI)<>2 | RedoFor |endif
+;		FunctionCall(Adr_Joint_verification,CodeJoint(vI))
+;		Seek_Mchemin(Mdos.HtmlCheminCod(CodeJoint(vI)+1))
+;		ProcedureCall(Adr_JOINT_KEY,CodeJoint(vI),"A")	
+;		Loop FunctionCall(Adr_JOINT_READ,CodeJoint(vI),mJoint)=0 
+;			if [left(mchemin.Chemin) "\"  mjoint.Fic] <> [left(mjoint.Chemin) "\"  mjoint.Fic]	and mjoint.Chemin<>" "
+;				ug_Trace_Sel(mchemin.Chemin && "\" & nospaces(mjoint.Fic) && "")
+;				ug_trace_Trt(mjoint.Chemin && "\" & nospaces(mjoint.Fic) && "")
+;				if HMovefile(mchemin.Chemin && "\" & nospaces(mjoint.Fic) && "",mjoint.Chemin && "\" & nospaces(mjoint.Fic) && "",Numfic,false)<>0
+;					if HMovefile(mchemin.Chemin && "\" &  mjoint.Fic && "",mjoint.Chemin && "\" & mjoint.Fic && "",Numfic,false)=0
+;						ListInsert(LstFic,mJoint)
+;					elsif ListSeek(LstFic,mJoint,mJoint_Trouve)>0
+;						mJoint.Chemin=mjoint_Trouve.chemin
+;						ProcedureCall(Adr_JOINT_REWRITE,CodeJoint(vI),mJoint)
+;					endif
+;				else
+;					ListInsert(LstFic,mChemin)
+;				endif
+;			endif
+;		endloop
+;	Next	
+
+	mChemin.Chemin="//lilgerp01/ficjoints/"
+					 
+	mJointSQL.Init()
+	Rd_Sel = mJointSQL.ReaderSelect()	
+	Loop mJointSQL.ReaderNext(Rd_Sel)=1	
+		mJoint=mJointSQL.mJoint
+		if [left(mchemin.Chemin) "\"  mjoint.Fic] <> [left(mjoint.Chemin) "\"  mjoint.Fic]	and mjoint.Chemin<>" "
+			ug_Trace_Sel(mchemin.Chemin && "\" & nospaces(mjoint.Fic) && "")
+			ug_trace_Trt(mjoint.Chemin && "\" & nospaces(mjoint.Fic) && "")
+			if HMovefile(mchemin.Chemin && "\" & nospaces(mjoint.Fic) && "",mjoint.Chemin && "\" & nospaces(mjoint.Fic) && "",Numfic,false)<>0
+				if HMovefile(mchemin.Chemin && "\" &  mjoint.Fic && "",mjoint.Chemin && "\" & mjoint.Fic && "",Numfic,false)=0
+					ListInsert(LstFic,mJoint)
+				elsif ListSeek(LstFic,mJoint,mJoint_Trouve)>0
+					mJoint.Chemin=mjoint_Trouve.chemin
+					
+				endif
+			else
+				ListInsert(LstFic,mChemin)
+			endif
+		endif
+	endloop
+		
+	ug_Trace_Fin
+endp
+
+
+
+;*
+;*	Programme Principal
+;*
+
+main
+
+	ug_Init(false,false)
+
+	mz.mecle="A5ee906.dhoe"
+	mz.Titre2="Deplacement des fichiers joints"
+
+	Seek_MDos(mz.Dos)
+
+	ug_Affiche_Masque
+
+	Loop G3_Saisie_Selections(mz.MeCle,1)<>0
+	endloop
+	
+	ug_Deplace

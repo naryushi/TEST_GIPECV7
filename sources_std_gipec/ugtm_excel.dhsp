@@ -1,0 +1,830 @@
+;* Gestion Excel
+
+OverWrittenBy ugum_excel.dhop
+
+module ugtm_tech.dhop
+module yoffice.dhop
+
+1 err S
+
+;*
+;*	Limitations
+;*
+
+;*
+public procedure ug_ole_execute(I)
+	;Execute une instruction OLE pour débloquer les limitations Divalto/Excel
+	1 I 1000								;Instruction
+
+	1 adr 16
+
+beginp
+
+	if getadressfunction("yoffice.dhop","InterneOffice_Execute",adr) = 0	
+		Err=functioncall(adr,I)
+	endif
+
+endp
+
+;*
+public function char ug_Ole_Q(Q)
+	;Question OLE pour débloquer les limitations Divalto/Excel
+	;Retour : Résultat ou ""
+	1 Q 1000								;Question
+
+	1 adr 16
+	1 retour 256
+
+beginf
+
+	if getadressfunction("yoffice.dhop","InterneOffice_Question",adr) = 0
+		functioncall(adr,Q,retour)
+	endif
+
+	freturn(Retour)
+
+	;Fonctions disponibles :
+		;Nombre de feuille
+		;if getadressfunction("gtpmwin.dhop","ole_question",adr) = 0
+		;	functioncall(adr,"Excel.Application.Sheets.Count",retour)
+		;endif
+
+		;Sauvegarde
+		;"Excel.Application.SaveWorkspace"
+		
+endf
+
+;*
+;* Initialisation	/ Fin
+;*
+;*
+public procedure ug_XL_Begin
+; Initialisaion de la liaison EXCEL
+beginp
+	office_Begin		
+endp
+
+;*
+Public Procedure ug_XL_Charger_Classeur(Repertoire,Classeur,Feuille,Visible,InitExcel)
+	;Initialisaion de la liaison EXCEL et chargement du fichier
+	1 InitExcel 1,0=True
+	1 Repertoire 500
+	1 Classeur 500
+	1 Feuille 30
+	1 Visible 1,0=True
+beginp
+	if InitExcel=True
+		ug_XL_Begin
+	endif
+
+	office_Open(Repertoire,Classeur,Feuille,Visible)
+
+endp
+;*
+public procedure ug_XL_Init
+	;Initialisaion de la liaison EXCEL
+	
+	1 Repertoire 500
+	1 Classeur 500
+	1 Feuille 30
+
+beginp
+
+	office_Begin
+
+	if IsOffice_Open = False
+		office_Open(Repertoire,Classeur,Feuille,True)
+	else
+		Office_GetActiveSheetAndWorkBookName(classeur, feuille)
+	endif
+
+endp
+
+;*
+public procedure ug_XL_Init_Export
+	;Initilisation de la liaison EXCEL "propre" dans la cas d'un export
+
+	1 cpt 5,0
+	1 NbFeuille 5,0
+
+beginp
+
+	ug_XL_Init
+
+	Office_RenameSheet('Result')
+	
+	NbFeuille = Office_GetCountSheet
+	for cpt = 2 to NbFeuille
+		Office_DeleteSheetByName('Feuil'&tostring(cpt))
+	next
+	ug_Ole_Execute("classeur.worksheets('Result').Activate)")
+
+endp
+
+;*
+public procedure ug_XL_Save
+	;Sauvegarde le document Excel
+	1 FichierSauvegarde 256	= " "							;Nom du fichier a sauvegarder
+
+beginp
+
+	ug_Creer_Fichier(FichierSauvegarde,true)
+
+	Office_SaveAsCalc(FichierSauvegarde)	
+
+endp
+
+;*
+public procedure ug_XL_End(AvecSauvegarde)
+	;Termine le dialogue OLE entre Divalto et Excel
+	1 AvecSauvegarde B = false								;Indique s'il faut sauvegarder le fichier
+
+beginp
+
+	if AvecSauvegarde
+		ug_XL_Save
+	endif
+
+	office_end
+
+endp
+
+;*
+;* Attribut / Présentation
+;*
+
+;*
+function int ug_XL_Get_Couleur(Coul)
+	1 Coul 10 		;Voir le source pour avoir la liste des couleurs disponible
+
+beginf
+
+	switch coul
+
+		;Couleur de base
+		case "NOIR" 		| freturn(1)
+		case "BLANC" 		| freturn(2)
+		case "ROUGE" 		| freturn(3)
+		case "VERT" 		| freturn(4)
+		case "BLEU" 		| freturn(5)
+		case "JAUNE" 		| freturn(6)
+		case "ROSE" 		| freturn(7)
+		case "CYAN" 		| freturn(8)
+		case "ORANGE"		| freturn(45)
+
+		;Couleur foncée
+		case "ROUGE_FONCE" 		| freturn(9)
+		case "VERT_FONCE" 		| freturn(10)
+		case "BLEU_FONCE" 		| freturn(11)
+		case "OR" 					| freturn(12)
+		case "VIOLET" 				| freturn(13)
+		case "TURQUOISE" 			| freturn(14)
+		case "GRIS_FONCE"			| freturn(16)
+
+		;Couleur claire / Pastel
+		case "GRIS_CLAIR"			| freturn(15)
+		case "BLEU_CLAIR" 		| freturn(33)
+		case "CYAN_CLAIR" 		| freturn(34)
+		case "VERT_CLAIR" 		| freturn(35)
+		case "JAUNE_CLAIR" 		| freturn(36)
+
+	endswitch
+	
+	;Non trouvé
+	freturn(1)
+
+endf
+
+;*
+public procedure ug_XL_Largeur_Colonne(lig,col,width)
+	;Modifie la largeur d'une colonne
+	1 Lig 9,0		  						;Numéro de la ligne
+	1 Col 9,0								;Numéro de la colonne
+	1 width 3,0	= 20						;Largeur
+
+beginp
+
+	if width <> 20
+		Office_ColumnWidth(lig,col,width)
+	endif
+	
+endp
+;*
+Public Procedure ug_XL_Autofit_Colonne(ColD,ColF)
+; Adapte de facon automatique la largeur de colonne en fonctionne des informations presentes dans les cellules de la colonne
+1 ColD 9,0
+1 ColF 9,0=0 ; si vide ColF=ColD
+1 Col 9,0
+beginp
+	ColF=Condition(ColF=0,ColD,ColF)
+	For Col=ColD to ColF
+		ug_ole_execute("Excel.Columns(" & val(Col) &  ").AutoFit")
+	Next
+endp
+
+;*
+public procedure ug_XL_Gras(lig,col,bold)
+	;Modifie la largeur d'une colonne
+	1 Lig 9,0		  						;Numéro de la ligne
+	1 Col 9,0								;Numéro de la colonne
+	1 bold B = false						;Gras ?
+
+beginp
+
+	if bold
+		Office_FontBold(lig,col,bold)
+	endif
+
+endp
+
+;*
+public procedure ug_XL_Couleur_Police(lig,col,CoulPolice)
+	;Modifie la largeur d'une colonne
+	1 Lig 9,0		  						;Numéro de la ligne
+	1 Col 9,0								;Numéro de la colonne
+	1 CoulPolice 10 = "NOIR"			;Couleur de la police. Voir procedure ug_xl_get_couleur pour avoir la liste des couleurs disponibles.
+
+beginp
+
+	if CoulPolice <> "NOIR"
+		Office_FontColorIndex(lig,col,ug_XL_Get_Couleur(CoulPolice))	
+	endif
+
+endp
+
+;*
+public procedure ug_XL_Taille_Police(lig,col,Taille)
+	;Modifie la taille de la police
+	1 Lig 9,0
+	1 Col 9,0
+	1 Taille 3,0 = 10
+
+beginp
+
+	if taille <> 10
+		Office_FontSize(lig,col,taille)
+	endif
+	
+endp
+
+;*
+public procedure ug_XL_Couleur_Fond(lig,col,CoulFond)
+	;Modifie la largeur d'une colonne
+	1 Lig 9,0		  						;Numéro de la ligne
+	1 Col 9,0								;Numéro de la colonne
+	1 CoulFond 10 = "TRANS"				;Couleur de fond. Voir procedure ug_xl_get_couleur pour avoir la liste des couleurs disponibles.
+
+beginp
+
+	if CoulFond <> "TRANS"
+		Office_InteriorColorIndex(lig,col,ug_XL_Get_Couleur(CoulFond))
+	endif
+
+endp
+
+;*
+public procedure ug_XL_Italic(lig,col,Italic)
+	;Modifie la largeur d'une colonne
+	1 Lig 9,0		  						;Numéro de la ligne
+	1 Col 9,0								;Numéro de la colonne
+	1 Italic B = false					;Italique ?
+
+beginp
+
+	if italic
+		ug_ole_execute("Excel.Cells(" & val(Lig) & ", " & val(Col) &  ").Font.Italic = True")
+	endif
+
+endp
+
+;*
+public procedure ug_XL_Orientation(Sens)
+	;Modifier l'orientation dans Excel
+	1 sens 1 = "F"					;Francaise (Portrait) ou Italienne (Paysage)
+
+beginp
+
+	ug_Ole_Execute("Excel.ActiveWorkbook.Worksheets(1).PageSetup.Orientation = " & condition(sens="F",1,2)) 	; 1 = Portrait, 2 = Paysage
+
+endp
+
+;*
+public procedure ug_XL_Adapter_Page(NbPageH,NbPageL)
+	;Adapter la 1 page en hauteur et en largeur
+	1 NbPageH 3,0=1
+	1 NbPageL 3,0=1
+beginp
+
+	ug_Ole_Execute("Excel.ActiveWorkbook.Worksheets(1).PageSetup.Zoom = False")
+	ug_Ole_Execute("Excel.ActiveWorkbook.Worksheets(1).PageSetup.FitToPagesTall =" & NbPageH)
+  	ug_Ole_Execute("Excel.ActiveWorkbook.Worksheets(1).PageSetup.FitToPagesWide =" & NbPageL)
+
+endp
+;*
+Public Procedure ug_XL_MiseEnPage(Haut,Bas,Gauche,Droite,EntetePage,PiedPage,CentrerH,CentrerV,TaillePage)
+; gestion de la mise en page
+; TaillePage
+;17=27,9 x 43,2 cm													  ;9=A4 (21 x 29,7 cm)										 ;11=A5 (14,8 x 21 cm)												  
+;13=A5 (14,8 x 21 cm)												  ;25=Feuille US taille D									 ;21=Enveloppe US #11 (11,4 x 26,4 cm)				 
+;23=Enveloppe US #14 (12,7 x 29,2 cm)							  ;33=Enveloppe B4 (25 x 35,3 cm)         			 ;35=Enveloppe B6 (17,6 x 12,5 cm)								  
+;30=Enveloppe C4 (22,9 x 32,4 cm)						        ;31=Enveloppe C6 (11,4 x 16,2 cm)						 ;27=Enveloppe DL (11 x 22 cm)
+;37=Enveloppe US Monarch (9,8 x 19,1 cm)						  ;26=Feuille US taille E									 ;41=Legal Fanfold allemand (21,6 x 33 cm)						  
+;39=Papier glacé légal US (37,8 x 27,9 cm)					  ;4=Ledger US (43,2 x 27,9 cm) 						    ;1=Lettre US (21,6 x 27,9 cm)							 
+;18=Note US (21,6 x 27,9 cm)										  ;6=Statement US (14 x 21,6 cm)							 ;256=Taille définie par l'utilisateur							  
+;16=25,4 x 35,6 cm											 		  ;8=A3 (29,7 x 42 cm)										 ;10=Petit A4 (21 x 29,7 cm)
+;12=B4 (25 x 35,4 cm)												  ;24=Feuille US taille C									 ;20=Enveloppe US #10 (10,5 x 24,1 cm)							  
+;22=Enveloppe US #12 (11,4 x 27,9 cm)							  ;19=Enveloppe US #9 (9,8 x 22,5 cm)					 ;34=Enveloppe B5 (17,6 x 25 cm)						 
+;29=Enveloppe C3 (32,4 x 45,8 cm)								  ;28=Enveloppe C5 (16,2 x 22,9 cm)						 ;32=Enveloppe C65 (11,4 x 22,9 cm)								  
+;36=Enveloppe (11 x 23 cm)								           ;38=Enveloppe US (9,2 x 16,5 cm)						 ;7=Exécutive US (19,1 x 26,7 cm)
+;40=Legal Fanfold allemand (21,6 x 33 cm)						  ;14=Folio US (21,6 x 33 cm)								 ;5=Legal US (21,6 x 35,6 cm)										  
+;2=Petite lettre US (21,6 x 27,9 cm)							  ;15=Quarto US (21,5 x 27,5 cm)							 ;3=Tabloïd US (27,9 x 43,2 cm)							 
+1 Haut       5,2=1		; marge de haut   en cm
+1 Bas        5,2=1		; marge du Bas		en cm
+1 Gauche     5,2=1		; marge de gauche	en cm
+1 Droite     5,2=1		; marge de droite en cm
+1 EntetePage 5,2=0		; hauteur entete
+1 PiedPage   5,2=0		; hauteur pied de page
+1 CentrerH   1,0=False	; centrer horizontalement
+1 CentrerV   1,0=False	; centrer verticalement
+1 TaillePage 2,0=9		; Taille: 9=A4  11=A5 8=A3	 12=B4 etc...
+beginp
+	ug_Ole_Execute("Excel.ActiveWorkbook.Worksheets(1).PageSetup.LeftMargin = Excel.CentimetersToPoints(" & Modify(",",".",Gauche) & ")")	
+	ug_Ole_Execute("Excel.ActiveWorkbook.Worksheets(1).PageSetup.RightMargin = Excel.CentimetersToPoints(" & Modify(",",".",Droite) & ")")	
+	ug_Ole_Execute("Excel.ActiveWorkbook.Worksheets(1).PageSetup.TopMargin = Excel.CentimetersToPoints(" & Modify(",",".",Haut) & ")")	
+	ug_Ole_Execute("Excel.ActiveWorkbook.Worksheets(1).PageSetup.BottomMargin = Excel.CentimetersToPoints(" & Modify(",",".",Bas) & ")")	
+	ug_Ole_Execute("Excel.ActiveWorkbook.Worksheets(1).PageSetup.HeaderMargin = Excel.CentimetersToPoints(" & Modify(",",".",EntetePage) & ")")	
+	ug_Ole_Execute("Excel.ActiveWorkbook.Worksheets(1).PageSetup.FooterMargin = Excel.CentimetersToPoints(" & Modify(",",".",PiedPage) & ")")	
+
+	ug_Ole_Execute("Excel.ActiveWorkbook.Worksheets(1).PageSetup.CenterHorizontally =" & Condition(CentrerH=True,"True","False"))	
+	ug_Ole_Execute("Excel.ActiveWorkbook.Worksheets(1).PageSetup.CenterVertically ="& Condition(CentrerV=True,"True","False"))	
+
+	ug_Ole_Execute("Excel.ActiveWorkbook.Worksheets(1).PageSetup.PaperSize ="& TaillePage)	
+endp
+
+;*
+public procedure ug_XL_Fusion(CD,LD,CF,LF)
+	;Fusion d'une plage de cellule
+	1 CD 2			;Lettre de la Colonne Début
+	1 LD 9,0			;Ligne Début
+	1 CF 2			;Lettre de la Colonne Fin
+	1 LF 9,0			;Ligne Fin
+
+beginp
+
+	ug_ole_execute('Excel.range("' & nospaces(CD) & nospaces(LD) & '..' & nospaces(CF) & nospaces(LF) & '").Merge') 
+
+endp
+;*
+public procedure ug_XL_FusionB(CD,LD,CF,LF)
+	;Fusion d'une plage de cellule
+	1 CD 9,0			;Colonne Début
+	1 LD 9,0			;Ligne Début
+	1 CF 9,0			;Colonne Fin
+	1 LF 9,0			;Ligne Fin
+	1 CDa 2
+	 2 CDa1 1
+	 2 CDa2 1
+	1 CFa 2
+	 2 CFa1 1
+	 2 CFa2 1
+	1 Pos L=1
+beginp
+	Pos=1
+	CDa2=chr(64+Modulo(Cd,52))
+	CDa1=Condition(CD>52,Chr(64+val(Split(val(CD/52),Pos,SeparateursNonRendus=",")))," ")
+
+	Pos=1
+	CFa2=chr(64+Modulo(CF,52))
+	CFa1=Condition(CF>52,Chr(64+val(Split(val(CF/52),Pos,SeparateursNonRendus=",")))," ")
+
+	ug_ole_execute('Excel.range("' & nospaces(CDa) & nospaces(LD) & '..' & nospaces(CFa) & nospaces(LF) & '").Merge') 
+
+endp
+
+;*
+;* Lecture / Ecriture
+;*
+
+;*
+public procedure ug_XL_Ecrire(lig,col,txt,width,bold,CoulPolice,CoulFond,Italic,TailleP,form,decim,multi,zero)
+	;Ecriture dans une cellule EXCEL
+	1 Lig 9,0		  						;Numéro de la ligne
+	1 Col 9,0								;Numéro de la colonne
+	1 txt S									;Valeur a écrire
+	1 width 3,0 = 20						;Largeur de la colonne
+	1 Bold B = false						;Gras ?
+	1 CoulPolice 10 = "NOIR"			;Couleur de la police
+	1 CoulFond 10 = "TRANS"				;Couleur de fond
+	1 Italic B = false					;Italique ?
+	1 TailleP 3,0 = 10					;Taille police
+	1 form S	= " "							;Format = Texte,Numeric,Date,DateHeure,Heure,HeureMinuteSeconde,Multichoix,Duree
+	1 decim 2,0 = 0						;Nombre de décimale si numéric (0 par défaut)
+	1 Multi S = " "						;Liste des multichoix séparé par |
+	1 zero B = 0							;Afficher 0 si vide (false par défaut)
+
+beginp
+
+	ug_XL_Largeur_Colonne(lig,col,width)
+	ug_XL_gras(lig,col,bold)
+	ug_XL_Couleur_Police(lig,col,CoulPolice)
+	ug_XL_Couleur_Fond(lig,col,coulfond)	
+	ug_xl_italic(lig,col,italic)
+	ug_XL_Taille_Police(lig,col,TailleP)
+
+	;Repositionne les valeurs par défaut si paramètre ne corespond pas au type
+	if fstring("AU",form) <> "NUMERIC"
+		decim = 0
+	endif
+	if fstring("AU",form) <> "MULTI"
+		multi = " "
+	endif
+
+	if form = system.Esp
+		office_write(lig,col,nospaces(txt))
+	else
+		Office_WriteFormat(Lig,Col,nospaces(txt),form,decim,multi,zero)
+	endif
+	
+endp
+;*
+Public Procedure ug_XL_Alignement(Lig,Col,AlignHorizontal,AlignVertical)
+;
+; --- Alignement Horizontal ------
+;Centre =-4108
+;Distribue =-4117
+;Justifié =-4130
+;Gauche =-4131
+;Droite =-4152
+;
+; ---- Alignement Vertical -------
+;Bas =-4107
+;Centré =-4108
+;Distribue =-4117
+;Justifié =-4130
+;Haut =-4160
+	1 Lig 9,0		  						;Numéro de la ligne
+	1 Col 9,0								;Numéro de la colonne
+	1 AlignHorizontal 5,0=-4131				;Alignement Horizontal Centre =-4108 Gauche =-4131 Droite =-4152 Justifié =-4130
+	1 AlignVertical 5,0	=-4107			;Alignement Horizontal Bas =-4107 Centré =-4108 Justifié =-4130 Haut =-4160
+beginp
+	ug_ole_execute("Excel.Cells(" & val(Lig) & ", " & val(Col) & ").HorizontalAlignment = " & AlignHorizontal )
+	ug_ole_execute("Excel.Cells(" & val(Lig) & ", " & val(Col) & ").VerticalAlignment = " & AlignVertical)	
+endp
+;*
+Public Procedure ug_XL_Alignement_Zone(CD,LD,CF,LF,AlignHorizontal,AlignVertical)
+;
+; --- Alignement Horizontal ------
+;Centre =-4108
+;Distribue =-4117
+;Justifié =-4130
+;Gauche =-4131
+;Droite =-4152
+;
+; ---- Alignement Vertical -------
+;Bas =-4107
+;Centré =-4108
+;Distribue =-4117
+;Justifié =-4130
+;Haut =-4160
+	1 CD 9,0			;Colonne Début
+	1 LD 9,0			;Ligne Début
+	1 CF 9,0			;Colonne Fin
+	1 LF 9,0			;Ligne Fin
+	1 CDa 2
+	 2 CDa1 1
+	 2 CDa2 1
+	1 CFa 2
+	 2 CFa1 1
+	 2 CFa2 1
+	1 Pos L=1
+	1 AlignHorizontal 5,0=-4131				;Alignement Horizontal Centre =-4108 Gauche =-4131 Droite =-4152 Justifié =-4130
+	1 AlignVertical 5,0	=-4107			;Alignement Horizontal Bas =-4107 Centré =-4108 Justifié =-4130 Haut =-4160
+beginp
+	Pos=1
+	CDa2=chr(64+Modulo(Cd,52))
+	CDa1=Condition(CD>52,Chr(64+val(Split(val(CD/52),Pos,SeparateursNonRendus=",")))," ")
+
+	Pos=1
+	CFa2=chr(64+Modulo(CF,52))
+	CFa1=Condition(CF>52,Chr(64+val(Split(val(CF/52),Pos,SeparateursNonRendus=",")))," ")
+
+
+	ug_ole_execute('Excel.Range("' & nospaces(CDa) & nospaces(LD) & '..' & nospaces(CFa) & nospaces(LF) & '").HorizontalAlignment = ' & AlignHorizontal )
+	ug_ole_execute('Excel.Range("' & nospaces(CDa) & nospaces(LD) & '..' & nospaces(CFa) & nospaces(LF) & '").VerticalAlignment = ' & AlignVertical)	
+endp
+
+;*
+Public Procedure ug_XL_Bordure(Lig,Col,Style,epaisseurTrait,Couleur)
+; Ecrit une bordure
+;
+;----style-------
+;1 Trait continu. 
+;-4115 En pointillés. 
+;4 Alternance de tirets et de points. 
+;5 Tiret suivi de deux points. 
+;-4118 Trait avec points. 
+;-4119 Double trait. 
+;-4142 Aucun trait. 
+;13 Tirets inclinés. 
+;
+;---epaisseur trait----
+;1 Très fin (bordure la plus fine). 
+;-4138 Moyen. 
+;4 Épais (bordure la plus large). 
+;2 Fin. 
+
+	1 Lig 9,0		  						;Numéro de la ligne
+	1 Col 9,0								;Numéro de la colonne
+	1 Style          5,0=1				; 1 Trait continu -4115 En pointillés 4 Alternance de tirets et de points 5 Tiret suivi de deux points
+	1 EpaisseurTrait 5,0=2				; 2 Fin -4138 Moyen 4 Épais 1 Très fin
+	1 Couleur 50="NOIR"					
+beginp
+	if style=-4142
+		ug_ole_execute("Excel.Cells(" & val(Lig) & ", " & val(Col) & ").Borders.LineStyle=" & val(Style) ) 
+	else
+		ug_ole_execute("Excel.Cells(" & val(Lig) & ", " & val(Col) & ").BorderAround LineStyle:=" & val(Style)  & ",Weight :=" & val(EpaisseurTrait) & ",ColorIndex :=" & ug_XL_Get_Couleur(Couleur)) 
+	endif
+
+	;Office_BordersColorIndex(Lig,Col,ug_XL_Get_Couleur(Couleur))	
+endp
+;*
+Public Procedure ug_XL_Bordure_Zone(CD,LD,CF,LF,Style,epaisseurTrait,Couleur)
+; Ecrit une bordure
+;
+;----style-------
+;1 Trait continu. 
+;-4115 En pointillés. 
+;4 Alternance de tirets et de points. 
+;5 Tiret suivi de deux points. 
+;-4118 Trait avec points. 
+;-4119 Double trait. 
+;-4142 Aucun trait. 
+;13 Tirets inclinés. 
+;
+;---epaisseur trait----
+;1 Très fin (bordure la plus fine). 
+;-4138 Moyen. 
+;4 Épais (bordure la plus large). 
+;2 Fin. 
+
+	1 CD 9,0			;Colonne Début
+	1 LD 9,0			;Ligne Début
+	1 CF 9,0			;Colonne Fin
+	1 LF 9,0			;Ligne Fin
+	1 CDa 2
+	 2 CDa1 1
+	 2 CDa2 1
+	1 CFa 2
+	 2 CFa1 1
+	 2 CFa2 1
+	1 Pos L=1
+	1 Style          5,0=1				; 1 Trait continu -4115 En pointillés 4 Alternance de tirets et de points 5 Tiret suivi de deux points
+	1 EpaisseurTrait 5,0=2				; 2 Fin -4138 Moyen 4 Épais 1 Très fin
+	1 Couleur 50="NOIR"
+beginp
+	Pos=1
+	CDa2=chr(64+Modulo(Cd,52))
+	CDa1=Condition(CD>52,Chr(64+val(Split(val(CD/52),Pos,SeparateursNonRendus=",")))," ")
+
+	Pos=1
+	CFa2=chr(64+Modulo(CF,52))
+	CFa1=Condition(CF>52,Chr(64+val(Split(val(CF/52),Pos,SeparateursNonRendus=",")))," ")
+
+	if style=-4142
+		ug_ole_execute('Excel.Range("' & nospaces(CDa) & nospaces(LD) & '..' & nospaces(CFa) & nospaces(LF) & '").Borders.LineStyle=' & val(Style) ) 
+	else
+		ug_ole_execute('Excel.Range("' & nospaces(CDa) & nospaces(LD) & '..' & nospaces(CFa) & nospaces(LF) & '").BorderAround LineStyle:=' & val(Style)  & ',Weight :=' & val(EpaisseurTrait) & ',ColorIndex :=' & ug_XL_Get_Couleur(Couleur)) 
+	endif
+
+	;Office_BordersColorIndex(Lig,Col,ug_XL_Get_Couleur(Couleur))	
+endp
+
+;*
+public function char ug_XL_Lire(Lig,Col)
+	;Lecture dans une cellule EXCEL
+	1 Lig 9,0		  						;Numéro de la ligne
+	1 Col 9,0								;Numéro de la colonne
+
+	1 Result 5000							;Résultat de la lecture
+								
+beginf
+												 
+	office_readstring(lig,col,result)
+
+	freturn(nospaces(result))
+
+endf
+;*
+Public procedure ug_XL_Visible(Visible)
+; affichage d'excel
+1 Visible 1,0=True
+beginp
+	ug_ole_execute("Excel.Application.Visible = " & Condition(Visible=True,"True","False"))		
+endp
+;*
+Public procedure ug_XL_WindowShow(Show)
+; Fenetre d'excel minize normal ou maximize
+1 Show L=SW_NORMAL
+1 sw_valeur 5,0
+beginp
+	Switch Show	
+		case sw_hide
+			ug_ole_execute("Excel.Visible =false")			
+		case vsw in(sw_Minimize,SW_SHOWMINIMIZED)
+			sw_valeur=-4140
+			ug_ole_execute("Excel.Visible =True")
+		case vsw in(SW_MAXIMIZE,SW_SHOWMAXIMIZED)
+			sw_valeur=-4137
+			ug_ole_execute("Excel.Visible =True")
+		default
+			sw_valeur=-4143
+			ug_ole_execute("Excel.Visible =True")	
+	endswitch
+	
+	ug_ole_execute("Excel.Application.WindowState =" & sw_valeur)
+endp
+;*
+public Procedure ug_XL_Charger_Feuille(Feuille)
+; Charge la feuille du classeur actif
+1 Feuille 30 ; Numero ou Nom de la feuille
+ 2 FeuilleN 14,0
+1 Classeur 256
+1 FeuilleActive 30
+beginp
+	if Office_GetActiveSheetAndWorkBookName(Classeur,FeuilleActive)=True
+
+		ug_ole_execute('Excel.Sheets(' &  Condition(FeuilleN>0,'','"') & Feuille && Condition(FeuilleN>0,'','"') & ').Select')
+		Office_GetActiveSheetAndWorkBookName(Classeur,FeuilleActive)
+		if IsNum(FeuilleN)=0 and  fstring("U",FeuilleActive)<>fstring("U",Feuille)
+			ug_Alert("Impossible de charger la feuille " & feuille && "||la feuille active est " & FeuilleActive)
+		endif
+	endif		
+endp
+
+;*
+Public Procedure ug_XL_Ajouter_Classeur(Visible,NbFeuille,NomFeuilles)
+; Ouvre un nouveau classeur avec quelques parametres
+
+1 Visible 1,0=True
+1 cls 50
+1 fl 30
+1 NbFeuille 3,0=1
+1 NomFeuilles 250="Result" ; Nom des feuille entre ";"
+1 NbFeuilleTot 3,0
+1 vI 3,0
+1 LSt L
+beginp
+	Office_Open('','','',Visible)
+	; Suppression des Feuilles Inutiles
+	if (NbFeuilleTot:=Office_GetCountSheet) >NBFeuille
+		For vI=(Nbfeuille+1) to NbFeuilleTot
+			Office_DeleteSheetByIndex(vI)
+		Next
+	elsif NbFeuilleTot<NbFeuille
+		For vI=1 to (NbFeuille-NbFeuilleTot)
+			Office_AddSheet("Result" & val(NbFeuilleTot+vI))
+		next
+	endif
+	; Renommage des feuilles
+	Lst=SplitList(NomFeuilles,SeparateursNonRendus=";",2)
+	ListBegin(Lst)
+	For vI = 1 to NbFeuille
+		if Not ListIndex(Lst,NomFeuilles,vI)>0
+			NomFeuilles="Result" & vI
+		endif
+		ug_ole_execute('Excel.Sheets(' & val(vI) & ').Name ="' & NomFeuilles && '"')
+		
+	Next
+	ug_XL_Charger_Feuille(1)
+endp
+;*
+
+Public Procedure ug_XL_SaveAs(NomFichier)
+;
+1 NomFichier 512
+1 NomFichierTmp S
+beginp
+	if ServiceModeTransport=0
+		Office_SaveAs(NomFichier)
+	else
+	 	NomFichierTmp=LcWinGetTempPath & "\" & System.User && Time(7) & "." & FileNameExtension(NomFichier)
+		Office_SaveAs(NomFichierTmp)
+		if LCWinUpLoad(NomFichierTmp,NomFichier,ToujoursCreer=True)=0
+			LcWinDeleteFile(NomFichierTmp && $00)
+		endif
+
+	endif
+endp
+;*
+Public function char ug_XL_SaveAs_Format(NomFichier,FormatXl)
+; Ecriture d'une fichier Excel au format Desiré
+; Retour du nomfichier	car l'extension est changé en fonction du format
+; Attention certain ne fonctionne pas avec les versions de Divalto
+; 
+; CSV			6 CSV					; 22 Macintosh CSV	; 24 MSDOS CSV		; 23 Windows CSV
+; DBF			7 DBF2					; 8 DBF3					; 11 DBF4
+; DIF			9 DIF
+; XLSX 		50 Excel 12
+; XLS			16 Excel 2			; 29 Excel3				; 33 Excel4			; 39 Excel7			; 56 Excel8
+; XLS			43 Excel9795
+; HTM			44 Format HTML
+; XML			54 Modèle Open XML								; 53 Modèle Open XML avec macros
+; XML			51 Classeur Open XML							; 52 Classeur Open XML avec macros
+; ?			17 Modèle
+; TXT			19 Texte Macintosh		; 21 Texte MSDOS	; 36 Texte imprimante	; 20 Texte Windows	; 42 Texte Unicode
+; XKS			38 WK4
+
+1 NomFichier 512
+1 NomFichierTmp S
+1 FormatXl   9,0=50
+beginf
+	
+	WinDeleteFile(NomFichier && $00)
+	Switch FormatXl
+		case vsw in(6,22,24,23)
+			NomFichier=FilenameBase(NomFichier) & "\" & FileNameNoExt(NomFichier) & ".csv"
+		case vsw in(16,29,33,39,56,43)
+			NomFichier=FilenameBase(NomFichier) & "\" & FileNameNoExt(NomFichier) & ".xls"
+		case vsw in(50)
+			NomFichier=FilenameBase(NomFichier) & "\" & FileNameNoExt(NomFichier) & ".xlsx"
+		case vsw in(19,21,36,20,42)
+			NomFichier=FilenameBase(NomFichier) & "\" & FileNameNoExt(NomFichier) & ".txt"
+		case 38
+			NomFichier=FilenameBase(NomFichier) & "\" & FileNameNoExt(NomFichier) & ".wks"
+		case vsw in(51.54)
+			NomFichier=FilenameBase(NomFichier) & "\" & FileNameNoExt(NomFichier) & ".xml"
+		case 44
+			NomFichier=FilenameBase(NomFichier) & "\" & FileNameNoExt(NomFichier) & ".htm"
+		case vsw in(7,8,11)
+			NomFichier=FilenameBase(NomFichier) & "\" & FileNameNoExt(NomFichier) & ".dbf"
+		case vsw in(9)
+			NomFichier=FilenameBase(NomFichier) & "\" & FileNameNoExt(NomFichier) & ".dif"	
+		default
+			
+	endswitch
+	Nomfichier=Modify('/','\',NomFichier)
+	if ServiceModeTransport=0
+		ug_Ole_Execute('Excel.ActiveWorkbook.SaveAs("' & NomFichier && '", ' & val(FormatXl) & ")") ;&", Local:=True)")
+	else
+		; a tester
+		ug_Ole_Execute('Excel.ActiveWorkbook.SaveAs("' & NomFichierTmp && '", ' & val(FormatXl) & ")")
+		if Err<>" "
+			NomFichierTmp=LcWinGetTempPath & "\" & System.User && Time(7) & "." & FileNameExtension(NomFichier)
+			ug_Ole_Execute('Excel.ActiveWorkbook.SaveAs("' & NomFichierTmp && '", ' & val(FormatXl) & ")")
+			if LCWinUpLoad(NomFichierTmp,NomFichier,ToujoursCreer=True)=0
+				LcWinDeleteFile(NomFichierTmp && $00)
+			endif
+		endif
+	endif
+
+
+	if Err<>" "
+		ug_XL_SaveAs(Nomfichier && "")
+	endif
+
+	Freturn(Nomfichier && "")
+endf
+;*
+Public Procedure ug_XL_Close
+; Ferme Excel
+beginp
+	Office_CloseNoSave	
+endp
+
+;*
+Public Procedure ug_XL_Inserer_Image(NomImage,PosX,PosY,Hauteur,Largeur)
+; Insertion d'une image dans un fichier Excel
+; l'objet s'appelle ug_img
+1 NomImage A
+1 PosX     L=1
+1 PosY     L=1
+1 Hauteur  L=10
+1 Largeur  L=10
+beginp
+	;*Image
+	ug_ole_execute('Dim ug_img')
+	ug_ole_execute('Set ug_img = Excel.ActiveSheet.Pictures.Insert ("' & NomImage && '")')
+	ug_ole_execute('ug_img.top = ' & val(posY))
+	ug_ole_execute('ug_img.left = ' & val(posX))
+	ug_ole_execute('ug_img.width = ' & val(Largeur))
+	ug_ole_execute('ug_img.height = ' & val(Hauteur))
+endp
+;*
+Public Procedure ug_XL_Inserer_Commentaire(Lig,Col,TxtCom,TjrsVisible)
+; Permet d'ajouter et Modifier et Supprimer
+; si TxtCom =" " c'est une suppression qui est faite
+1 Lig       9,0			
+1 Col       9,0
+1 TxtCom    S
+1 TjrsVisible 1,0=False
+beginp
+	ug_ole_execute('Excel.Cells( ' & val(Lig) & ', ' & val(Col) & ').ClearComments')		
+	if TxtCom<>" "
+		ug_ole_execute('Excel.Cells( ' & val(Lig) & ', ' & val(Col) & ').AddComment("' & TxtCom && '")')
+		ug_ole_execute('Excel.Cells( ' & val(Lig) & ', ' & val(Col) & ').Comment.Visible =' & Condition(TjrsVisible=True,"True","False"))
+	endif
+	
+
+	; pour avoir le texte du commentaire
+	;ug_Ole_Q('Excel.Cells(' & val(Lig) & ', ' & val(Col) & ').Comment.Text')
+endp

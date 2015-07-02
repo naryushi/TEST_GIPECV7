@@ -1,0 +1,164 @@
+;*
+;*	Module pour la gestion de fonction Stock SPE
+;*
+
+Module ugtm_tech.dhop
+Module ugtm_baseStd.dhop
+Module gtpmficSQL.dhop
+Module gtpm000.dhop
+
+
+Public record gtfdd.dhsd Mvtl MvtlSTK
+Public recordSQL gtrspppce.dhoq Ventilation MvtlStkSQL
+
+Public record gtfdd.dhsd Mvtl MvtlCde
+Public recordSQL gtrspppce.dhoq Ventilation MvtlCdeSQL
+
+;*
+;*	Procedures
+;*
+
+;*
+Public Function Long ug_Tri_Stock(&a,&b)
+;
+record gtfdd.dhsd mvtl a
+record gtfdd.dhsd mvtl b
+1 a1 S
+1 b1 S
+beginf
+	a1=a.StDt & a.Serie ; pas besoin de ref et autre car deja trié 
+	b1=b.StDt & b.Serie
+	freturn (SortCompare(a1,b1))
+endf
+;*
+;*
+Public Function Long ug_Tri_Portefeuille(&a,&b)
+;
+record gtfdd.dhsd mvtl a
+record gtfdd.dhsd mvtl b
+1 a1 S
+1 b1 S
+beginf
+	a1=a.deldt ; pas besoin de ref et autre car deja trié 
+	b1=b.deldt 
+	freturn (SortCompare(a1,b1))
+endf
+;*
+;*
+Public function int ug_Stock_Calculer_Quantite_EnStock(ref,sref1,sref2,depo,serie,nst,lieu,TiersStock)
+; function de calcul du stock et meme les grandes quantité 20,D2 prevu
+; Filtre sur la fonction dans mz.mtcle --> ug_filtrer_stock
+; Avant Requete Appel de la procedure  --> ug_filtrer_Av_Requete
+; PingLocal("ug_ReaderId",Rd_Vtl) à chaque filtrer_stock
+; Variable Globale 	MVTLSTK pour les filtres
+; 							MVTLSTKSQL RecordSQL de gtrspppce.dhoq Ventilation
+; Liste = ug_Stock_Calculer_Quantite_EnStock avec les elements trouvés
+1 ref > gtfdd.dhsd ref
+1 sref1 > gtfdd.dhsd sref1
+1 sref2 > gtfdd.dhsd sref2
+1 depo > gtfdd.dhsd depo
+1 nst > gtfdd.dhsd nst
+1 lieu > gtfdd.dhsd lieu
+1 serie > gtfdd.dhsd serie
+1 stk 20,D2
+1 st 1
+1 clemax > ddsys.dhsd cle
+1 TiersStock > gtfdd.dhsd TiersStock=" "
+
+1 Lst L
+1 Rd_Vtl L
+beginf
+	Lst=ug_Liste("ug_Stock_Calculer_Quantite_EnStock",True)
+	ug_Lance_Tri(Lst,"ug_tri_stock","ugtm_stocStd.dhop")
+
+
+	MvtlStkSQL.Init()
+	MvtlStkSql.Where.En_Stock()
+	MvtlStkSql.Where.AddCondition("En_Stock")
+	MvtlStkSql.Where.Equal_Ref(Ref) 		| MvtlStkSql.Where.AddCondition("Equal_Ref")
+	MvtlStkSql.Where.Equal_sRef1(sRef1) | MvtlStkSql.Where.AddCondition("Equal_sRef1")
+	MvtlStkSql.Where.Equal_sRef2(sRef2) | MvtlStkSql.Where.AddCondition("Equal_sRef2")
+	if Depo<>" " 			| MvtlStkSql.Where.Equal_Depo(Depo) 					| MvtlStkSql.Where.AddCondition("Equal_Depo") 		| endif
+	if Serie<>" "			| MvtlStkSql.Where.Equal_Serie(Serie) 					| MvtlStkSql.Where.AddCondition("Equal_Serie") 		| endif
+	if Nst<>" "				| MvtlStkSql.Where.Equal_Nst(Nst) 						| MvtlStkSql.Where.AddCondition("Equal_Nst") 		| endif
+	if TiersStock<>" "	| MvtlStkSql.Where.Equal_TiersStock(TiersStock) 	| MvtlStkSql.Where.AddCondition("Equal_TiersStock")| endif
+	if Lieu<>" "			| MvtlStkSql.Where.Equal_Lieu(Lieu)						| MvtlStkSql.Where.AddCondition("Equal_Lieu")		| Endif
+	
+	G3_Xmt_Call("ug_Filtrer_Av_Requete")
+
+
+	ReaderOpen_Ventilation(MvtlStkSQL,Rd_Vtl)
+	ReaderSelect_Ventilation(MVtlStkSql,Rd_Vtl)
+	Loop ReaderNext_Ventilation(MvtlStkSQL,Rd_Vtl)=0
+		MvtlStk=MvtlStkSQL.MVTL
+		PingLocal("ug_ReaderId",Rd_Vtl)
+		if (st:=G3_Xmt_Call("ug_Filtrer_Stock"))="I" | Redoloop | elsif st='N' | Exitloop | endif
+		if serie<>" " and mvtlSTK.Serie<>Serie |redoloop | endif
+		if nst <>" "  and mvtlSTK.Nst<>nst 		|redoloop | endif
+		if lieu<>" "  and mvtlSTK.Lieu<>lieu 	|redoloop | endif
+		stk+=mvtlSTKSql.stqte
+
+		ListInsert(Lst,MvtlSTK)
+	endloop
+	ReaderClose_Ventilation(MvtlStkSQL,Rd_Vtl)
+	freturn (stk)	
+endf
+;*
+Public function int ug_Stock_Calculer_Quantite_EnPorteFeuille(ref,sref1,sref2,depo,nst,Sens,lieu,TiersStock)
+; function de calcul du Portefeuille et meme les grandes quantité 20,D2 prevu
+; Filtre sur la fonction dans mz.mtcle --> ug_filtrer_Portefeuille
+; Avant Requete Appel de la procedure  --> ug_filtrer_Av_Requete_Portefeuille
+; PingLocal("ug_ReaderId",Rd_Vtl) à chaque filtrer_Portefeuille
+; Variable Globale 	MVTLCde pour les filtres
+; 							MVTLCdeSQL RecordSQL de gtrspppce.dhoq Ventilation
+; Liste = ug_Stock_Calculer_Quantite_EnPortefeuille avec les elements trouvés
+1 ref > gtfdd.dhsd ref
+1 sref1 > gtfdd.dhsd sref1
+1 sref2 > gtfdd.dhsd sref2
+1 depo > gtfdd.dhsd depo
+1 nst > gtfdd.dhsd nst
+1 lieu > gtfdd.dhsd lieu=' '	; il s'agit de l'emplacement saisie dans la commande
+1 qte 20,D2
+1 st 1
+1 clemax > ddsys.dhsd cle
+1 TiersStock > gtfdd.dhsd TiersStock=" "
+1 Sens 1,0=0 ; si vide tout le portefeuille
+
+1 Lst L
+1 Rd_Vtl L
+beginf
+	Lst=ug_Liste("ug_Stock_Calculer_Quantite_EnPortefeuille",True)
+	ug_Lance_Tri(Lst,"ug_tri_Portefeuille","ugtm_stocStd.dhop")
+
+
+	MvtlCdeSQL.Init()
+	MvtlCdeSql.Where.En_Portefeuille()
+	MvtlCdeSql.Where.AddCondition("En_Portefeuille")
+	MvtlCdeSql.Where.Equal_Ref(Ref) 		| MvtlCdeSql.Where.AddCondition("Equal_Ref")
+	MvtlCdeSql.Where.Equal_sRef1(sRef1) | MvtlCdeSql.Where.AddCondition("Equal_sRef1")
+	MvtlCdeSql.Where.Equal_sRef2(sRef2) | MvtlCdeSql.Where.AddCondition("Equal_sRef2")
+	if Depo<>" " 			| MvtlCdeSql.Where.Equal_Depo(Depo) 					| MvtlCdeSql.Where.AddCondition("Equal_Depo") 		| endif
+	if Nst<>" "				| MvtlCdeSql.Where.Equal_Nst(Nst) 						| MvtlCdeSql.Where.AddCondition("Equal_Nst") 		| endif
+	if TiersStock<>" "	| MvtlCdeSql.Where.Equal_TiersStock(TiersStock) 	| MvtlCdeSql.Where.AddCondition("Equal_TiersStock")| endif
+	if Lieu<>" "			| MvtlCdeSql.Where.Equal_Lieu(Lieu)						| MvtlCdeSql.Where.AddCondition("Equal_Lieu")		| Endif
+	if Sens<>0				| MvtlCdeSql.Where.Equal_Sens(Sens)						| MvtlCdeSql.Where.AddCondition("Equal_Sens")		| endif
+	
+	G3_Xmt_Call("ug_Filtrer_Av_Requete_Portefeuille")
+
+
+	ReaderOpen_Ventilation(MvtlCdeSQL,Rd_Vtl)
+	ReaderSelect_Ventilation(MvtlCdeSql,Rd_Vtl)
+	Loop ReaderNext_Ventilation(MvtlCdeSQL,Rd_Vtl)=0
+		MvtlCde=MvtlCdeSQL.MVTL
+		PingLocal("ug_ReaderId",Rd_Vtl)
+		if (st:=G3_Xmt_Call("ug_Filtrer_Portefeuille"))="I" | Redoloop | elsif st='N' | Exitloop | endif
+		
+		if nst <>" "  and MvtlCde.Nst<>nst 		|redoloop | endif
+		if lieu<>" "  and MvtlCde.Lieu<>lieu 	|redoloop | endif
+		Qte+=MvtlCdeSql.refqte
+
+		ListInsert(Lst,MvtlCde)
+	endloop
+	ReaderClose_Ventilation(MvtlCdeSQL,Rd_Vtl)
+	freturn (Qte)	
+endf

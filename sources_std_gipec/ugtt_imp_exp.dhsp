@@ -1,0 +1,1105 @@
+;* Programme d'import / export
+
+;*
+;20110406			| RTH			| Correction constitution de la clé par rapport aux positions des champs dans la clé et non pas aux positions dans le fichiers
+;*
+
+OverWrittenBy ugut_imp_exp.dhop
+
+module a5pmfic.dhop
+module ugtm_tech.dhop
+module ugtm_excel.dhop
+module yoffice.dhop
+
+public record a5dd.dhsd mz
+public record a5dd.dhsd muser
+
+Public record gtfdd.Dhsd T000
+
+public record ddsys.dhsd scrollbar ascens
+public record ddsys.dhsd rowinfo
+
+public record ugd_outils.dhsd uge_imp_exp
+public record ugd_outils.dhsd uge_enreg
+public record ugd_outils.dhsd uge_champs
+public record ugd_outils.dhsd uge_cle_primaire
+
+1 dico 20
+1 St L
+1 IdEnreg L
+1 IdChamp L
+1 IdDico L
+1 Retour 8096
+1 OffsetCol 5,0
+1 NumLig 9,0
+1 NumCol 9,0
+1 LstCC L
+1 LstCC_Champs L
+
+1 FlagSelectionAuto 1,0=false
+1 Offset_IdEnreg L =1
+
+;*
+;* IMPORT
+;*
+Proto procedure Index_Principal
+endproto
+Proto procedure Charger_Champs
+endproto
+;*
+function char Format_Donnee_Import(&donnee,type,longueur)
+	1 Donnee 1000
+	1 Type 2,0
+	1 Longueur 5,0
+	1 cebin B
+	1 dt D
+	1 hms H
+	1 dhms DH
+
+beginf
+
+	switch type
+		case vsw in (3,5)							;Alpha --> RAS
+		case 6
+			cebin = val(donnee)
+			donnee = cebin
+		case vsw in (1,2,7..9) 				  	;Numérique --> Cadrage a droite
+		  	donnee = fstring("R",mid(donnee,1,longueur))
+		case 4										;AAAAMMJJ
+			fdate(dt,donnee,true)
+			donnee = dt
+		case 10										;HHMMSS
+			ftime(hms,donnee)
+			donnee = hms
+		case 11										;AAAAMM
+			freturn(fdate(dt,donnee,true))
+			donnee = dt
+		case 12										;AAAAMMJJHHMMSS
+			fdateDH(dhms,donnee,true)			
+			donnee = dhms		
+		default
+			freturn(false)
+	endswitch
+			
+	freturn(true)
+		
+endf
+
+;*
+procedure Import_Tableur
+	record ugd_outils.dhsd uge_champs erech
+	record ugd_outils.dhsd uge_champs ecc
+	record * htdf tdf
+	1 Table > ugd_outils.dhsd enreg
+	1 Champs > ugd_outils.dhsd champs
+	1 Valeur 1000
+	1 ano B
+	1 Lst_Import L									;A ne pas trier pour conserver l'ordre des colonnes
+	1 adrF 16
+	1 ColMax 9,0
+	1 enreg 10000
+	1 enregDP 10000
+	1 EnregR 10000
+	1 cr x
+
+beginp
+
+ 	ug_XL_init
+
+	Office_CodePage(uge_imp_exp.CodePage)
+
+	;Contrôle l'enregistrement
+	table = ug_XL_Lire(1,2)
+	if table <> uge_enreg.Enreg
+		ug_info(15,uge_enreg.Enreg,table)
+		preturn
+	endif
+
+	Lst_Import = ug_Liste("LST_IMPORT")
+
+	;Contrôle les champs de l'entête pour vérifier que toutes les champs que l'on souhaite intégrer existe dans l'enregistrement
+	ano = false
+	numcol = 0
+	do
+		numcol++
+		champs = ug_XL_Lire(3,numcol)
+		champs=Fstring("U",Champs)
+	while champs <> system.Esp and champs<>"ERREUR"
+		xmelistbegin(IdChamp)
+		if XmeListFind(idchamp,Ptr(erech.Champs)-Ptr(erech)+1,Size(erech.Champs),Champs,erech)<>0
+		endif
+		;loop xmelistnext(idchamp,erech) > 0 and erech.Champs <> champs
+		;endloop	
+		if erech.Champs <> champs
+			ug_XL_Couleur_Police(3,numcol,"ROUGE")
+			ano = true
+		else
+			listaddend(Lst_Import,erech) 			;Conserve l'ordre des colonnes dans Excel
+		endif	
+	wend		
+	if ano
+		ug_info(17)
+		preturn
+	endif
+	ColMax = NumCol - 1								;Mémorise le nombre de colonne
+
+	;Contrôle la présence de tous les champs de la clé	dans le fichier Excel
+	xmelistbegin(IdChamp)
+	;loop xmelistnext(idchamp,uge_champs) > 0
+	Loop xmeListfind(idchamp,ptr(uge_champs.Present_Cle)-Ptr(uge_champs)+1,Size(uge_champs.Present_Cle),"2",uge_champs)>0
+		if uge_champs.Present_Cle = 2
+			listbegin(lst_import)					;Liste non trié donc on parcours a chaque fois
+			loop listnext(lst_import,erech) > 0	and erech.Champs <> uge_champs.champs
+			endloop
+			if erech.Champs <> uge_champs.champs
+				ug_info(18,uge_champs.Champs)
+				ano = true
+			endif
+		endif
+	endloop
+	if ano
+		preturn
+	endif
+
+	;Tout est OK --> Lance l'intégration
+	ug_trace_debut("Import ...")
+
+	;tdf.Name = nospaces(uge_enreg.Fichier) && ".dhfi"
+	tdf.Name = uge_enreg.Nomfichier
+
+	hopen(tdf,"P")
+
+	numlig = 3
+	do
+		numlig++
+		numcol = 1
+		valeur = ug_XL_Lire(numlig,NumCol)
+
+	while valeur <> system.Esp
+
+		tdf.Key = system.esp
+		tdf.LKey = condition(uge_cle_primaire.Type_Cle = 1,nospaces(uge_cle_primaire.Acces),getkeybyname(tdf,uge_cle_primaire.Acces))
+
+		ug_Trace_Sel(numlig)
+
+		;Controle les données de l'enregistrement
+		init enreg = " "
+		init enregDP = " "
+
+		Mid(Enreg,uge_enreg.PosCe,1)=Chr(uge_enreg.ValeurCe) ; CE1 
+
+		ano = false
+		do
+			listindex(Lst_Import,erech,NumCol)									;Recupère la position de la donnée ainsi que son type
+	 		
+	 		if uge_imp_exp.Controle_cle = 1 and	erech.Present_Cle = 2 and valeur = system.Esp				;La valeur est obligatoire si le champ fait partie de la clé
+				ug_XL_Couleur_Fond(numlig,numcol,"ROUGE")
+				ano = true
+			endif
+
+			if erech.present_Cle = 2 and uge_imp_exp.doublons<>2													;Positionne la clé de recherche
+
+				;> 20110406
+				listbegin(LstCC_Champs)
+				loop listnext(LstCC_Champs,ecc) > 0
+					if ecc.Champs = erech.Champs
+						exitloop
+					endif
+				endloop
+				if ecc.Champs = erech.Champs 
+					Format_Donnee_Import(Valeur,erech.Type,eRech.longueur)
+					mid(tdf.Key,ecc.posd+1,ecc.longueur) = valeur
+				endif
+				;< 20110406
+				
+			endif				
+
+		while numcol < ColMax
+			numcol++
+			valeur = ug_xl_lire(numlig,numcol)
+		wend
+	
+		;Si pas d'anomalie, recherche si l'enregistrement existe déjà pour savoir s'il s'agit d'une création ou d'une mise a jour
+		if not ano
+
+			cr = hseek(tdf,enreg,tdf.Key)
+
+			Mid(Enreg,uge_enreg.PosCe,1)=Chr(uge_enreg.ValeurCe) ; CE1 
+
+
+			;Pack de la zone depack. Si posd = 0 and longueur = 0, pas de zone pack
+			if uge_enreg.posd <> 0 and uge_enreg.longueur <> 0
+				depack enregdp = mid(enreg,uge_enreg.posd,uge_enreg.longueur)
+			endif
+			; Lecture de Colonne
+			Numcol=1
+			valeur = ug_XL_Lire(numlig,NumCol)
+
+			do
+				listindex(Lst_Import,erech,NumCol)									;Recupère la position de la donnée ainsi que son type
+		 		
+		 		if uge_imp_exp.Controle_cle = 1 and	erech.Present_Cle = 2 and valeur = system.Esp				;La valeur est obligatoire si le champ fait partie de la clé
+					ug_XL_Couleur_Fond(numlig,numcol,"ROUGE")
+					ano = true
+				elsif not Format_Donnee_Import(valeur,erech.Type,erech.longueur)				;Converti la donnée au format divalto. Si erreur, renvoi false --> La ligne ne devra pas être intégrée
+					ug_XL_Couleur_Police(numlig,numcol,"ROUGE")
+					ano = true
+				else
+					if erech.Present_pack = 1
+						mid(enreg,erech.posd,erech.longueur) = valeur
+					else
+						mid(enregDP,erech.posd-uge_enreg.taille,erech.longueur) = valeur
+					endif
+				endif
+			while numcol < ColMax
+				numcol++
+				valeur = ug_xl_lire(numlig,numcol)
+			wend
+
+
+
+			;Pack de la zone depack. Si posd = 0 and longueur = 0, pas de zone pack
+			if uge_enreg.posd <> 0 and uge_enreg.longueur <> 0
+				pack mid(enreg,uge_enreg.posd,uge_enreg.longueur) = enregdp
+			endif
+			
+			;met a jour ou nouveau selon CR
+			if cr = 0
+			 	hrewrite(tdf,left(enreg,uge_enreg.taille))
+			else
+				hwrite(tdf,left(enreg,uge_enreg.taille))
+			endif
+		endif
+
+	wend
+	
+	ug_trace_fin
+
+	ug_info(19)
+
+endp
+
+;*
+;*	EXPORT
+;*
+
+;*
+function char Format_Donnee_Export(Donnee,type)
+	1 Donnee 1000
+	1 Type 2,0
+	1 cebin B
+
+beginf
+
+	switch type
+		case vsw in (3,5)							;Alpha --> RAS
+			freturn(str(Donnee))	
+		case 6
+			cebin = donnee
+			freturn(val(cebin))
+		case vsw in (1,2,7..9) 				  	;Numérique
+			freturn(val(donnee))
+		case 4										;AAAAMMJJ
+			freturn(sdate(donnee,"/"))
+		case 10										;HHMMSS
+			freturn(stime(donnee))
+		case 11										;AAAAMM
+			donnee &= "01"
+			freturn(formatd("J0/M0/AAAA",donnee))
+		case 12										;AAAAMMJJHHMMSS
+			freturn(SdateDH(donnee))		
+	endswitch
+			
+	freturn(donnee)
+		
+endf
+;*
+function int ug_Selection_Tableau
+;
+1 Ligne > ugd_outils.dhsd champs
+1 LstChamp L
+1 classeur 50
+1 feuille 30
+1 Lst_export L
+record ddsys.dhsd harmony ug_harmony
+beginf
+	FlagSelectionAuto=False
+	Office_Begin
+	if IsOffice_Open=False | Office_End |Freturn(0) | endif
+	PingLocal("ug_Harmony",Harmony)
+;	XmeRet	
+	
+	PingLocal("Uge_Enreg",uge_Enreg)
+	Office_GetActiveSheetAndWorkBookName(classeur, feuille)
+	; recherche de l'enreg dans le fichier Excel
+	uge_enreg.Enreg=Fstring("U",ug_XL_Lire(1,2))
+	; Affichage et Selection du Tableau des enreg
+	;? harmony.ocolonne = 0
+	XmeDisp(mz.MeCle,3,Xme_Mode_GoSub)
+	XmeListSetSelection(IdEnreg,False,1,XmeListCount(IdEnreg))
+	XmeListBegin(IdEnreg)
+	if XmeListFind(IdEnreg,Ptr(uge_enreg.Enreg)-Ptr(uge_Enreg)+1,Size(uge_enreg.Enreg),uge_enreg.Enreg,uge_enreg)<>0
+	 	XmeListSetSelection(IdEnreg,True,XmeListNumber(IDEnreg),XmeListNumber(IdEnreg))
+		
+		Index_Principal
+		Charger_Champs
+	else
+		PingLocalReceiveAndDelete("ug_Harmony",Harmony)
+		PingLocalReceiveAndDelete("Uge_Enreg",uge_Enreg)
+		XmeDispv(mz.MeCle,HArmony.Page,Xme_Mode_Goto)
+		;Messagebox("Enregistrement non retrouvé dans le dictionnaire","Erreur",mb_iconexclamation)
+		Freturn(True) ; erreur
+	endif
+
+	XmeListDisplay(IDEnreg)
+	; Recherche des Champs Saisie dans le fichier Excel 
+	LstChamp=ListGetId("Ug_Liste_Champ")
+	ListErase(LstChamp)
+	NumCol=1
+	Loop (Ligne:=ug_Xl_Lire(3,NumCol))<>" "
+		ListAddEnd(LstChamp,Ligne)				
+		Numcol++
+	endloop
+
+	Lst_export = ug_Liste("LST_EXPORT")
+	; affichage du tableau des champs 
+	XmeRet
+	;? harmony.ocolonne = OffsetCol
+	XmeDisp(mz.MeCle,4,Xme_Mode_GoSub)
+	XmeListSetSelection(IdChamp,false,1,XmeListCount(IdEnreg))
+	XmeListDisplay(IdChamp)
+	ListBegin(LstChamp)
+	Loop ListNext(LstChamp,Ligne)<>0
+		XmeListBegin(IdChamp)
+		if XmeListFind(IdChamp,Ptr(uge_champs.Champs)-Ptr(uge_champs)+1,Size(uge_champs.Champs),Ligne,uge_champs)<>0
+			XmeListSetSelection(IDChamp,True,XmeListNumber(IdChamp),XmeListNumber(IdChamp))
+			ListAddEnd(Lst_Export,uge_champs)
+			FlagSelectionAuto=True
+		else
+			XmeListSetSelection(IdChamp,false,1,XmeListCount(IdEnreg))
+			Messagebox("Champ " & Ligne && " non retrouvé dans la table " & uge_enreg.Enreg, "Erreur",mb_iconexclamation)
+			PingLocalReceiveAndDelete("ug_Harmony",Harmony)
+			XmeDispv(mz.MeCle,HArmony.Page,Xme_Mode_Goto)
+
+			freturn(True); erreur
+		endif
+	endloop
+	XmeListDisplay(Idchamp)
+	XmeRet
+	PingLocalReceiveAndDelete("ug_Harmony",ug_Harmony)
+	;? harmony.ocolonne = ug_harmony.Ocolonne
+	XmeDisp(mz.MeCle,ug_harmony.Page,Xme_Mode_GoSub)
+	XmeListDisplay(Condition(harmony.Page=4,IDchamp,IdEnreg))
+	Office_End
+	Freturn(0)	
+endf
+
+;*
+procedure Export_Tableur(Entete)
+	1 Entete 1,0=False ; export uniquement des entêtes
+	record * htdf tdf
+	record ugd_outils.dhsd uge_champs erech_dos
+	record ugd_outils.dhsd uge_champs erech_cebin
+	record ugd_outils.dhsd uge_champs erech
+	1 enreg 10000
+	1 enregDP 10000
+	1 Lst_Export L
+	1 desc S
+	1 cr x
+	1 increment B
+	1 Champs > ugd_outils.dhsd champs
+	1 cebin B
+	1 Valeur 1000
+	1 Nbcol 9,0
+	1 vI 9,0
+	record ugd_outils.dhsd uge_champs uge_champs_Cle
+	  
+beginp
+	SetHourGlassCursor
+
+;	Office_Begin
+	Lst_export = ug_Liste("LST_EXPORT",Condition(FlagSelectionAuto=True,False,True))
+;	if IsOffice_Open=True ;and ug_Selection_Tableau=False
+;	else
+;	Office_End
+	ug_XL_Init_Export
+	if FlagSelectionAuto=False
+		ug_XL_Ecrire(1,1,"Enregistrement",bold=true)
+		ug_XL_Ecrire(1,2,uge_enreg.Enreg)
+		ug_XL_Ecrire(1,3,uge_enreg.Lib70)
+		
+		numlig = 3
+		numcol = 0
+		xmelistbegin(IdChamp)
+		loop xmelistnext(IdChamp,uge_champs) > 0
+			if rowinfo.Selection
+				numcol++
+				ug_xl_ecrire(numlig-1,numcol,uge_champs.Lib70,Italic=True)
+				ug_xl_ecrire(numlig,numcol,uge_champs.Champs,bold=true,CoulFond="CYAN_CLAIR")
+				
+				listaddend(lst_export,uge_champs)
+			endif
+		endloop
+		NbCol=Numcol
+	endif
+;	endif
+	if Entete=True ; si export des entetes 
+		For vI = 1 to NbCol
+			ug_ole_execute("Excel.Columns(" & val(vI) &  ").AutoFit")
+		Next
+	
+		ug_XL_end
+		ug_info(1)  
+		Preturn 
+	endif
+	numlig = 3
+	NbCol=Val(XmeListCount(Lst_export))
+	
+
+	tdf.Name = nospaces(uge_enreg.nomFichier) ;&& ".dhfi"
+	hopen(tdf,"P")
+	
+
+	;Les fonction ixxx ne savent pas utiliser la tdf. On passe par hxxx mais pour les clés nommées, il faut récupérer la lettre clé
+	tdf.LKey = condition(uge_cle_primaire.Type_Cle = 1,nospaces(uge_cle_primaire.Acces),getkeybyname(tdf,uge_cle_primaire.Acces))
+	tdf.Key = tdf.LKey
+
+	;Si le dossier est dans la clé
+	if uge_cle_primaire.cle_dos = 2
+		
+
+		
+		
+		ListBegin(LstCC_Champs)
+		champs="DOS"
+		if ListFind(LstCC_Champs,ptr(uge_champs.Champs)-ptr(uge_champs)+1,size(uge_champs.Champs),champs,uge_champs_Cle)<>0
+			Mid(tdf.Key,uge_champs_Cle.posd+1,uge_champs_cle.longueur)=	uge_imp_exp.dos
+		else
+			tdf.Key &= uge_imp_exp.dos
+		endif	
+		;Recherche la position du dossier dans l'enregistrement
+		xmelistbegin(IdChamp)
+		loop xmelistnext(idchamp,erech_dos) > 0 and erech_dos.Champs <> "DOS"
+		endloop	
+	endif
+	
+	;Si le CEBIN est dans la clé
+	if uge_cle_primaire.cle_cebin = 2
+		cebin = uge_imp_exp.cebin
+		tdf.Key &= cebin
+
+		;Recherche la position du cebin dans l'enregistrement
+		xmelistbegin(IdChamp)
+		loop xmelistnext(idchamp,erech_cebin) > 0 and erech_cebin.Champs <> "CEBIN"
+		endloop
+
+	endif
+	; Lecture des champs cle Cle
+	ListBegin(LstCC_Champs)
+	Loop ListNext(LstCC_Champs,uge_champs_cle)>0
+		if uge_champs_cle.Champs=uge_Enreg.ChampCe
+			Mid(Tdf.KeyValue,uge_champs_cle.posd,uge_champs_cle.longueur)=Chr(uge_Enreg.ValeurCe)
+		endif
+	endloop
+
+	ug_Trace_Debut("Export ...")
+
+	Office_CodePage(uge_imp_exp.CodePage)
+
+	loop (cr:=hread(tdf,enreg)) = 0
+		if uge_enreg.PosCe>0 and Mid(Enreg,uge_enreg.PosCe,1)<>Chr(uge_enreg.ValeurCe)	|Redoloop |endif
+		ug_Trace_Sel(numlig)
+
+		
+
+		;S'il existe une zone packée --> Depack
+		if uge_enreg.posd > 0
+			depack EnregDP = mid(enreg,uge_enreg.posd,uge_enreg.longueur)
+		endif
+		increment = false
+
+		;Test le dossier. Le dossier ne peut pas faire partie de la zone packée.
+		if uge_cle_primaire.cle_dos = 2
+			if mid(enreg,erech_dos.posd,erech_dos.longueur) <> uge_imp_exp.dos
+				if uge_champs_Cle.posd=2
+					exitloop
+				else
+					redoloop
+				endif				
+			endif
+		endif
+
+		;Test le cebin. Le cebin ne peut pas faire partie de la zone packée.
+		if uge_cle_primaire.cle_cebin = 2
+			if mid(enreg,erech_cebin.posd,erech_cebin.longueur) <> cebin
+				exitloop				
+			endif
+		endif
+
+		;Export des données
+		listbegin(Lst_export)
+		loop listnext(lst_export,uge_champs) > 0
+			if not increment	
+				numlig++
+				increment = true
+			endif
+			numcol = listnumber(Lst_Export)
+			if uge_champs.Present_pack = 1
+				ug_XL_Ecrire(numlig,numcol,Format_Donnee_Export(mid(enreg,uge_champs.posd,uge_champs.longueur),uge_champs.Type),form="Texte")			
+			else
+				ug_XL_Ecrire(numlig,numcol,Format_Donnee_Export(mid(enregDP,uge_champs.posd-uge_enreg.taille,uge_champs.longueur),uge_champs.Type),form="Texte")			
+			endif
+		endloop	
+		
+		ug_trace_trt(numlig)
+															  		
+	endloop
+
+	For vI = 1 to NbCol
+		ug_ole_execute("Excel.Columns(" & val(vI) &  ").AutoFit")
+	Next
+	
+
+	ug_Trace_Fin
+	ug_XL_end
+	SetNormalCursor
+
+	ug_info(1)
+
+endp
+
+;*
+;* ACCES DICTIONNAIRE
+;*
+
+;*
+procedure Ouvre_Dico
+beginp
+
+	ddinterface(dd_close,iddico," ",retour,1)					;Ferme un dictionnaire potentiellement ouvert
+
+	dico = FileNameLastSegment(uge_imp_exp.dico)	
+
+	if DDInterface(DD_OPEN,IdDico,Dico,Retour,1) <> 0 
+		st=DDInterface(DD_GETERROR,IdDico," ",Retour,1)
+		ug_Erreur(hmpseek(Retour,"TexteErreur"))
+		;Programexit
+	endif
+
+endp
+
+;*
+function long Tri_Champs_Cle(&a,&b)
+	1 a > ugd_outils.dhsd champs
+	1 b > ugd_outils.dhsd champs
+
+beginf
+	
+	freturn(sortcompare(a,b))
+
+endf
+
+;*
+procedure Index_Principal
+	record ugd_outils.dhsd uge_champs erech
+	1 Lect L
+	1 NomChamp > ugd_outils.dhsd champs
+	1 adr 16
+
+beginp
+
+	;Liste mémoire qui va contenir les champs de la clé
+	LstCC = ug_liste("CHAMP_CLE")
+	if getadressfunction(" ","Tri_champs_cle",adr) <> 0
+		ug_info(16,"Tri_Champs_Cle")
+		programexit
+	endif
+	listmode(LstCC,true,adr)
+	LstCC_Champs = ug_liste("CHAMP_CLE_DETAIL")
+
+	init uge_Cle_Primaire = " "
+
+	if ddinterface(DD_FILEFIND,iddico,uge_enreg.fichier,retour) = 0 and DDInterface(DD_TABLEFIND,IdDico,uge_enreg.enreg,Retour) = 0
+
+		Lect = DDInterface(DD_KEYBEGIN,IdDico," ",Retour,1)
+		loop Lect = 0
+
+			if hmpseek(retour,"FlagClePrimaire") = true
+
+				uge_cle_primaire.cle_p = hmpseek(retour,"nom")
+				uge_cle_primaire.lib70 = hmpseek(retour,"libelle")
+				uge_cle_primaire.acces = hmpseek(retour,"cleounomdecle")
+				uge_cle_primaire.Type_Cle = condition(hmpseek(retour,"lettrecle")	= system.Esp,2,1)		;Si vide, clé nommé (2) sinon lettre cle (1)
+				uge_cle_primaire.cle_cebin = 1
+				uge_cle_primaire.cle_dos = 1
+
+				;Lecture des champs de l'index principal pour marquer dans le tableau
+				lect = ddinterface(dd_datakeybegin,IdDico," ",retour,1)
+				loop lect = 0
+					
+					init erech = " "
+					erech.Champs = hmpseek(retour,"nom")
+					erech.posd = hmpseek(retour,"position")	  			;20110406
+					erech.longueur = hmpseek(retour,"longueur")			;20110406
+					listInsert(LstCC_Champs,erech)
+
+					listinsert(LstCC,hmpseek(retour,"nom"))
+
+					if hmpseek(retour,"nom") = "DOS"
+						uge_cle_primaire.cle_dos = 2
+					endif
+					if hmpseek(retour,"nom") = "CEBIN"
+						uge_cle_primaire.cle_cebin = 2
+					endif
+
+					lect = ddinterface(dd_datakeynext,iddico," ",retour,1)
+
+				endloop
+			endif
+
+			lect = DDInterface(DD_KEYNEXT,IdDico," ",Retour,1)	
+		endloop
+	endif
+
+	xmedispv(mz.MeCle,5,xme_mode_gosub)			;Raffraihir l'affichage
+	xmeret
+
+endp
+
+;*
+procedure Charger_Champs
+	record ugd_outils.dhsd uge_champs erech
+	1 dim 5,0*4
+	1 Vi 5,0
+	1 vJ 5,0
+	1 vk 5,0
+	1 vL 5,0
+	1 Lect L
+	1 Champs > ugd_outils.dhsd champs
+	1 Zpack B = false
+	1 DebutDepack > ugd_outils.dhsd posd
+	1 Pas 9,0*4
+	1 PasTotal 9,0
+	1 Dos > gtfdd.dhsd Dos*2="   999"
+beginp
+
+	;? harmony.ocolonne = OffsetCol
+	xmedisp mz.mecle 4 xme_mode_gosub
+
+	xmelisterase(idchamp)
+	xmelistdisplay(idchamp)
+
+	init RowInfo = " "
+	RowInfo.bitmap = "1" 
+	RowInfo.Couleur = "POINTE"
+	RowInfo.CoulSelec = false
+	RowInfo.Selection = false 
+	
+	if DDInterface(DD_TABLEFIND_DD,IdDico,uge_enreg.enreg,Retour) = 0
+		Lect = DDInterface(DD_DATABEGIN,IdDico," ",Retour,1)	
+		loop Lect = 0 
+		
+			if hmpSeek(Retour,"Virtuel") = " "
+	
+				init uge_champs = " "
+				
+				dim(1) = hmpseek(Retour , "Dimensions1")
+				dim(2) = hmpseek(Retour , "Dimensions2")
+				dim(3) = hmpseek(Retour , "Dimensions3")
+				dim(4) = hmpseek(Retour , "Dimensions4")
+
+				uge_champs.niveau = hmpseek(retour,"Niveau")
+				uge_champs.lib70 = hmpseek(retour,"Libelle")
+				uge_champs.type = hmpseek(retour,"Nature")
+				uge_champs.posd = hmpseek(retour,"position")
+				uge_champs.longueur = hmpseek(retour,"longueur")
+				uge_champs.champs = hmpseek(retour,"Nom")
+
+				; Cebin
+				if Fstring('U',uge_champs.Champs)='CEBIN' and \
+									uge_champs.posd=uge_enreg.PosCe
+					uge_imp_exp.cebin=uge_enreg.ValeurCe
+					Dos(1)=mz.dos
+					if uge_enreg.ValeurCe>0
+						uge_imp_exp.dos=Dos(T000.TabTyp(uge_enreg.ValeurCe))
+					endif
+					;? harmony.ocolonne = 0
+					XmeDispv(mz.MeCle,2,Xme_Mode_Gosub)
+					XmeRet
+					;? harmony.ocolonne = OffsetCol
+				elsif	Fstring('U',uge_champs.Champs)='CE1' 
+					uge_imp_exp.cebin=" "
+					uge_imp_exp.dos=mz.dos
+					;? harmony.ocolonne = 0
+					XmeDispv(mz.MeCle,2,Xme_Mode_Gosub)
+					XmeRet
+					;? harmony.ocolonne = OffsetCol 	
+				endif
+				
+
+				;Indicateur donnée dans la zone packée
+				if val(hmpseek(retour,"DonneePack")) = 1
+					uge_enreg.posd = uge_champs.posd
+					uge_enreg.longueur = uge_champs.longueur
+				endif
+				
+				if not zPack
+					if val(hmpseek(retour,"DonneePack")) = 2
+						zPack = true
+						DebutDepack = uge_champs.posd - 1
+					endif
+				endif
+
+				uge_champs.Present_pack = condition(zPack,2,1)
+				if uge_champs.Present_pack = 2
+					uge_champs.posd -= DebutDepack
+				endif
+				
+				if dim(1) = 0
+					uge_champs.champs = hmpseek(retour,"Nom")
+					;Indicateur donnée de la clé				
+					if listseek(LstCC,uge_champs.Champs,champs) > 0
+						uge_champs.Present_Cle = 2
+					else
+						uge_champs.Present_Cle = 1
+						if uge_enreg.PosCe=uge_champs.posd and uge_champs.longueur=1
+							uge_champs.Present_Cle = 2
+							ListInsert(LstCC,uge_champs.Champs)
+						endif
+
+					endif
+					
+					xmeListaddend(idChamp,uge_Champs)
+				else
+					for vI = 1 to Dim(1)
+						if Dim(2) > 0
+							For vJ = 1 to dim(2)
+								if Dim(3) > 0
+									for vK = 1 to dim(3)
+										if Dim(4) > 0
+											For vL = 1 to dim(4)
+												uge_champs.posd = hmpseek(retour,"position")
+												Pas(1)=HmpSeek(Retour,"EnJambees1")
+												Pas(2)=HmpSeek(Retour,"EnJambees2")
+												Pas(3)=HmpSeek(Retour,"EnJambees3")
+												Pas(3)=HmpSeek(Retour,"EnJambees4")
+												uge_champs.posd +=(Pas(1)*(vI-1)) + (Pas(2)*(vJ-1)) + (Pas(3)*(vK-1)) + (Pas(4)*(vL-1))
+
+
+												uge_champs.champs = hmpseek(retour,"Nom") && "(" && val(vI) && "," && Val(vJ) && "," && Val(vK) && "," && Val(vL) && ")"
+												xmeListaddend(idChamp,uge_Champs)
+											next
+										else
+											uge_champs.posd = hmpseek(retour,"position")
+											Pas(1)=HmpSeek(Retour,"EnJambees1")
+											Pas(2)=HmpSeek(Retour,"EnJambees2")
+											Pas(3)=HmpSeek(Retour,"EnJambees3")
+											uge_champs.posd +=(Pas(1)*(vI-1)) + (Pas(2)*(vJ-1)) + (Pas(3)*(vK-1))
+
+											uge_champs.champs = hmpseek(retour,"Nom") && "(" && val(vI) && "," && Val(vJ) && "," && Val(vK) && ")"
+											xmeListaddend(idChamp,uge_Champs)
+										endif
+									next
+								else
+									uge_champs.posd = hmpseek(retour,"position")
+									Pas(1)=HmpSeek(Retour,"EnJambees1")
+									Pas(2)=HmpSeek(Retour,"EnJambees2")
+									uge_champs.posd +=(Pas(1)*(vI-1)) + (Pas(2)*(vJ-1)) 
+
+									uge_champs.champs = hmpseek(retour,"Nom") && "(" && val(vI) && "," && Val(vJ) && ")"
+									xmeListaddend(idChamp,uge_Champs)
+								endif
+							next
+						else
+							uge_champs.posd = hmpseek(retour,"position")
+							Pas(1)=HmpSeek(Retour,"EnJambees1") 
+							uge_champs.champs = hmpseek(retour,"Nom") && "(" && val(vI) && ")"
+							uge_champs.posd +=Pas(1)*(vI-1)
+							xmeListaddend(idChamp,uge_Champs)
+						endif
+					next
+				endif	
+				
+
+			endif
+
+			lect = DDInterface(DD_DATANEXT,IdDico," ",Retour,1)
+					
+		endloop
+	endif
+
+	xmelistscrollbarinit(idchamp,ascens)
+	xmelistdisplay(idchamp)
+
+	xmeret
+
+endp
+
+;*
+procedure Charger_Tables
+	1 premier B = true
+
+beginp
+
+	xmedisp mz.mecle 3 xme_mode_gosub
+
+	xmelisterase(idenreg)
+	xmelistdisplay(idenreg)
+
+	loop DDInterface(condition(premier,DD_FILEBEGIN,DD_FILENEXT),IdDico,,Retour) = 0	
+		
+		premier = true
+		
+		init uge_enreg = " "
+		uge_enreg.fichier = hmpseek(Retour,"Nom")
+		uge_enreg.nomfichier=hmpseek(Retour,"NomFichier")
+
+		loop DDInterface(condition(premier,DD_TABLEBEGIN,DD_TABLENEXT),IdDico,uge_enreg.fichier,retour) = 0
+
+			premier = false
+
+			uge_enreg.enreg = hmpseek(Retour,"Nom")
+			uge_enreg.lib70 = hmpseek(Retour,"Libelle")
+			uge_enreg.posd = hmpseek(Retour,"PositionPack")
+			uge_enreg.longueur = hmpseek(Retour,"LgPack")
+			uge_enreg.taille = hmpseek(Retour,"LgTable")
+			uge_enreg.ChampCe  = Hmpseek(Retour,"ChampCe")
+			uge_enreg.PosCe  = Hmpseek(Retour,"PositionCe")
+			uge_enreg.ValeurCe=Hmpseek(Retour,"ValeurCe")
+			uge_enreg.ValeurCeA=chr(uge_enreg.ValeurCe)
+			xmelistaddend(idenreg,uge_enreg)
+
+		endloop
+
+		premier = false 		;Cas ou pas d'enregistrement dans un fichier
+
+	endloop
+
+	xmelistscrollbarinit(idenreg,ascens)
+	xmelistdisplay(idenreg)
+
+	xmeret
+
+endp
+
+;*
+;* PROGRAMME DE SAISIE
+;*
+
+
+
+
+;*
+procedure Saisie_Champs
+beginp
+
+	;? harmony.ocolonne = OffsetCol
+	xmeinput mz.mecle 4 0 xme_mode_gosub
+
+
+	xmelistconsultdefault(idchamp,uge_champs,ascens,ZOOM_PRIVILEGE_CONSULTATION,selection=true)
+
+	loop uge_imp_exp.phase = "C"	
+
+		xmelistconsult(idchamp)
+
+		switch harmony.key
+			case k_f9
+				programexit
+
+			default
+				switch harmony.dataarret
+					case 1
+						uge_imp_exp.phase = "E"
+					case 1002
+						ug_Selection_Tableau
+						if not xmelistselectioncount(idchamp) > 0
+							ug_info(14)
+						else
+							Export_Tableur
+						endif
+					case 1012
+						if not xmelistselectioncount(idchamp) > 0
+							ug_info(14)
+						else
+							Export_Tableur(Entete=True)
+						endif
+
+					case 2000
+						uge_imp_exp.phase = "T"					
+				
+					default
+						xmelistconsultdefault(idchamp,uge_champs,ascens,ZOOM_PRIVILEGE_CONSULTATION,selection=true)
+						
+				endswitch			
+		endswitch
+	endloop
+
+
+	xmeret
+
+endp
+
+;*
+procedure Saisie_Tables
+
+
+beginp
+	
+	xmeinput mz.mecle 3 0 xme_mode_gosub
+
+	;Premier clic
+	XmeListSetOffset(IdEnreg,Offset_IdEnreg)
+	xmelistconsultdefault(idenreg,uge_enreg,ascens,ZOOM_PRIVILEGE_CONSULTATION)
+	Index_Principal
+	Charger_Champs
+	xmelistmodify(IdEnreg,uge_enreg)
+
+	
+
+	loop uge_imp_exp.phase = "T"	
+
+		xmelistconsult(idenreg)
+
+		switch harmony.key
+			case k_f9
+				programexit
+
+			default
+				switch harmony.dataarret
+					case 1
+						uge_imp_exp.phase = "E"
+					
+					case 1003
+						import_tableur
+					case 1002
+						ug_Selection_Tableau
+						if not xmelistselectioncount(idchamp) > 0
+							ug_info(14)
+						else
+							Export_Tableur
+						endif
+					case 3000
+						uge_imp_exp.phase = "C"					
+				
+					default
+						xmelistconsultdefault(idenreg,uge_enreg,ascens,ZOOM_PRIVILEGE_CONSULTATION)
+						Index_Principal
+						Charger_Champs
+						xmelistmodify(IdEnreg,uge_enreg)
+						
+				endswitch			
+		endswitch
+	endloop
+	Offset_IdEnreg=XmeListGetOffset(idenreg)
+	xmeret
+	
+endp
+
+;*
+procedure Saisie_Entete
+record * htdf fic
+beginp
+
+	xmeinput mz.mecle 2 1 xme_mode_gosub
+
+	loop uge_imp_exp.phase = "E"
+		switch harmony.key
+			case k_f9
+				programexit
+
+			case k_f10
+				fic.Name=uge_imp_exp.Dico
+				if hopen(fic,"P")=0
+					hclose(fic)
+					Ouvre_Dico
+					if St<>0
+						Charger_Tables
+						if xmelistcount(idenreg) > 0
+							xmelistbegin(idenreg)
+							xmelistnext(idenreg,uge_enreg)
+							uge_imp_exp.phase = "T"
+						endif
+					endif
+				endif
+			default
+				switch harmony.dataarret
+			
+					case 1001				;Ouvrir
+						ug_Select_Fichier_divalto(uge_imp_exp.dico,"dictionnaires|*.dhsd")
+						xmenext(xmenext_point_sequence,1)
+					
+					case 1500				;Après choix du dictionnaire
+				 		if nospaces(uge_imp_exp.dico) = ""
+				 			xmenext(xmenext_point_sequence,1)
+						elsif fstring("U",right(nospaces(uge_imp_exp.dico),4)) <> "DHSD"
+							xmenext(xmenext_point_sequence,1)
+						else
+							xmenext(xmenext_donnee_suivante,harmony.cplretour)
+						endif
+						
+					case 2000
+						uge_imp_exp.phase = "T"
+
+					case 3000
+						uge_imp_exp.phase = "C"
+
+					default
+						xmenext(xmenext_point_sequence,1)
+
+				endswitch
+		endswitch
+	endloop			
+
+	xmeret
+
+endp
+
+;*
+procedure Saisie_Masque
+beginp
+
+	seek_muser(system.User)
+	uge_imp_exp.dos = muser.dos
+
+	loop 1
+		;? harmony.ocolonne = 0
+		switch uge_imp_exp.phase
+			case "E"
+				Saisie_Entete
+			case "T"
+				Saisie_Tables
+			case "C"
+				Saisie_Champs
+		endswitch
+	endloop
+				
+endp
+
+;*
+main
+
+	ug_Init(false)
+	mz.MeCle="ugee_imp_exp.dhoe"
+	mz.Titre2="Import / Export des Tables"
+	ug_init(false,True)
+
+	idEnreg = xmelistgetid(mz.mecle,3,"TAB_ENREG",uge_enreg)
+	idChamp = xmelistgetid(mz.mecle,4,"TAB_CHAMP",uge_champs)
+
+	init uge_imp_exp = " "
+	uge_imp_exp.phase = "E"
+	uge_imp_exp.Controle_cle = 2
+	uge_imp_exp.CodePage=1252
+
+	xmedispv mz.mecle 1 xme_mode_goto
+	xmedispv mz.mecle 2 xme_mode_goto
+	xmedispv mz.mecle 3 xme_mode_goto
+	xmedispv mz.mecle 5 xme_mode_goto
+	xmeinfopage mz.mecle	3
+	OffsetCol = harmony.opara4					;Nombre de colonne du premier tableau = offset de décalage du second
+	;? harmony.ocolonne = OffsetCol
+	xmedispv mz.mecle 4 xme_mode_goto
+	
+	Saisie_Masque
+

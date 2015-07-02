@@ -1,0 +1,113 @@
+;*
+;*	Programme de Regeneration des fichiers
+;*
+
+Module ysystemex.dhop
+
+; lecture du répertoire /divalto/sys
+record ddsys.dhsd   OPDIR      OP
+record ddsys.dhsd   ELTDIR     EL
+1   car   1 
+1   st    X
+1 Prg 50
+1 vI 5,0
+
+1 Liste L
+record ddsys.dhsd implicite imp
+record ddsys.dhsd hstat hstat
+record ddsys.dhsd cles cles
+record * htdf fic
+record * htdf ficL ;Fichier Log
+1 ficdata 500
+1 Show 1,0=false
+1 FicLog 512
+
+
+
+main
+
+XmeTitle ("Regeneration / Reorganisation des fichiers")
+
+Show=WinDivaltoGlobalReadInt("UG_REORGANISATION","show")
+FicLog=WinDivaltoGlobalReadString("UG_REORGANISATION","fichierLog")
+FicLog=Condition(FicLog=" ",GetHarmonyDirectory & "\ug_regeneration.log",FicLog)
+ficL.Name=FicLog
+Loop Fopen(ficL,"P")<>0
+	if HCreateFile(FicL.Name,"U",Abort=False)<>0
+		FicLog=" "
+		Exitloop
+	endif
+endloop
+if FicLog<>" "
+	Herase(FicL)
+endif
+
+
+
+Liste=ListImplicitesGet
+Listbegin(Liste)
+Loop ListNext(liste,imp)<>0
+	if count("sys",imp.path)>0 | redoloop | endif
+   ;if count("fic",imp.path)>0 | exitloop | endif
+	if Count("fichiers",fstring("l",imp.path))=0 | redoloop | endif
+	op.racine=imp.path
+	;op.racine = "//hp01/harmony/fic/"	
+	op.prefixe = "*"
+	op.tri = 4
+	st = DirOpen(op)
+	if st
+	   Display "Erreur " & binhexa(ldx(st)) & " lors de l'ouverture"
+	   ProgramExit
+	endif
+	loop DirRead(op,el) = 0
+		
+		if right(nospaces(el.nom),4)="dhfi"
+			if left(el.nom,5)="fstyl" | redoloop | endif
+			fic.name=el.nom
+			if fopen(fic)<>0 | redoloop | endif
+			fclose(fic)
+			display "Regeneration   :" & el.nom	 && "" 0
+			ping("XREOF_FICHIER",nospaces(op.racine) & "/" & el.nom)
+			ping("XREOF_OPERATION",1)
+			ping("XREOF_MEMOIRE",65520)
+			ping("XREOF_MESSAGES",0)
+			ProgramCall("xreof.dhop",Condition(Show=0,SW_HIDE,SW_NORMAL))
+			display " OK"
+			if FicLog<>" "
+				HWrite(FicL,Left("Regeneration " & nospaces(op.racine) & "/" & el.nom))
+			endif
+			;if el.nom<>"ursaf.dhfi" or el.nom<>"b3ferr.dhfi"
+			loop (st:=HsiRead(op.racine && "/" & el.nom,FicData,cles, st, false))<>0		; verifier si nom du fichier de donnée existe
+				vI++
+				if vI>100
+					exitloop	
+				endif
+			endloop
+			ficdata=Condition(Ficdata=" ",FileNameNoExt(el.Nom) & ".dhfd",FicData)
+			Loop statFile (ficdata , Hstat)<>0
+				vI++
+				if vI>100
+					hstat=" "
+					exitloop	
+				endif
+			endloop
+			if hstat.TypeF in ("N"," ")
+				display "Reorganisation :" & el.nom && "" 0
+		 		ping("XREOF_FICHIER",nospaces(op.racine) & "/" & el.nom)
+				ping("XREOF_OPERATION",2)
+				ping("XREOF_MEMOIRE",65520)
+				ping("XREOF_MESSAGES",0)
+				ProgramCall("xreof.dhop",Condition(Show=0,SW_HIDE,SW_NORMAL))
+				if FicLog<>" "
+					HWrite(FicL,Left("Reorganisation " & nospaces(op.racine) & "/" & el.nom))
+				endif
+
+				display " OK"
+			endif
+		endif
+	endloop
+	DirClose(op)
+endloop
+
+programgoto("xquit")
+

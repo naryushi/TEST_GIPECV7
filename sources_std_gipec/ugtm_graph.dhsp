@@ -1,0 +1,487 @@
+;* Module de gestion des objets graphiques
+
+;*
+;20110614			| RTH			| Version initiale
+;*
+
+;*
+;Le programme principal rempli trois listes :
+;	- Liste des X contient les éléments à afficher sur l'axe des X. Le programme calcul automatiquement l'espacement et les coordonnées de chaque élément.
+;	- Liste des Y contient les éléments à afficher sur l'axe des Y. Le programme calcul automatiquement l'espacement et les coordonnées de chaque élément.
+;	- Liste des objets graphiques : Chaque élément de la liste doit contenir la référence début/fin des axes X et Y. Le programme calcule automatiquement les dimensions de l'objets.
+;Les deux premières listes (axes) doivent être triées dans l'ordre d'affichage des éléments a partir du point de coordonnées (0,0)
+;Attention : les listes ne sont pas triées, aussi pour l'affichage du graphique, le programme effectue une lecture et s'arrête au premier élément trouvé.
+;*
+
+OverWrittenBy ugum_graph.dhop
+
+include ugin_graph.dhsp
+include Zygraph.dhsp
+
+module ugtm_tech.dhop
+
+public record a5dd.dhsd mz
+
+recorddiva elem_G elem_G
+recorddiva elem_X elem_X
+recorddiva elem_Y elem_Y
+
+1 LstX L
+1 LstY L
+1 LstG L
+
+1 PoliceInit B = false
+1 CouleurInit B = false
+
+
+;*
+1 dx x = 0				;X mini du graph, légende incluse
+1 fx x = 0		 		;X maxi du graph, légende incluse
+1 dy x = 0				;Y mini du graph, légende incluse
+1 fy x = 0				;Y maxi du graph, légende incluse
+1 LegendeX x = 0		;Taille de la légende de l'axe X	(A déduire de la taille de Y)
+1 LegendeY x = 0		;Taille de la légende de l'axe Y	(A déduire de la taille de X)
+1 c1 x
+1 c2 x
+1 c3 x
+1 p1 x
+1 angle 6,0
+1 PasX 6,0
+1 PasY 6,0
+1 x 6,0 = 0
+1 y 6,0 = 0
+1 maxX 6,0 = 0
+1 maxY 6,0 = 0
+
+1 NbLigG 6,0=0
+1 NBColG 6,0=0
+
+;*
+procedure ug_Init_Legende
+	;Calcul la taille des légendes de chaque axe
+
+beginp
+
+	listbegin(lstX)
+	loop listnext(LstX,elem_X) > 0
+	   GraphSizeText(p1,elem_X.Nom,x,y,angle)
+		MaxY = max(MaxY,y)
+	endloop
+	LegendeX = MaxY + 1
+
+	listbegin(lstY)
+	loop listnext(LstY,elem_Y) > 0
+	   GraphSizeText(p1,elem_Y.Nom,x,y)
+		MaxX = max(MaxX,x)
+	endloop
+	LegendeY = MaxX + 1
+
+endp
+
+;*
+procedure ug_Init_X
+	;Initialisation de l'axe x
+
+beginp
+
+	PasX = ug_divise(fx - LegendeY,listcount(lstX))
+
+	listbegin(lstX)
+	loop listnext(LstX,elem_X) > 0
+	   elem_X.PosX = LegendeY + (PasX * (listnumber(lstX) - 1))
+		elem_x.PasX = PasX
+		listmodify(lstX,elem_X)
+	endloop
+	
+endp
+
+;*
+procedure ug_Init_Y
+	;Initialisation de l'axe Y
+
+beginp
+
+	PasY = ug_divise(FY - LegendeX,listcount(lstY))
+
+	listbegin(lstY)
+	loop listnext(LstY,elem_Y) > 0
+		;elem_Y.PosY = LegendeX + (PasY * (listnumber(lstY) - 1))
+		elem_Y.PosY = fy - LegendeX - (PasY * (listnumber(lstY) - 1))
+		elem_y.PasY = PasY
+		listmodify(lstY,elem_Y)
+	endloop
+
+endp
+
+;*
+public procedure ug_Init_Police(police1)
+	;Définition des polices. Les polices doivent être dans la feuille de style.
+  	1 police1 A = "ARIAL10G"				;Police des axes.
+	
+beginp
+		
+	p1 = GraphCreateFont(police1)
+	
+	PoliceInit = true
+
+endp
+
+;*
+public procedure ug_Init_Couleur(couleur1,couleur2,couleur3)
+	;Définition des couleurs. Les couleurs doivent être dans la feuille de style.
+	1 Couleur1 A = "GRAPH2"		  			;Axe et encadrement
+	1 Couleur2 A = "GRAPH3"					;Fond des barres
+	1 Couleur3 A = "STD"						;Fond du graphique
+
+beginp
+	
+	c1 = GraphCreateColor(Couleur1) 
+	c2 = GraphCreateColor(Couleur2)
+	c3 = GraphCreateColor(Couleur3)
+
+	CouleurInit = true
+
+endp
+
+;*
+public procedure ug_Init_Graph(Page,IdLstX,IdLstY)
+	;Initialisation du graphique
+	1 Page > ddsys.dhsd zpage
+	1 IdLstX	A
+	1 IdLstY A
+
+	1 Id x
+
+beginp
+
+	XmeInfoPage(mz.mecle,Page)
+	fx = harmony.Opara4 - 1
+	fy = harmony.Opara3 - 1
+	GraphSizePageOrteil(dx,dy,fx,fy)
+	dx = dx + 1 							;la page a peut être un cadre, il faut prendre l'interieur du cadre
+	fx = fx - 1
+	dy = dy + 1
+	fy = fy - 1
+	xmedispv(mz.MeCle,Page,xme_mode_gosub)
+
+	lstX = ug_liste(IdLstX,false,false,false)
+	LstY = ug_liste(IdLstY,false,false,false)
+
+	angle = 270 + 45 				;Angle des libellés
+
+	ug_Init_Legende
+
+	ug_Init_X
+	ug_Init_Y
+	
+	if not PoliceInit
+		ug_Init_Police
+	endif
+
+	if not CouleurInit
+		ug_Init_Couleur
+	endif
+	
+	;Effacement de l'écran
+	GraphClearScreen(dx,dy,fx,fy)
+
+	dx = dx + 1
+	dy = dy + 1
+	fx = fx - 1
+	fy = fy - 1
+
+	if dx > fx or dy > fy
+		preturn
+	endif
+	
+	;Défini les limites de l'objet pour ne pas dépasser de l'écran
+	GraphSetLimite(dx,dy,fx,fy)
+
+	;Dessine le fond du graph 
+	GraphRectangle (dx,dy,fx,fy,c3,c3,0) 
+	GraphSetIdentObjet(id,10000)
+	GraphSetModeFlashVisible(id,false)
+
+	;Dessine les axes
+	GraphLine(LegendeY,fy-legendeX,fx,fy-legendeX,c1,0,2)			;X
+	GraphLine(LegendeY,dy,LegendeY,fy-LegendeX,c1,0,2)				;Y
+
+	;Ecriture des légendes de l'axe X
+	listbegin(lstx)
+	loop listnext(lstx,elem_X) > 0
+		GraphSizeText(p1,elem_X.Nom,x,y,angle)
+		GraphText(elem_X.PosX,fy - legendeX,elem_X.PosX + x,fy,elem_X.Nom,p1,-1,0,angle)
+	endloop
+
+	;Ecriture des légendes de l'axe Y
+	listbegin(lsty)
+	loop listnext(lsty,elem_Y) > 0
+		GraphSizeText(p1,elem_Y.Nom,x,y)
+		GraphText(dx,elem_Y.PosY,dx + LegendeY,elem_Y.PosY - y,elem_Y.Nom,p1,-1,0)
+	endloop
+
+endp
+
+;*
+public procedure ug_Dessin_Graph_Histo(IdLstG)
+	;Recherche les coordonnées des données et affiche les rectangles de façon dynamique
+	;Attention : les informations passées doivent être cohérente car le programme n'effectue pas de vérification des coordonnées ni des ratios
+	1 IdLstG A
+	1 dxl x
+	1 fxl x
+	1 dyl x
+	1 fyl x
+
+	1 id x
+
+beginp
+	
+	lstG = ug_liste(IdLstG,false,false,false)
+
+	listbegin(lstG)
+	loop listnext(LstG,elem_G) > 0
+
+		;Renseigne les ratios non renseignés
+		elem_G.PcXD = condition(elem_G.PcXD <> system.Esp,elem_G.PcXD,100)
+		elem_G.PcXF = condition(elem_G.PcXF <> system.Esp,elem_G.PcXF,100)
+		elem_G.PcYD = condition(elem_G.PcYD <> system.Esp,elem_G.PcYD,100)
+		elem_G.PcYF = condition(elem_G.PcYF <> system.Esp,elem_G.PcYF,100)
+
+		;Init la recherche
+		dxl = 0
+		fxl = 0
+		dyl = 0
+		fyl = 0
+
+		;Recherche les positions début et fin en X
+		listbegin(lstx)
+		loop listnext(lstx,elem_X) > 0 and ( dxl = 0	or fxl = 0)
+			if elem_X.Nom = elem_G.AxeDX
+				dxl = elem_X.PosX
+			endif
+			if elem_X.Nom = elem_G.AxeFX
+				fxl = elem_X.PosX	+ elem_X.PasX
+			endif
+		endloop
+		listfirst(LstX,elem_X)			;Pour charger le pas
+
+		;Recherche les positions début et fin en Y
+		listbegin(lsty)
+		loop listnext(lsty,elem_Y) > 0 and ( dyl = 0	or fyl = 0)
+			if elem_Y.Nom = elem_G.AxeDY
+				dyl = elem_Y.PosY
+			endif
+			if elem_Y.Nom = elem_G.AxeFY
+				fyl = elem_Y.PosY	- elem_Y.PasY
+			endif
+		endloop
+		listfirst(LstY,elem_Y)			;Pour charger le pas
+
+		;Applique les ratios
+		dxl += ((100 - elem_G.PcXD) / 100 * elem_X.PasX) 
+		fxl -= ((100 - elem_G.PcXF) / 100 * elem_X.PasX)
+		dyl -= ((100 - elem_G.PcYD) / 100 * elem_Y.PasY) 
+		fyl += ((100 - elem_G.PcYF) / 100 * elem_Y.PasY)
+		
+		id = GraphRectangle(dxl,dyl,fxl,fyl,c1,c2,false,0)
+
+		GraphModifyInfoBulle(Id,elem_G.Bulle)
+		GraphSetIdentObjet(id,elem_G.Id)
+
+	endloop
+
+endp
+;*
+Public Procedure ug_Graph_init(Page,NbLig,NbCol,AffCadre,CouleurCadre,CouleurFondCadre,IdCadre,FlashCadre)
+;
+1 Page 3,0
+1 NbLig 	 X ; nombre de ligne   que vous aller gérer
+1 NbCol   X ; nombre de colonne que vous aller gérer
+1 AffCadre 1,0=True
+1 CouleurCadre S="STD"
+1 CouleurFondCadre S="STD"
+1 IDCadre N=0
+1 FlashCadre 1,0=false ; gestion du flash sur le cadre
+
+1 Id X
+1 idCoul X
+1 IdCoulFond X
+beginp
+	XmeInfoPage(mz.mecle,Page)
+
+	fx = harmony.Opara4 - 1
+	fy = harmony.Opara3 - 1
+	GraphSizePageOrteil(dx,dy,fx,fy)
+	dx = dx + 1 							;la page a peut être un cadre, il faut prendre l'interieur du cadre
+	fx = fx - 1
+	dy = dy + 1
+	fy = fy - 1
+
+	;Effacement de l'écran
+	GraphClearScreen(dx,dy,fx,fy)
+	
+	dx = dx + 1
+	dy = dy + 1
+	fx = fx - 1
+	fy = fy - 1
+
+	if dx > fx or dy > fy
+		preturn
+	endif
+	
+	;Défini les limites de l'objet pour ne pas dépasser de l'écran
+	GraphSetLimite(dx,dy,fx,fy)
+
+	NbLigG=NbLig
+	NbColG=NbCol
+
+	if AffCadre
+		;Dessine le fond du graph 
+		IdCoul=GraphCreateColor(CouleurCadre)
+		idCoulFond=GraphCreateColor(CouleurFondCadre)
+		
+		Id=GraphRectangle (dx,dy,fx,fy,idcoul,idcoulfond,0) 
+
+		GraphDeleteColor(idCoul)
+		GraphDeleteColor(idCoulFond)
+		
+		if IDCadre>0
+			GraphSetIdentObjet(id,IdCadre)
+		endif
+		GraphSetModeFlashVisible(id,FlashCadre)
+	endif
+endp
+;*
+Public Function Ptr ug_Graph_Rectangle(PosLig,PosCol,LgLig,LgCol,Id,Coul,CoulFond,Hachure,Epaisseur,Bulle,Visible,idPre,ValPosLgEnPixel)
+;
+1 PosLig 6,0
+1 PosCol 6,0
+1 LgLig  6,0
+1 LgCol  6,0
+1 Id 6,0=0 				; identifiant
+1 CoulFond S="STD" 	; Couleur de fond	si numerique prise en compte de couleur de graphcreatecolor
+1 Coul S=" " 			; Couleur
+1 Hachure 6,0=0 		; HW_Couleur_... 
+1 Epaisseur 6,0=1 	; En Pixel
+1 Bulle S=" "			; Bulle du rectangle
+1 Visible 1,0=0 		; Visible=0 Caché=3
+1 IdPre 6,0=0 			; Identifiant prefixe
+1 ValPosLgEnPixel 1,0=False ; Valeur de PosLg en Pixel
+
+1 CoulN 6,0
+1 CoulFondN 6,0
+1 nuid X
+beginf
+	if ValPosLgEnPixel=False
+		PosLig=Condition(PosLig=0,0,(PosLig/NbLigG)*(fy-dy))+ dy
+		PosCol=Condition(PosCol=0,0,(PosCol/NbColG)*(fx-dx))+ dx
+	
+		LgLig=(LgLig/NbLigG)*(fy-dy)
+		LgCol=(LgCol/NbColG)*(fx-dx)
+	else
+		PosLig
+		PosCol
+		LgLig
+		LgCol
+	endif
+	; Couleur
+	if IsNum(Coul)=True
+		CoulN=Coul	
+	else
+		CoulN=GraphCreateColor(Coul)
+	endif
+	; Couleur Fond
+	if IsNum(CoulFond)=True
+		CoulFondN=CoulFond	
+	else
+		CoulFondN=GraphCreateColor(CoulFond)
+	endif
+	
+	nuid=GraphRectangle(PosCol,PosLig,PosCol+LgCol,PosLig+LgLig,CoulN,CoulFondN,Condition(CoulFondN=0,True,False),Hachure,Epaisseur,Visible)
+	if IdPre>0 and ID>0	
+		GraphSetIdentPrefixeAndObjet(nuid,idpre,id) 
+	elsif id>0 
+		GraphSetIdentObjet(nuid,id) 
+	endif
+	; Bulle
+	If Bulle <>" "
+		GraphModifyInfoBulle(nuid,Bulle)
+	endif
+
+	if CoulN<>Coul | GraphDeleteColor(CoulN) | endif
+	if CoulFondN<>CoulFond | GraphDeleteColor(CoulFondN) | endif
+
+	Freturn(Nuid)
+endf
+;*
+Public Function Char ug_Graph_Text(PosLig,PosCol,LgLig,LgCol,Texte,Police,ValPosLgEnPixel,Coul,CoulFond,Id,IdPre,Bulle,Angle,Cadrage,CodePage,Apparence,ModeChamp,ModeFlash)
+;
+1 PosLig          6,0
+1 PosCol          6,0
+1 LgLig           6,0
+1 LgCol           6,0
+1 Texte 				S			; Possibilité de gérer des textes en HOG
+1 Police				S="STD"	; si numerique pris en compte idpolice
+1 Cadrage			1,0=0 	;0=Gauche 1=Droite
+1 ValPosLgEnPixel 1,0=False
+1 Coul            S="TRAIT_SIMPLE_NOIR"
+1 CoulFond        S="STD"
+1 Id					6,0=0
+1 IdPre				6,0=0
+1 Bulle				S=' '
+1 Angle           3,0=0
+1 CodePage        4,0=0
+1 Apparence       1,0=0		;0=visible 1=Grisee 2=illisible 3=caché
+1 ModeChamp			1,0=0
+1 ModeFlash 		1,0=True	
+
+1 CoulN 6,0
+1 CoulFondN 6,0
+1 PoliceN 6,0
+1 nuid X
+
+beginf
+	; Couleur
+	if IsNum(Coul)=True
+		CoulN=Coul	
+	else
+		CoulN=GraphCreateColor(Coul)
+	endif
+	; Couleur Fond
+	if IsNum(CoulFond)=True
+		CoulFondN=CoulFond	
+	else
+		CoulFondN=GraphCreateColor(CoulFond)
+	endif
+	; Police
+	if IsNum(CoulFond)=True
+		PoliceN=Police	
+	else
+		PoliceN=GraphCreateFont(Police)
+	endif
+	
+	GraphSizeText( PoliceN, Texte , LgCol, LgLig , Angle,ModeChamp=ModeChamp)
+	if Count("<hog>",Fstring("l",Texte))>0
+		nuid=GraphTextHOG(PosCol,PosLig,PosCol+LgCol,PosLig+LgLig,Texte,PoliceN,CoulN,Cadrage,Angle,CoulFondN,False,Apparence=Apparence,CodePage,ModeChamp)
+	else
+		nuid=GraphText(PosCol,PosLig,PosCol+LgCol,PosLig+LgLig,Texte,PoliceN,CoulN,Cadrage,Angle,CoulFondN,false,Apparence=Apparence,CodePage,ModeChamp)
+	endif
+
+	if IdPre>0 and ID>0	
+		GraphSetIdentPrefixeAndObjet(nuid,idpre,id) 
+	elsif id>0 
+		GraphSetIdentObjet(nuid,id) 
+	endif
+	; Bulle
+	If Bulle <>" "
+		GraphModifyInfoBulle(nuid,Bulle)
+	endif
+	; Mode Flash
+	GraphSetModeFlashVisible(nuid,ModeFlash)
+	; suppression des polices et Couleur
+	if CoulFond<>CoulFondN 		| GraphDeleteColor(CoulFondN) 		| endif
+	if Coul<>CoulN 				| GraphDeleteColor(CoulN) 				| endif
+	if Police<>PoliceN 			| GraphDeleteFont(PoliceN)	 			| endif
+
+	freturn (nuid)
+endf

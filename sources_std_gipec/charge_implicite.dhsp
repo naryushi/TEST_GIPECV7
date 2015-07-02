@@ -1,0 +1,171 @@
+;*	Programme de chargement des Implicites
+
+module ysystemex.dhop
+
+public record gtfdd.dhsd xz G3xz
+public record gtfdd.dhsd xq G3xq
+
+record ddsys.dhsd opDir op
+Record ddsys.dhsd EltDir El
+record ddsys.dhsd implicite imp
+
+record * htdf ficimp
+record * htdf fconfig
+
+1 Lst L
+1 Lst_Implicite L
+1 Lst_serv L
+1 Texte 1024
+1 Masque 50
+1 pos 3,0
+1 vI 3,0
+1 PositionTri	L
+1 Longueur L
+1 SousProjet 50
+1 Enreg 500
+
+;*
+function Long Tri(&p1,&p2)
+	1	P1	A
+	1	p2 a
+
+beginf
+
+	if mid(p1,PositionTri,Longueur) = mid(p2,PositionTri,Longueur)
+		freturn(2)
+	endif
+
+	freturn(mid(p1,PositionTri,Longueur) < mid(p2,PositionTri,Longueur))
+
+endf
+
+;*
+procedure Recherche_Listes_Implicites
+	Record * htdf fic
+	1 St X
+	1 AdrFonc 16
+
+beginp
+
+	listerase(Lst)
+
+	;Initialisation des valeurs pour le tri
+	positiontri = ptr(Texte) - ptr(Texte) + 1
+	longueur = datasize(Texte)
+	GetAdressFunction(" ","Tri",Adrfonc)
+	ListMode(Lst,1,Adrfonc)
+	op.racine = g3xq.winTitre	
+	op.prefixe = "*.txt"
+	op.tri = 4
+	st = DirOpen(op)
+	Loop DirRead(op,El)=0
+		if Right(Nospaces(El.nom),3) <> "txt" | redoloop | endif
+		Texte = eL.nom & ";" & Filenamelastsegment(el.nom)
+		ListInsert(Lst,Texte)
+	endloop
+	DirClose(op)  
+
+endp
+
+;*
+function int Charge_Implicite(Fichier)
+	record * htdf fic
+	1 fichier S
+	1 Texte 512
+	1 NumFicErr 1,0
+	1 ficD L
+	1 TLE L
+	1 finfic L
+	1 ficM L
+	1 st x
+	1 resultat 256
+	1 serveur 32
+	1 extension 6
+	1 nom 256
+	1 pos L
+
+beginf
+
+	if right(nospaces(g3xq.wintitre),1) not in ("/","\")
+		g3xq.wintitre &= "/"
+	endif
+	
+	;Création du fichier destination
+	ficD = WinCreateFile(getharmonydirectory && "/sys/developpement.txt",GENERIC_WRITE,FILE_SHARE_WRITE,0,create_always,0,0)
+	if ficD = -1
+		freturn(1)
+	endif
+	
+	;Ouverture fichier implicite modèle
+	filenameanalyse(g3xq.wintitre && Fichier,resultat,serveur,nom,extension)
+
+	ficM = WinCreateFile(resultat,GENERIC_read,FILE_SHARE_read,0,open_existing,0,0)
+	if ficM = -1
+		freturn(1)
+	endif
+
+	;Copie des lignes et modification du serveur
+	do
+		st = WinReadFileRecord(ficM,enreg,TLE,finfic,8) 
+	while not finfic and st
+		enreg = fstring("l",enreg)
+		if g3xq.user = "localhost"
+   		enreg = modify("//serveur","",enreg)
+		else
+			enreg = modify("//serveur","//" && nospaces(g3xq.user),enreg)
+		endif
+		if g3xz.modifflg = 2	and (pos := string("/bases",enreg)) > 0
+			enreg = mid(enreg,pos,length(enreg))
+		endif	
+		winwritefile(ficD,enreg & $0d0a,TLE)
+	wend
+	winclosehandle(ficd)
+	winclosehandle(ficm)
+
+	;Chargement
+	ListImplicitesLoad("developpement.txt",,,true)
+	freturn(0)
+	
+endf
+
+;*
+main
+
+	lst_serv = listgetid("LIST_SRV")
+	Listerase(Lst_serv)
+	listinsert(Lst_serv,"localhost")
+	fconfig.name = "fconfig.dhfi"
+	hopen(fconfig,"P")
+	fconfig.key = "B"
+	loop hread(fconfig,enreg) = 0
+		if nospaces(mid(enreg,141,32)) <> ""
+			listinsert(Lst_Serv,mid(enreg,141,32))
+		endif
+	endloop
+	g3xq.user = "localhost"
+
+	Lst = Listgetid("LIST0")
+	masque = "charge_implicite.dhoe"
+	g3xq.wintitre = "/implicites/"
+	Recherche_Listes_Implicites
+	g3xq.prg = "Divalto.dhop"
+	g3xq.titreimp = 0
+	g3xz.modifflg = 1								;Par défaut les bases sont sur serveur
+
+ 	xmeload(masque)
+	xmetitle("Charges Implicites")														  
+	xmeinput(masque,1,1,xme_mode_goto)
+
+	Loop 1
+		if system.statin=c_f9
+			Programgoto("Xquit")
+		endif
+		if system.statin=c_f10
+			if Charge_Implicite(g3xz.fic) = 0
+				harmony.retour = xmenext_point_sequence
+				harmony.cplretour = 1
+				programgoto(g3xq.prg)
+			endif
+		endif
+		xmenext harmony.retour,harmony.cplretour
+	endloop

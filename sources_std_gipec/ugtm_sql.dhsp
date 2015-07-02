@@ -1,0 +1,464 @@
+;*
+;*	Module pour la gestion Record SQL 
+;*
+
+OverWrittenBy ugum_sql.dhop
+
+Module ugtm_tech.dhop
+Module yodbcSql.dhop
+Module ugtm_xml.dhop
+
+public record ddsys.dhsd sql
+
+Const NomListeColonne = "ug_Sql_Colonne_RecordSet_"
+const NomListeResultat="ug_Sql_Resultat_RecordSet_"
+
+1 LstEntete L*10
+1 LstLigne L*10
+
+1 IsSqlOpen 1,0=False
+
+1 Erreur 200
+ 2 Erreur1 100
+ 2 Erreur2 100
+
+;*
+;*	Procedures
+;*
+
+;*
+Public Function Long ug_Select_RecordSql(PtrSql,ValeurCondition,InitRecord,SelectRecord,ValeurOrderby,RdSel)
+; Lancer un Init Where et OrderBy Select ou Readerder en une ligne
+; Si SelectRecord = 2 (ReaderSelect)
+; Retour RdSel
+; Sinon Retour du resultat du Select 
+; nom de la condition Spe "ug_Condition_SPE"
+; nom de l'orderby Spe "ug_OrderBy_SPE"
+1 InitRecord 1,0=True 	; Si True RecordSql.Init()
+1 SelectRecord 1,0=True ; Si True RecordSql.Select()  Si 2 = ReaderSelect()
+1 ValeurOrderby		S=" "
+1 ValeurCondition    S=" "
+RecordSqlPtr PtrSql
+
+1 RdSel L=0 ; pointeur du ReaderOpen
+beginf
+	Const CondSpe="ug_Condition_SPE"
+	Const OrderBySpe="ug_OrderBy_SPE"
+	; init
+	if InitRecord=True | PtrSql.Init() | endif
+	; condition
+	if ValeurCondition<>" "			 
+		PtrSql.Where.AddClause(CondSpe,ValeurCondition) | PtrSql.Where.AddCondition(CondSpe)
+	endif
+	; Orderby
+	if ValeurOrderBy<>" "
+		PtrSql.OrderBy.AddClause(OrderBySpe,Fstring("U",ValeurOrderby)) | PtrSql.OrderBy.UseClause(OrderBySpe)
+	endif
+	; Select
+	if SelectRecord=True 
+		RdSel=PtrSql.Select()	  
+	elsif SelectRecord=2
+		RdSel=PtrSql.ReaderSelect(RdSel)	  		
+	endif
+	Freturn(RdSel)
+endf
+;*
+Public function char ug_Convertir_Date_SQL(date,separateur)
+; Retour au format AAAA-MM-JJ
+1 date > gtfdd.dhsd datd ; au format AAAAMMJJ
+ 2 dtA 4
+ 2 dtM 2
+ 2 DtJ 2
+1 Separateur 1="-"
+beginf
+	freturn (Condition(Date<>' ',DtA & Separateur & DtM & Separateur & DtJ,' '))
+endf
+;*
+public function int ug_sql_requete(cn,req,p1,p2,p3,AffMess)
+	;Execution d'une requête SQL
+	;Retour = résultat de la requete
+	1 cn L
+	1 req 1000						;Texte de la requête SQL
+	1 p1 A = ""						;Paramètre 1
+	1 p2 A = ""						;Paramètre 2
+	1 p3 A = ""						;Paramètre 3
+	1 AffMess B = false
+
+	1 erreur 512
+	 2 erreur1 256
+	 2 erreur2 256
+
+beginf
+
+	if SQLExecDirect(cn,req) <> 0
+		if AffMess
+			SQLError(erreur1,erreur2)
+			ug_erreur(3,fstring("B",erreur1),fstring("B",erreur2))
+		endif
+		freturn(1)
+	endif
+
+	freturn(0)
+
+endf
+;*
+public function long ug_SQL_Debut(dsn,usr,pwd)
+	;Ouverture d'un dialogue SQL
+	;Retour = 0 si erreur, id de la connection si réussi
+	;
+	; Cette fonction ne fonctionne que pour les DSN
+	;
+	1 dsn A							;DSN windows
+	1 usr A							;Code utilisateur Divalto
+	1 pwd A							;Mot de passe utilisateur Divalto
+
+	1 cn L
+
+beginf
+
+	if SQLOpen
+		ug_alert(21)
+		freturn(0)
+   endif
+
+	cn = SQLConnect(dsn,usr,pwd)
+	if cn = 0
+		ug_alert(22,dsn)
+		freturn(0)
+	endif
+
+	freturn(cn)
+endf
+;*
+public procedure ug_sql_fin
+beginp
+	sqlclose
+endp
+;*
+;public function int ug_sql_requete(cn,req,p1,p2,p3,AffMess)
+;	;Execution d'une requête SQL
+;	;Retour = résultat de la requete
+;	1 cn L
+;	1 req 1000						;Texte de la requête SQL
+;	1 p1 A = ""						;Paramètre 1
+;	1 p2 A = ""						;Paramètre 2
+;	1 p3 A = ""						;Paramètre 3
+;	1 AffMess B = false
+;
+;	1 erreur 512
+;	 2 erreur1 256
+;	 2 erreur2 256
+;
+;beginf
+;
+;	if SQLExecDirect(cn,req) <> 0
+;		if AffMess
+;			SQLError(erreur1,erreur2)
+;			ug_erreur(3,fstring("B",erreur1),fstring("B",erreur2))
+;		endif
+;		freturn(1)
+;	endif
+;
+;	freturn(0)
+;
+;endf
+;*
+public function char ug_SQL(dsn,usr,pwd,req,p1,p2,p3,AffMess)
+	;Execution d'une fonction SQL de type "Select count()"
+	;Retour = Résultat de la requête
+	1 dsn A							;DSN windows
+	1 usr A							;Code utilisateur Divalto
+	1 pwd A							;Mot de passe utilisateur Divalto
+	1 req 1000						;Texte de la requête SQL
+	1 p1 A							;Paramètre 1
+	1 p2 A							;Paramètre 2
+	1 p3 A							;Paramètre 3
+	1 AffMess B = true			;Afficher message si erreur
+
+	1 cn L
+	1 erreur 512
+	 2 erreur1 256
+	 2 erreur2 256
+	1 Retour s = " "
+
+beginf
+
+	cn = ug_sql_debut(dsn,usr,pwd)
+	
+	req = modify("$1",p1,req)
+	req = modify("$2",p2,req)
+	req = modify("$3",p3,req)
+
+	if SQLExecDirect(cn,req) <> 0
+		goto Err
+	endif
+
+	loop 1
+		if SQLGetResult(cn) <> 0
+			goto Err
+		endif
+	
+		if sql.SQLtype = 1
+         if AffMess
+				retour = "Nombre de lignes mise à jour : " & sql.sqlnblig
+			endif
+			exitloop
+
+		elsif sql.SQLtype = 4 
+			retour = mid(SQLGetData,1,SQLGetDataSize)
+			exitloop
+
+		endif
+			
+	endloop
+
+	goto fin
+
+	label err
+
+		if AffMess
+			SQLError(erreur1,erreur2)
+			ug_erreur(3,fstring("B",erreur1),fstring("B",erreur2))
+		endif
+
+	label fin
+		
+		ug_sql_fin	
+
+		freturn(Retour)
+
+endf
+
+;*
+Public Function Long ug_SQL_Recuperation_Entete(Cn)
+; Recuperation
+1 Cn 3,0
+1 Fini 1,0=False
+beginf
+	Loop Fini=False and SQLGetResult(Cn)=0
+		switch (sql.sqltype)
+			case 0 ; Fin du Resultat	
+				Fini=True
+			case 1 ; Nombre de Ligne Modifié
+								
+			case 2 ; Lecture Entete Colonne
+				ListAddEnd(LstEntete(Cn),Sql)
+			case 3 ; Fin des Colonnes
+				Fini=True
+		endswitch
+	endloop
+	freturn (LstEntete(Cn))
+endf
+;*
+Public Function Char ug_SQL_Fetch(Cn,RecupEnreg)
+;
+1 Cn 3,0
+1 RecupEnreg 1,0=False
+1 Fini 1,0=false
+1 Champ 4096
+1 Enreg 50000
+1 Lg 5,0
+1 Pos L=1
+beginf
+	ListErase(LstLigne(Cn))
+	Loop Fini=False	
+		if SQLGetResult(Cn)<>0
+	   	SQLERROR (erreur1,erreur2)
+			Exitloop
+		endif
+		;
+		switch (sql.sqltype)
+			case 0 ;type 0 -> il n'y a plus de résultats
+				Fini=True				
+			case 1
+			case 2
+			case 3
+			case 4 ;type 4 -> résultat d'une colonne
+				Champ = SQLGetData
+				lg = min( 4096 , SQLGetDataSize )
+			   ListAddEnd(LstLigne(Cn),Left(Champ,lg))
+				Mid(Enreg,Pos,Lg)=Left(Champ,lg)
+				Pos +=Lg
+			case 5 ;type 5 -> fin d'une ligne de résultats
+				Fini=True
+		endswitch
+	endloop
+	freturn (Condition(RecupEnreg=True,Enreg,"0"))
+endf
+;*
+Public Function Char ug_SQL_GetData(Cn,ColonneOuNum)
+;
+1 Cn 3,0
+1 ColonneOuNum U ; Colonne ou Numero de Colonne
+1 Enreg 10000
+1 NumCol 5,0
+beginf
+	if DataType(ColonneOuNum)=3
+		ListBegin(LstEntete(Cn))
+		Sql.Sqltexte=ColonneOuNum
+		If ListFind(LstEntete(Cn),Ptr(Sql.Sqltexte)-Ptr(Sql)+1,Size(Sql.Sqltexte),Sql.Sqltexte,Sql)>0
+			NumCol=ListNumber(LstEntete(Cn))
+		endif
+	else
+		NumCol=ColonneOuNum		
+	endif
+	;
+	if NumCol>0 
+		ListIndex(LstEntete(Cn),Enreg,NumCol)
+	endif
+	freturn (Enreg)
+endf
+;*
+Public Function char ug_SQL_Executer_Requete(Cn,Requete)
+;
+1 Cn      3,0 ; Identifiant connexion
+1 Requete S
+1 Erreur1 S
+1 Erreur2 S
+beginf
+	SQLCancel(cn) ;abandonne la requete precedente
+	if SQLExecDirect(cn,requete)<>0 
+   	SQLERROR (erreur1,erreur2)
+		SQLDisconnect(cn)
+	else
+		ug_SQL_Recuperation_Entete(Cn)
+	endif
+	;LireLesEntetesDeColonnes(cn,ListeEntetes(cn))	
+	freturn (Erreur1 && " " & Erreur2)
+endf
+;*
+Public Function int ug_SQL_Begin
+;
+1 i 3,0
+beginf
+	; Ouverture des fonctions SQL
+	if not IsSqlOpen
+		if SQLOpen <> 0
+			Freturn(1)
+		endif
+		IsSqlOpen = TRUE
+		for i = 1 to 10
+			LstEntete(i) = 0
+			LstLigne(i) = 0
+		next
+	endif
+	freturn(0)
+endf
+;*
+Public Function int ug_SQL_Close
+;
+beginf
+	SQLClose
+	freturn (0)
+endf
+;*
+Public Function int ug_SQL_Connexion(Chaine,Mode)
+;
+1 Chaine S
+1 Chaine1 100
+1 Mode   L=1
+
+
+1 Cn L
+1 Erreur1 100
+1 Erreur2 100
+beginf
+	ug_SQL_Begin
+	; Connexion SQL
+	Cn = SQLDriverConnect(chaine,chaine1,mode)
+	; Gestion d'erreur
+	if Cn = 0
+	   SQLERROR (erreur1,erreur2)
+   	display left(erreur1)
+	   display left(erreur2)
+		programexit
+	endif
+	; 
+	LstEntete(Cn) = ug_Liste(NomListeColonne & Val(Cn))
+	LstLigne(Cn) = ug_Liste(NomListeResultat & Val(Cn))
+	freturn Cn
+endf
+;*
+Public Procedure ug_SQL_Deconnexion(Cn)
+;
+1 Cn 3,0
+beginp
+	Deconnexion(Cn)
+endp
+;*
+Public Function int ug_SQL_Select(Requete,NomDriver)
+; Fait la connexion SQL et lance la requete
+; Renvoie le numero de Connexion SQL
+1 Requete S
+
+1 NomDriver 50="SQL Server Native Client 10.0"
+1 Serveur 50
+1 DataBases 50
+1 Uid 50
+1 Pwd 50
+1 Trusted 3
+1 Cn 3,0=0
+
+1 Tic L ; Ticket Xml
+1 Rep S
+1 Pos L=1
+hfile gtfdd.dhsd gtfdos gtfdos 
+recordDiva ugtm_Xml.ugs_Xml eXml
+
+1 LstXml L
+1 Ligne S
+1 Tag 100
+1 Valeur 100
+1 NomCn S
+1 Enreg S
+
+1 St X
+beginf
+	Const Rech="nomBase"
+	Const ChaineCon="chaineDeConnexion"
+	Const DataSrce="Data Sources"
+	Const ConnexionXml="Connexions.Xml"
+	; Recuperation de la connexion au serveur
+	;FileNameAnalyse(Gtfdos.Name,Resultat,Serveur,NomCourt,Extension)
+	Serveur=Split(Modify("//","",Gtfdos.Name),Pos,SeparateursNonRendus="/")
+	Databases=Split(Modify("//","",Gtfdos.Name),Pos,SeparateursNonRendus="/")
+
+	Tic=ug_Xml_Open("\\" & Serveur && "\Divalto\sys\" & ConnexionXml,3)
+	LstXml=ug_Xml_Analyse(Tic)	
+	ug_Xml_Close(Tic)
+	ListBegin(LstXml)
+	eXml.Tag=Rech
+	Loop ListFind(LstXml,ptr(eXml.Tag)-Ptr(eXml)+1,Size(eXml.Tag),eXml.Tag,eXml)>0
+		if Fstring("U",eXml.Valeur)=Fstring("U",Databases)
+			Loop ListNext(LstXml,eXml)>0 
+				if fstring("l",eXml.Tag)=Fstring('l',ChaineCon)
+					Ligne ="<" & Modify(";","<",Modify("=",">",Modify(" ;",";",Modify("; ",";",eXml.Valeur))))
+					Loop HmpRead(Ligne,Tag,Valeur)=0
+						Switch Fstring("U",Tag)
+							case "TRUSTED_CONNECTION"
+								Trusted=Valeur
+							case "DATA SOURCE"
+								Serveur=Valeur								
+							Case "UID"
+								Uid=Valeur
+							Case "PWD"	
+								Pwd=Valeur
+						endswitch
+					endloop
+					Exitloop
+				endif
+			endloop
+			Exitloop
+		endif
+	endloop
+
+	; connexion 
+	NomCn="Driver=" & NomDriver && ";server=" & serveur && ";database=" & Databases && ";" & Condition(Trusted<>" ","Trusted_Connection=" & Trusted,"UID=" & Uid && ";PWD=" & Pwd)
+	Cn=ug_SQL_Connexion(NomCn,0)		
+	;ExecuteRequete(Cn,"Select REF From ART")
+	ug_SQL_Executer_Requete(Cn,Requete)
+	freturn (Cn)
+endf
+
+
+

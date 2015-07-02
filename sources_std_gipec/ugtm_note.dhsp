@@ -1,0 +1,546 @@
+;* Module de gestion des notes (sans interface)
+
+OverWrittenBy ugum_note.dhop
+
+include "Zrtf.dhsp"
+
+Module a5pm000.dhop
+module ugtm_tech.dhop
+module A5pmnotejoint.dhop
+Module ygraph.dhop
+
+public record a5dd.dhsd mw
+
+1 NomFicRtf S
+1 Num_CodePage 4,0=0
+1 Valeur_CodePage 512
+
+Public Structure ugs_s_lst_joint
+	1 Applic_LstMot 40
+	 2 Applic > A5dd.dhsd Applic
+	 2 LstMot 32
+	1 IdLst L
+	1 IdLstSup L
+	1 JointEtat 1,0
+	1 JointCharg 1,0
+EndStructure
+
+ 
+
+;*
+function int RTF_CreateNewRTF_CodePage(file1)
+1   file1	A
+1	 i			x
+beginf
+  if RTF_iddll <> 0
+     RTF_fnc = 3								;simple open
+     RTF_file1 = left(file1) & $00
+     i = DllExecute(RTF_iddll,RTF_param)
+
+    if RTF_result = 0 
+    					
+       RTF_WriteTexte2( "{\rtf1\ansi\deff0"               )	;entete standard			
+   	 RTF_WriteTexte2(	 "{\fonttbl"			  				)	;table des polices
+	    RTF_WriteTexte2(    "{\f0\fswiss Arial;}"				)
+	    RTF_WriteTexte2(    "{\f1\fmodern Courier New;}"		)
+	    RTF_WriteTexte2(    "{\f2\froman Times New Roman;}")
+	    RTF_WriteTexte2(    "{\f3\fdecor Symbol;}"			)
+	    if Valeur_CodePage<>" "	
+	    	RTF_WriteTexte2( Left(Valeur_CodePage))						      
+		 endif
+	    RTF_WriteTexte2(   "}"										)
+	    RTF_WriteTexte2(   "{\colortbl"						   ) ;table des couleurs
+	    RTF_WriteTexte2(	  	"\red0\green0\blue0;"			) ;0 noir 
+       RTF_WriteTexte2(		"\red0\green0\blue255;"			) ;1 bleu foncee
+       RTF_WriteTexte2(		"\red0\green255\blue0;"			) ;2 vert foncee
+	    RTF_WriteTexte2(	   "\red0\green255\blue255;"		) ;3 cyan 
+	    RTF_WriteTexte2(		"\red255\green0\blue0;"       ) ;4 rouge 
+	    RTF_WriteTexte2(		"\red255\green0\blue255;"     ) ;5 magenta 
+	    RTF_WriteTexte2(		"\red255\green255\blue0;"     ) ;6 jaune 
+	    RTF_WriteTexte2(		"\red255\green255\blue255;"   ) ;7 blanc 
+	    RTF_WriteTexte2(		"\red128\green128\blue128;"	) ;8 gris fc
+	    RTF_WriteTexte2(		"\red0\green0\blue128;"			) ;9 bleu 
+	    RTF_WriteTexte2(		"\red0\green128\blue0;"			) ;10 vert 
+	    RTF_WriteTexte2(		"\red0\green128\blue128;"		) ;11 maron 
+	    RTF_WriteTexte2(		"\red128\green0\blue0;"       ) ;12 rouge 
+	    RTF_WriteTexte2(		"\red128\green0\blue128;"     ) ;13 magenta 
+	    RTF_WriteTexte2(		"\red128\green128\blue0;"     ) ;14 jaune 
+	    RTF_WriteTexte2(		"\red192\green192\blue192;"   ) ;15 gris
+	    RTF_WriteTexte2(	 "}"										)
+	    RTF_WriteTexte2(	 "{\stylesheet"						) ;table des styles
+       RTF_WriteTexte2(		"{\fs20 \snext0Normal;}"		)
+	    RTF_WriteTexte2(	 "}"										)						
+ 	    RTF_WriteTexte2(   "\widoctrl\ftnbj\sectd\linex0\endnhere " ) ;init texte avec valeurs par defaut
+    endif
+
+    freturn( RTF_result )
+  else
+    freturn(1)
+  endif
+endf
+
+;*
+public function int ug_Note_Debut(NomFichier)
+	;Initialisation de la gestion des notes
+	;Retour : 0 pas d'erreur, 1 erreur
+	1 st x
+	1 NomFichier S=" " ; si vide generation d'un nom de fichier en automatique
+beginf
+	NomFicRtf = Condition(NomFichier<>" ",NomFichier,nospaces(left(system.zuser,4)) & nospaces(system.ztache) & ".rtf")
+	
+	st = RTF_OpenConvert
+	if st <> 0
+		freturn(1)
+	endif
+
+	;st = RTF_CreateNewRTF(NomFicRtf)
+	st = RTF_CreateNewRTF_CodePage(NomFicRtf)
+  	if st <> 0		
+		freturn(1)
+	endif
+
+	freturn(0)
+
+endf
+
+;*
+public procedure UG_Note_Ecrire(pMessage,pGras, pItalique, pSouligne, pTaille, pCouleur)
+	;Ecriture d'une nouvelle note
+	1 pMessage A  					;Texte a écrire
+	1 pGras B = false				;En gras ?
+	1 pItalique B = false		;En italique ?
+	1 pSouligne B = false		;Souligné ?
+	1 pTaille 2,0 = 20			;Taille : 20 correspond a ARIAL10
+	1 pCouleur A = "NOIR"		;Couleur
+		 
+beginp
+
+	RTF_BeginParam
+
+	if Num_CodePage>0
+		RTF_WriteTexte2("\f" & Val(Num_CodePage))
+	endif
+	
+	if pGras
+		RTF_Cmd(START_GRAS)
+	endif
+	if pItalique
+		RTF_Cmd(START_ITALIQUE)
+	endif
+	if pSouligne
+		RTF_Cmd(START_SOULIGNEE)
+	endif
+	RTF_Cmd(TAILLE_POLICE,pTaille)
+	switch pCouleur
+		case "BLEU" | RTF_Cmd(COLORTEXTE_BLEU)	
+		case "VERT" | RTF_Cmd(COLORTEXTE_VERT)	
+		case "ROUGE" | RTF_Cmd(COLORTEXTE_ROUGE)	
+		case "JAUNE" | RTF_Cmd(COLORTEXTE_JAUNE)
+		; Ajouter d'autres couleurs	
+		default | RTF_Cmd(COLORTEXTE_NOIR)	
+	endswitch
+	
+	;Ecriture du message
+	RTF_WriteTexte(pMessage)
+	
+	;Fin du changement de style
+	if pGras
+		RTF_Cmd(END_GRAS)
+	endif
+	if pItalique
+		RTF_Cmd(END_ITALIQUE)
+	endif
+	if pSouligne
+		RTF_Cmd(END_SOULIGNEE)
+	endif
+
+	RTF_EndParam
+
+endp
+;*
+Public Procedure ug_Note_Code_Page(CodePage)
+; Gestion des Code Pages
+;
+;Europe centrale  	1250 
+;Cyrillique  			1251 
+;Occidental  			1252 
+;Grec  					1253 
+;Turc  					1254 
+;Hébreu  				1255 
+;Arabe  					1256 
+;Baltique  				1257 
+;Vietnamien  			1258 
+;Thai  					 874 
+;Chine symboles simplifiés   		936 
+;Chine symboles traditionnels   	950 
+;Corée  					 949 
+;Japon  					 932 
+1 CodePage 4,0 ;
+beginp
+	Num_CodePage=CodePage
+	Switch CodePage	
+		case 1250 	; europe centrale
+			Valeur_CodePage="{\f1250\fswiss\fcharset238{\*\fname Arial;}Arial CE;}"
+		case 1251	; Cyrillique
+			Valeur_CodePage="{\f1251\fswiss\fcharset204{\*\fname Arial;}Arial CYR;}" 
+		case 1252	; europe occidental
+			Num_CodePage=0 ;"\f0"
+			Valeur_CodePage=" "
+		case 1253	; Grec
+			Valeur_CodePage="{\f1253\fswiss\fcharset161{\*\fname Arial;}Arial Greek;}"	
+		case 1254	; truc
+			Valeur_CodePage="{\f1254\fswiss\fcharset162{\*\fname Arial;}Arial TUR;}}"
+		case 1255	; Hebreu
+			Valeur_CodePage="{\f1255\fswiss\fcharset177 Arial;}"
+		case 1256	; Arabe
+			Valeur_CodePage="{\f1256\fswiss\fcharset178 Arial;}"
+		case 1257	; baltique
+			Valeur_CodePage="{\f1257\fswiss\fcharset238{\*\fname Arial;}Arial CE;}"
+		case 1258	; vietnamien
+			Valeur_CodePage="{\f1258\fswiss\fcharset163 Arial;}"
+		case 874		; thai
+			Valeur_CodePage="{\f874\fswiss\fcharset222 Cordia New;}"
+		case 936		;Chine symboles simplifiés 
+			Valeur_CodePage="{\f936\fmodern\fprq6\fcharset134 Arial Unicode MS;}"
+		case 950		;Chine symboles traditionnels 
+		case 949		;Corée 
+			Valeur_CodePage="{\f949\fmodern\fprq1\fcharset129 Arial Unicode MS;} "
+		case 932		; Japonais
+			Valeur_CodePage="{\f932\froman\fprq1\fcharset128 MS Mincho;}"		
+	endswitch
+	
+endp
+
+;*
+public procedure UG_Note_Fin
+	;Fin de la saisie d'une note
+beginp
+
+	RTF_EndNewRTF
+	RTF_CloseConvert
+
+endp
+
+;*
+public function long ug_Note_Maj_Fichier(pAppli,SuppRTF,NoteD,RtfMot)
+	;Ecriture de la note temporaire dans le fichier
+	;Retour : 0 si anomalie, autre = numéro de la note générée
+	;
+	;pAppli de type XY avec X = Apllication et Y Fichier pointé (Voir Doc A5PM000)
+	;Valeur de X :
+	;0	DAV
+	;1	DCPT
+	;2	DPAIE
+	;3	DRT
+	;4	R3
+	;5	A5
+	;6	GG
+	1 pAppli > A5dd.dhsd Applic	;Appli DAV,DCPT,DPAIE,DRT,SPE0,SPE1 ou Numero D'appli 
+	 2 pAppliN 8,0
+	1 RtfMot 32=' ' ; Cela permet d'avoir plusieurs fichiers RTF ouvert en meme temps pour une meme appli
+	1 Apl >A5dd.dhsd Applic*10
+	1 SuppRTF B = false				;Suppression du fichier temporaire
+	
+	record * htdf ficRTF
+	1 NumNote > gtfdd.dhsd note
+	1 st X
+	1 IdTemp L
+	1 TE L
+	1 Texte 1000
+	1 NoteD > gtfdd.dhsd Note=0  ; note de debut
+	1 pf L=0 ; pointeur fichier
+beginf
+	if IsNum(pAppli)=True
+;		Apl(1)="DAV"
+;		Apl(2)="DCPT"
+;		Apl(3)="DPAIE"
+;		Apl(4)="DRT"
+;		Apl(5)="DREG"
+;		Apl(6)="COMMUN"
+;		pAppliN=val(pAppli) /10 T
+;		pAppli=Apl(pAppliN)	
+		pAppli=ug_Appli_Valeur(2,str(pAppliN))
+	endif
+	;Valeur de Y : On s'arrange pour toujours passer 0
+	
+	NumNote = 0
+	Note_Debut
+	note_chargement_(pAppli,NoteD,RtfMot)
+
+	idtemp = wincreatefile(mw.rtfnom(1),GENERIC_WRITE,FILE_SHARE_WRITE,0,OPEN_EXISTING,0,0)
+	if idtemp <> -1
+		WinSetFilePointer(idtemp,0,pf,FILE_BEGIN)		  ; positionnement au debut pour ecraser
+
+		
+	 	ficRTF.name = NomFicRtf
+		if hopen(ficRTF,"P") = 0
+			
+			Loop freadst(ficRTF,Texte) = 0
+				winwritefile(idtemp,texte, TE)
+			endloop
+			WinSetEndOfFile(idTemp)								; fin de fichier pour ecraser
+			winclosehandle(idtemp)
+
+			hclose(ficRTF)
+
+			if SuppRTF
+				HdeleteFile(NomFicRtf,st)
+			endif
+
+			Note_Maj_Etat_Charge(pAppli,RtfMot)
+
+			if NoteD>0
+				MW.NOTEETAT(1)=1 ; indice 1 par defaut
+				
+				NumNote = Note_Modification_(pAppli,NoteD,RtfMot=RtfMot)
+				;NumNote = Note_Modification(pAppli,NoteD)
+			else
+				NumNote = note_creation_(pAppli,RtfMot=RtfMot)
+			endif
+
+		endif
+	endif
+
+	freturn(NumNote)
+
+endf
+
+;*
+public procedure ug_Note_Saut_Ligne(pNbLigne)
+	;Provoque un saut de ligne dans la note
+	1 pNbLigne 3,0					;Nombre de ligne a sauter
+
+beginp
+
+	RTF_SautLigne(pNbLigne)
+
+endp
+
+;*
+public procedure ug_Note_Convertir_RTF_TXT(pFicRtf,pFicTxt)
+	;Convertir une note en fichier txt
+	1 pFicRtf A	  					;Fichier RTF de la note
+	1 pFicTxt A						;Fichier txt à créer
+	
+	1 st x
+	1 limite  3,0
+	1 convert 3,0
+
+beginp
+
+	st = RTF_OpenConvert
+	if st
+		ug_alert(6)
+		preturn
+	endif
+	
+	limite = 248	;Nombre de caractère max par ligne
+	convert = 0		;Ansi. Mettre 1 pour PC8
+	
+	st = RTF_ConvertFile(pFicRtf,pFicTxt,convert,limite)
+	if st <> 0
+		ug_alert(7)
+	endif
+
+	RTF_CloseConvert
+		
+endp
+;*
+Public Function Char ug_Note_Lire(Appli,NoNote,SeparateurLigne,RtfMot)
+1	NoNote	>gtfdd.dhsd Note
+1 	RtfMot 	32=' '
+1	i			X
+1 	Res		X
+1 	NbLign	X
+1	FicRtf 	260
+1	Id	      6,0
+1	Ligne		1000 = ' '
+1	Note		S
+1  Appli > A5dd.dhsd Applic ;Appli DAV,DCPT,DPAIE,DRT,SPE0,SPE1 ou Numero D'appli 
+1 SeparateurLigne 2="" ;inutile en note blob
+1 NoteBlob 1,0=false ; la gestion des Note blob sera par defaut
+
+;recordSql A5rsnote.dhoq NoteBloB NoteB
+BeginF
+
+;	if NoteBlob=True
+;		NoteB.Init()
+;		NoteB.Where.PK(Appli,NoNote)		| NoteB.Where.AddCondition("PK")
+;		NoteB.OrderBy.Par_Note()
+;		NoteB.Select()
+;		Note=NoteB.NoteBlob
+;		NoteB.Init()
+;	else
+		Note_Chargement_(Appli,NoNote,RtfMot)
+	
+		if Note_Empty_(Appli,RtfMot)=false
+			;id=Note_Rechercher_Nature_(Appli)
+	
+			FicRtf = Note_Rechercher_Nom_Rtf(Appli,RtfMot)
+			Id = RTFOpen2(FicRtf,1000)
+			
+			NbLign = RTFLineCount(Id)
+			For i = 1 To Nblign
+				Res = RTFLineGet(Id,i,Ligne)
+				;If FString('A',Ligne) <> ''
+					Note = Note && Ligne
+					Note = Note && SeparateurLigne
+				;EndIf
+			Next
+			
+			Res = RTFClose(Id)  ;ATTENTION le close est obligatoire	*
+			; si rien trouvé dans la note
+			if Modify(SeparateurLigne,"",Note)=" " and Count("{\rtf",(Note:=Note_Rechercher_Contenu(Appli,NoNote)))=0 And Note<>" "
+				Note=Modify($0d0a,SeparateurLigne,Note)					
+			endif
+		endif
+;	endif
+	FReturn(Note)
+
+EndF
+;*
+;*	Procedure Standard Pour Migration
+;*											
+Public Procedure Note_Init(ApplicNo)
+;
+1 ApplicNo 3,0
+beginp
+	Note_Debut	
+endp
+;*
+Public Procedure ug_Recup_Note_Info(ApplicNo,&Applic,&RtfMot,&NumFic)
+; recuperer les information ne ce
+1 ApplicNo 3,0
+1 Applic   > A5dd.Dhsd Applic
+1 RtfMot   32
+
+1 NumFic 1,0
+
+beginp
+	Applic= ug_Appli_Valeur(2,Str(ApplicNo))
+	NumFic=Modulo(Applic,10)+1
+	RtfMot="UG_FICHIER_" & NumFic
+endp
+;*
+Public function int Note_Chargement(ApplicNo,Note,Tmp) 
+; Util pour ne pas migrer le note chargement
+1 ApplicNo 3,0
+1 Note     > gtfdd.dhsd Note
+1 Tmp     N=0
+
+1 Applic > A5dd.Dhsd Applic
+1 NumFic 1,0
+1 Retour 1,0
+1 RtfMot 32
+beginf
+	ug_Recup_Note_Info(ApplicNo,Applic,RtfMot,NumFic)
+	PingLocal("UG_MW",mw)
+	Retour=Note_Chargement_(Applic,Note,RtfMot,Tmp)
+	PingLocalReceiveAndDelete("UG_MW",mw)
+	mw.Rtfnom(NumFic)=Note_Rechercher_Nom_Rtf(Applic,RtfMot)
+	freturn (Retour)
+endf
+;*
+Public function int Note_Modification(ApplicNo, note, tmp, NoteObj, Nature)
+; Le programme modifie le status pour considere qu'il y a eu une modification
+1 ApplicNo 3,0
+1 note     > gtfdd.dhsd Note
+1 tmp      N=0
+1 NoteObj  > A5dd.Dhsd NoteObj=' '
+1 Nature   > A5dd.dhsd NatureNoteCod=' '
+
+1 Applic > A5dd.Dhsd Applic
+1 NumFic 1,0
+1 Retour > gtfdd.dhsd Note
+1 RtfMot 32
+
+beginf
+	ug_Recup_Note_Info(ApplicNo,Applic,RtfMot,NumFic)
+
+	Note_Maj_Etat_Charge(Applic,RtfMot)
+
+	Retour=Note_Modification_(Applic,Note,NoteObj,RtfMot,Tmp)		
+	freturn (Retour)
+endf
+;*
+Public Function int Note_Creation(ApplicNo, tmp, NoteObj,Nature)
+;
+1 ApplicNo 3,0
+1 tmp      N=0
+1 NoteObj  > A5dd.Dhsd NoteObj=' '
+1 Nature   > A5dd.dhsd NatureNoteCod=' '
+
+1 Applic > A5dd.Dhsd Applic
+1 NumFic 1,0
+1 Retour > gtfdd.dhsd Note
+1 RtfMot 32
+
+beginf
+	ug_Recup_Note_Info(ApplicNo,Applic,RtfMot,NumFic)
+
+	Note_Maj_Etat_Charge(Applic,RtfMot)
+	
+	Retour=Note_Creation_(Applic,NoteObj,RtfMot,Tmp)
+	Freturn(Retour)		
+endf
+;*
+
+Public Function Long ug_Joint_Chargement_Lst(Applic,Joint,LstMot)
+; Recherche le numero de la liste qui est charger pour ce fichier joints
+
+1 LstMot 32
+1 Applic > A5dd.Dhsd Applic
+1 Joint  > A5dd.Dhsd Joint
+
+1 st X
+1 Lst L
+1 AdrL L
+1 LstRetour L=0
+recordDiva ugs_s_lst_joint ugs_joint
+
+beginf
+    st=Joint_Chargement_(Applic,Joint,LstMot)
+    Lst=ListGetId("LISTE_LST_PAR_LSTMOT")
+    AdrL=ListGetAdressCurrent(Lst)
+    ListBegin(Lst)
+    ugs_joint.Applic=Applic
+    ugs_joint.LstMot=LstMot
+    if ListFind(Lst,Ptr(ugs_joint)-ptr(ugs_joint.Applic_LstMot)+1,Size(ugs_joint.Applic_LstMot),ugs_joint.Applic_LstMot,ugs_joint)>0
+       LstRetour=ugs_joint.IdLst
+    endif
+    freturn (LstRetour)
+endf
+;*
+Public Procedure ug_Modifier_Police_RTF(Fichier,Police,Fstyle,PosD,PosF)
+;
+1 Fichier S
+1 Police S="ARIAL10"
+1 Fstyle S="FstyleImp.dhfi"
+1 PosD 9,0=0 ; Position Debut =0	 = Debut de fichier
+1 PosF 9,0=-1 ; Position Fin = -1 = Fin de fichier
+1 Id X
+1 IdFont X
+beginp
+	if Fichier<>" " and (id:=RTFOpen(Fichier))>0
+		RTFSetPos(Id,PosD,PosF)
+		idFont=GraphCreateFont(Police,Fstyle)
+		RTFSetFont(Id,idFont)
+		GraphDeleteFont(idFont)
+		RTFSave(Id)
+
+		RtfClose(Id)
+	endif
+endp
+
+;*
+;main
+;	messagebox("1","1")
+;	Note_Debut
+;	
+;	Note_Chargement_("DAV",245,'ABC')
+;	Note_Chargement_("DAV",245,'3')
+;	ug_Note_Lire("DAV",245)
+;	Note_Rechercher_Nom_Rtf('DAV','ABC')
+;	Note_Rechercher_Nom_Rtf('DCPT','3')
+;	mw
+;	display('ok')

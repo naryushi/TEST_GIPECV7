@@ -1,0 +1,404 @@
+;*
+;*	Module Standard Gipec pour les Spe pour les zooms
+;*
+
+OverWrittenBy ugum_zoomStd.dhop
+
+Module ugtm_BaseStd.dhop
+
+public record a5dd.dhsd mz
+Public record gtfdd.dhsd xz G3xz
+Public record ddsys.dhsd Zoom 
+
+Hfile		a5dd.dhsd a5fdos a5fdos noopen
+public  record 	a5dd.dhsd	MUSER					; Fiche Utilisateur
+record 	* Htdf 			Tdf_MenuZoom
+record 	hmenu.dhsd 		M4
+record 	ddsys.dhsd zoom wzoom
+
+Public Structure ugs_PosLgTri_Zoom	 ; Structure pour les positions longueurs des champs à trier
+	1 NbParam		L ; Nommbre de parametre ou de champ trie
+	1 PosTri 		X * 20
+	1 LgTri 			8,0 * 20
+	
+	
+	
+endStructure
+
+;*
+;*	Procedures
+;*
+Public function char ug_init_PosLgTri_ZoomCombo(*)
+;
+; Function pour Gerer le Tri 
+;
+; Parametre 1 = Ptr(Enreg)
+; Parametre 2 = Ptr(Enreg.champ)
+; Parametre 3 = Size(Enreg.Champ)
+; Parametre 4 = Ptr(Enreg.Champ2)
+; Parametre 5 = Size(Enreg.champ2)
+; Etc ...
+
+recorddiva ugs_posLgTri_Zoom Ptri
+1 Lst L
+1 Param L
+1 Taille L
+1 PtrEnreg L
+1 Indice 3,0=1
+beginf
+	init ptri.LgTri(*)=0
+	init ptri.PosTri(*)=0
+	ptri.NbParam=0
+	Lst=ListParamGetId
+	ListBegin(Lst)
+	Loop ListNext(Lst,Param)<>0
+		if ListNumber(Lst)=1 
+			PtrEnreg=Param 
+		else
+			Ptri.PosTri(Indice)=Param-PtrEnreg+1
+			ListNext(Lst,Taille)
+			Ptri.LgTri(Indice) =Taille
+			Indice++
+		endif 	
+	Endloop
+	Ptri.NbParam=Indice-1
+	freturn (ptri)
+endf
+
+
+;*
+Public Function char ug_ZoomCombo_Liste(Lst,PTri,IndiceSel,NbLigAff,Retour,ColTrad) 
+; La Premiere colonne est la colonne de retour si selection du retour
+; NE FONCTIONNE UNIQUEMENT SUR UN SAISIE DE CELLULE qu'à l'occasion d'un point d'arrêt, d'un point de traitement ou d'un piège de touche
+1 Lst L				; Liste 
+RecordDiva ugs_PosLgTri_Zoom Ptri ; Rendu par ug_init_PosLgTri_ZoomCombo (20 colonne max)
+1 IndiceSel L=1	; Premier Ligne Selectionné
+1 ColTrad S=''		; numero des colonnes entre les ";"
+1 NbLigAff 4,0=-1 ; -1 veut dire toutes les lignes
+1 Texte 10000
+1 Retour 1,0=1		; 0 Retour de l'indice de selection 1 Retour 1ere col 2 Retour 2eme etc 
+1 LstVal S			
+1 vI 2,0
+1 Fini 1,0=False
+1 NumLig L=0
+1 Depart L=0
+1 NbFois 4,0
+beginf
+	; Positionnement au debut de la liste et Tri de la liste
+	ug_Lance_Tri(Lst,Positionz=Ptri.PosTri(1),Ptri.LgTri(1))	
+	ListBegin(Lst)
+	; 
+	Loop Fini=False
+		NumLig=0
+		Loop NumLig<Condition(NbLigAff=-1,ListCount(Lst),NbLigAff) and ListNext(Lst,Texte)>0
+			if NumLig=0 and ColTrad<>" "
+				ColTrad &=Condition(Right(ColTrad && "",1)<>";",";","")
+				ColTrad = ";" & NoSpaces(ColTrad)
+				LstVal="<TRADUCTION>"
+				For vI = 1 To Ptri.NbParam
+					LstVal &="<COLONNE>" & Condition(Count(";" & val(vI) & ";",ColTrad)>0,True,False)
+				Next
+			endif
+			; Lecture des colonnes
+			For vI = 1 To Ptri.NbParam
+				if vI=1 ; Ligne d'etat
+					LstVal &="<LIGNE>"
+				endif
+				LstVal &="<COLONNE>"	 & Mid(Texte,Ptri.PosTri(vI),Ptri.LgTri(vI))
+			next
+			NumLig++ 
+			; Derniere ligne si pas affciher tout les lignes
+			if NbLigAff<>-1 and NumLig=NbLigAff | LstVal &="<LIGNE><COLONNE>..." | NBFois++  |endif
+		endloop
+		IndiceSel=XmeZoomCombo(LstVal,IndiceSel)
+		if IndiceSel<(NbLigAff*NbFois)+1 | Fini=True | endif 
+	endloop
+	; si pas d'abandon
+	if IndiceSel>0
+		ListIndex(Lst,Texte,IndiceSel)
+		if Retour>0
+			Texte=Mid(Texte,Ptri.PosTri(Retour),Ptri.LgTri(Retour))
+		endif
+	endif
+	freturn (Condition(Retour=0,Str(val(IndiceSel)),Texte && ""))
+endf
+
+
+;*
+;public function int GenZoom_Protection (fic, c,vide)
+;;
+;1					fic				A						; Nom du fichier sur lequel se fait le haccesscontrol		
+;1					c					4						; confidentialité exigée
+;1					vide				1,0 = true			; confidentialité à espace ok
+;
+;1 Adr 16
+;beginf
+;	GetAdressFunction("appelzoom.dhop","GenZoom_Protection",Adr)
+;	freturn (FunctionCall(adr,Fic,c,Vide))
+;endf
+;*
+Public function int GenZoom_Protection (fic, c,vide)
+
+; Teste la compatibilité de la confidentialité exigée "c" par rapport aux droits de l'opérateur.
+
+; 0		ok
+; 1		accès refusé
+
+1					fic				A						; Nom du fichier sur lequel se fait le haccesscontrol		
+1					c					4						; confidentialité exigée
+1					vide				1,0 = true			; confidentialité à espace ok
+
+1A					m					X						; taille de zacces
+1A					p					X						; position dans zacces
+
+beginf			; GenZoom_Protection
+
+	if c = ' ' and vide									; pas de confidentialité exigée
+			freturn(0)
+	endif
+	
+	if HAccessCodeControl(fic,'A***') = TRUE  	
+		freturn(0)
+	elsif HAccessCodeControl(fic,c) = TRUE
+		freturn(0)
+	endif
+	
+	freturn(1)												; pas les droits suffisants
+	
+endf				; GenZoom_Protection
+
+;*
+
+Public Function int ug_Zoom_Call(m, z, r,FichierSpe,wZoomA,ZoomPar)
+
+; Cette fonction appelle le zoom "z" du menu 'm' et renvoie le status de fin du zoom.
+; La description des paramètres d'appel est dans le menu 'm'
+; Le paramètre "r" indique si la récupération YME est autorisée (=1) ou non (=0).
+; Pour appeler le zoom généralisé, il suffit d'appeler la fonction avec comme seul paramètre
+; le nom du zoom.
+
+1					m					A						; Nom du fichier Menu
+1					z					5,0= 0				; numéro du zoom
+1					r					N	= 1				; = 0 pour récupération interdite
+1 fichierSpe 512=" " ; fichier SPE du Zoom
+
+1 ZoomPar >gtfdd.dhsd ZoomPar=' '
+
+record			ddsys.dhsd	zoom								; paramètres d'appel du zoom
+
+record 			* Htdf 			Tdf_TableLiee
+1 wZoomA 15000=" " ; si zoom Piloter
+record ddsys.Dhsd zoom wzoom
+
+
+1A					xx					X						; status gestion fichier
+1A					p					X						; privilège
+
+1A					windice			X
+1					wchoixcoche		B
+1					f7					1,0 					; <> 0 si appel par f7
+1					IndiceMenu		x
+
+1					extension		10
+1					Base				256
+1					fichier			128
+1					ficu				256
+
+
+beginf	; GenZoomZoom_Call
+	wzoom=wzoomA
+
+
+
+	fichier		= filenamenoext(m)
+	extension	= filenameExtension(m)
+	base			= filenamebase(m)
+
+	if base <> " "
+		ficu			= base && '/' & fichier && 'u.' &  extension
+	else
+		ficu			= fichier && 'u.' &  extension
+	endif
+		
+	Tdf_MenuZoom.name			= ficu	
+	xx 							= fopen(Tdf_MenuZoom, 'P')
+	if xx = 0
+		Tdf_MenuZoom.KEY	 			= [ 'A4' z ]
+		xx = FSeek2(Tdf_MenuZoom, M4, 'P')
+	endif
+	if xx <> 0
+		Tdf_MenuZoom.name			= m	
+		xx 							= fopen(Tdf_MenuZoom, 'P')
+		if xx <> 0
+			ErrorWarning(xx,left(Tdf_MenuZoom),,,,-1,-1)
+			freturn(E_ZOOM_ABANDON)
+	   endif
+	
+		Tdf_MenuZoom.KEY	 			= [ 'A4' z ]
+	
+		if (xx := FSeek2(Tdf_MenuZoom, M4, 'P'))
+			MessageBox('Zoom ' & z & ' non défini dans ' & left(Tdf_MenuZoom.name) && '.' , 'Erreur', MB_OK)
+			freturn(E_ZOOM_ABANDON)
+		endif
+	endif
+
+	if FichierSpe<>" "
+		Tdf_TableLiee.name 	= FichierSpe
+	else
+		M4.ZOOMFIC 				= modify("ttt", SYSTEM.ZTACHE, M4.ZOOMFIC)
+		Tdf_TableLiee.name 	= M4.ZOOMFIC
+	endif
+	xx 						= fopen(Tdf_TableLiee, 'P')
+	if xx <> 0
+		ErrorWarning(xx,left(Tdf_TableLiee.name),,,,-1,-1)
+		freturn(E_ZOOM_ABANDON)
+   endif
+
+	if GenZoom_Protection(Tdf_TableLiee, M4.CONFL) = 0
+		if GenZoom_Protection(Tdf_TableLiee, M4.CONFM) = 0
+			if GenZoom_Protection(Tdf_TableLiee, M4.CONFC) = 0
+				if GenZoom_Protection(Tdf_TableLiee, M4.CONFS) = 0
+					p = ZOOM_PRIVILEGE_SUPPRESSION
+				else
+					p = ZOOM_PRIVILEGE_CREATION
+				endif
+			else
+					p = ZOOM_PRIVILEGE_MODIFICATION
+			endif
+		else
+			p = ZOOM_PRIVILEGE_CONSULTATION
+		endif
+	else
+		MessageBox('Fonction zoom confidentiel||Privilège insuffisant.' , 'Erreur', MB_OK)
+		freturn(E_ZOOM_ABANDON)
+	endif
+
+
+	zoom					= ' '
+	zoom.fichier		= Condition(FichierSpe<>" ",FichierSpe,M4.ZOOMFIC)
+	zoom.enreg			= M4.ZOOMENR
+	zoom.msqecran		= M4.MSQECRAN
+	zoom.modtrait		= M4.MODTRAIT
+	zoom.priv			= p
+	zoom.msqimp			= M4.MSQIMP
+	zoom.modtraiti		= M4.MODTRAITI
+	zoom.sceaction		= Condition(wZoom.SCEACTION<>" ",wZOOM.SCEACTION,M4.SCEACTION)
+	zoom.scemode		= Condition(wZoom.SCEMODE<>" ",wZOOM.SCEMODE,M4.SCEMODE)
+	zoom.scenocle		= Condition(wZoom.SCENOCLE<>" ",wZoom.SCENOCLE, M4.SCENOCLE)
+	zoom.scesens		= Condition(wZoom.SCESENS<>" ",wZoom.SCESENS,M4.SCESENS)
+	zoom.sceretour		= Condition(wZoom.SCERETOUR<>" ",wZoom.SCERETOUR,M4.SCERETOUR)
+	zoom.scesaisie		= Condition(wZoom.SCESAISIE<>" ",wZoom.SCESAISIE,M4.SCESAISIE)
+	zoom.sceclecrea	= Condition(wZoom.SCECLECREA<>" ",wZoom.SCECLECREA,M4.SCECLECREA)
+	zoom.scemodelf		= Condition(wZoom.SCEMODELF<>" ",wZoom.SCEMODELF,M4.SCEMODELF)
+	zoom.scermodif		= Condition(wZoom.SCERMODIF<>" ",wZoom.SCERMODIF,M4.SCERMODIF)
+	zoom.scercrea		= Condition(wZoom.SCERCREA<>" ",wZoom.SCERCREA,M4.SCERCREA)
+	zoom.Scevaleur		= Condition(wZoom.Scevaleur<>" ",wZoom.Scevaleur," ")
+;	zoom.faide			= M4.ZOOMFICAID
+;	zoom.NoAide			= M4.ZOOMAIDE
+
+
+
+	ping( 'MZ', mz )
+	ping( 'zechange', mz )
+	ping( 'zoompar', ZoomPar )
+
+
+	Zoom4(zoom, recup = r)
+
+	freturn(zoom.status)
+
+endf		; GenZoomZoom_Call
+;*
+Public Procedure Ug_Zoom_Call_SPE(m, z, r,SceMode,SceSaisie,SceNoCle,SceAction,SceRetour,SceSens,SceValeur,SceCleCrea,SceRModif,SceExport,SceModifEnSerie,FichierSPE)
+;
+1					m					A="A5f.dhfi"							; Nom du fichier Menu
+1					z					5,0= 0									; numéro du zoom
+1					r					N	= 1									; = 0 pour récupération interdite
+1 SceMode   		>ddsys.dhsd SceMode=Zoom_Mode_Liste				; Mode fiche ou liste
+1 SceSaisie 		>ddsys.dhsd SceSaisie=Zoom_Oui					; Saisie Valeur (Zoom_Non , Zoom_Oui, Zoom_pas_premiere
+1 SceNoCle  		>ddsys.dhsd SceNoCle=1	 							; Numero de la cle de saisie
+1 SceAction 		>ddsys.dhsd SceAction=Zoom_Standard 			; Action du scénario	 (ZOOM_AFFICHAGE ,ZOOM_AFFICHAGE_FICHE, ZOOM_CREATION, ZOOM_DUPLICATION, ZOOM_MODIFICATION, ZOOM_SUPPRESSION, ZOOM_IMPRESSION, ZOOM_STANDARD)
+1 SceRetour 		>ddsys.dhsd SceRetour=True							; Retour Apres action (1 ou 0)
+1 SceSens   		>ddsys.dhsd SceSens=Zoom_Sens_Normal			; Sens de Lecture (ZOOM_SENS_NORMAL ,ZOOM_SENS_INVERSE ) 
+1 SceValeur 		>ddsys.dhsd SceValeur=' '							; Valeur de la donnee (Si Valeur en valeur Hmp Remplissage de par HMP (ex: "<ENT.TIERS>TEST")
+1 SceCleCrea		>ddsys.dhsd SceCleCrea=Zoom_non					; Correspond à l'option rester en creation (ZOOM_OUI ,ZOOM_NON )
+1 SceRModif 		>ddsys.dhsd SceRModif=Zoom_non					; Correspond à l'option rester en modification (ZOOM_OUI, ZOOM_NON)
+1 SceExport			>ddsys.dhsd SceExport=Zoom_Export_Tout			; Dans Parametrer l'impression il autorise export par impression ou export par données (ZOOM_EXPORT_TOUT, ZOOM_EXPORT_IMP, ZOOM_EXPORT_RIEN)
+1 SceModifEnSerie > ddsys.dhsd SceModifEnSerie=ZOOM_OUI			; Autorisation (ZOOM_OUI,ZOOM_NON)
+1 FichierSpe A=" "
+
+record ddsys.dhsd zoom wzoom
+beginp
+	wZoom.Scemode			=Scemode
+	wZoom.Scesaisie		=Scesaisie
+	wZoom.Scenocle			=Scenocle
+	wZoom.SceAction		=SceAction
+	wZoom.Sceretour		=Sceretour
+	wZoom.Scesens			=Scesens
+	wZoom.Scevaleur		=Scevaleur
+	wZoom.Sceclecrea		=Sceclecrea
+	wZoom.Scermodif		=Scermodif
+	wZoom.SceExport		=SceExport
+	wZoom.SceModifEnSerie=SceModifEnSerie
+	ug_Zoom_Call(m, z, r,FichierSpe,wZoom)
+endp
+
+
+;*
+Public Procedure Ug_Pilotage_ZoomDebut
+; Procedure A placer dans Zoom Debut
+; La procedure Recuperer les parametre du wZoom envoyé precedement
+1 Id 50
+1 Valeur 256
+1 Adr 120
+beginp
+	if PingReceive("Zoompilote",wZoom)=0
+		;Pilotage=True
+		if wZoom.Scemode<>" " 		|	Zoom.SceMode=wZoom.scemode 		| endif
+		if wZoom.SceSaisie<>" "		|	Zoom.SceSaisie=wZoom.SceSaisie 	| endif
+		if wZoom.SceNoCle<>0 		|	Zoom.SceNoCle=wZoom.SceNoCle		| endif
+		if wZoom.SceAction<>" " 	|	Zoom.SceAction=wZoom.SceAction	| endif
+		if wZoom.SceRetour<>" "		|	Zoom.SceRetour=wZoom.SceRetour	| endif
+		if wZoom.SceSens<>" "		|	Zoom.SceSens=wZoom.SceSens			| endif
+		if wZoom.sceValeur<>" "		| 	Zoom.SceValeur=wZoom.SceValeur	| endif
+
+		if wZoom.Scevaleur<>" " and HmpVerify(wZoom.Scevaleur)=True			 ; <CLI.TIERSGRP>C0000001
+		 	Loop HmpRead(wZoom.Scevaleur,ID,Valeur)=0
+				if DataDescriptor(Id,Adr)=0
+					DataValue(Adr)=Valeur
+				endif
+			endloop
+		endif
+		g3xz.pong=true
+	endif
+endp
+;*
+Public Procedure ug_Pilotage_AvantZoomCall(SceMode,SceSaisie,SceNoCle,SceAction,SceRetour,SceSens,SceValeur,SceCleCrea,SceRModif,SceExport,SceModifEnSerie)
+; Procedure à placer avant un Zoom Call pour chargement les parametres spe du Zoom
+1 SceMode   		>ddsys.dhsd SceMode=Zoom_Mode_Liste				; Mode fiche ou liste
+1 SceSaisie 		>ddsys.dhsd SceSaisie=Zoom_Oui					; Saisie Valeur (Zoom_Non , Zoom_Oui, Zoom_pas_premiere
+1 SceNoCle  		>ddsys.dhsd SceNoCle=1	 							; Numero de la cle de saisie
+1 SceAction 		>ddsys.dhsd SceAction=Zoom_Standard 			; Action du scénario	 (ZOOM_AFFICHAGE ,ZOOM_AFFICHAGE_FICHE, ZOOM_CREATION, ZOOM_DUPLICATION, ZOOM_MODIFICATION, ZOOM_SUPPRESSION, ZOOM_IMPRESSION, ZOOM_STANDARD)
+1 SceRetour 		>ddsys.dhsd SceRetour=True							; Retour Apres action (1 ou 0)
+1 SceSens   		>ddsys.dhsd SceSens=Zoom_Sens_Normal			; Sens de Lecture (ZOOM_SENS_NORMAL ,ZOOM_SENS_INVERSE ) 
+1 SceValeur 		>ddsys.dhsd SceValeur=' '							; Valeur de la donnee (Si Valeur en valeur Hmp Remplissage de par HMP (ex: "<ENT.TIERS>TEST")
+1 SceCleCrea		>ddsys.dhsd SceCleCrea=Zoom_non					; Correspond à l'option rester en creation (ZOOM_OUI ,ZOOM_NON )
+1 SceRModif 		>ddsys.dhsd SceRModif=Zoom_non					; Correspond à l'option rester en modification (ZOOM_OUI, ZOOM_NON)
+1 SceExport			>ddsys.dhsd SceExport=Zoom_Export_Tout			; Dans Parametrer l'impression il autorise export par impression ou export par données (ZOOM_EXPORT_TOUT, ZOOM_EXPORT_IMP, ZOOM_EXPORT_RIEN)
+1 SceModifEnSerie > ddsys.dhsd SceModifEnSerie=ZOOM_OUI			; Autorisation (ZOOM_OUI,ZOOM_NON)
+
+record ddsys.dhsd zoom wzoom
+beginp
+	wZoom.Scemode			=Scemode
+	wZoom.Scesaisie		=Scesaisie
+	wZoom.Scenocle			=Scenocle
+	wZoom.SceAction		=SceAction
+	wZoom.Sceretour		=Sceretour
+	wZoom.Scesens			=Scesens
+	wZoom.Scevaleur		=Scevaleur
+	wZoom.Sceclecrea		=Sceclecrea
+	wZoom.Scermodif		=Scermodif
+	wZoom.SceExport		=SceExport
+	wZoom.SceModifEnSerie=SceModifEnSerie
+	Ping("Zoompilote",wZoom)	
+endp

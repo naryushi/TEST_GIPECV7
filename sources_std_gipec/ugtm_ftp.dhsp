@@ -1,0 +1,887 @@
+;* Module d'accès au serveur ftp pour envoi / récéption des fichiers
+
+;*
+;20110422			| RTH			| Version initiale
+;*
+
+OverWrittenBy ugum_ftp.dhop
+
+module a5pmfic.dhop
+module gtpm000.dhop
+module ugtm_tech.dhop
+
+public record a5dd.dhsd mchemin
+
+Const Fic_BAT = "Lancer_ftp.bat"
+Const Fic_CMD = "Commandes_ftp.cmd"	;'.ftp'
+
+proto procedure ug_Lister_un_Repertoire_FTP(Serveur,User,Pass,Dossier,Fichier,FichierListe,Show,ncftp,port)
+;
+record * htdf fic
+record * htdf fic2
+record * htdf fic3
+1 User 50
+1 Pass 30
+1 Fichier 500
+1 Dossier 50
+1 Ip 50
+1 Serveur 50
+1 FichierTrouve 500
+1 FichierListe 500
+1 Lst L
+1 RepDistant 550
+1 Sock L
+1 Show 3,0 = SW_HIDE
+1 ncftp 1,0 = false ; 0 = par commande dos |1 = par ncftp
+1 port 5,0 = 21 ; port 21 par defaul <!> Uniquement par ncftp
+endproto
+
+proto procedure ug_Receptionner_un_Fichiers_FTP(Serveur,User,Pass,Dossier,Fichier,DossierReception,Show,ncftp,port,supp)
+;
+record * htdf fic
+record * htdf fic2
+1 User 50
+1 Pass 30
+1 Fichier 500
+1 Dossier 50
+1 Ip 50
+1 Serveur 50
+1 DossierReception 100 = " "
+1 Lst L
+1 RepDistant 550
+1 Sock L
+1 Show 3,0 = SW_HIDE
+1 ncftp 1,0 = false ; Utilisé le mode ncftp ( doit etre installer sur le serveur en client leger, sur le poste en lourd )
+1 port 5,0 = 21 	; Port ( selement en ncftp ) 
+1 supp 1,0 = false ; Supprimer les fichiers du repertoire ( selement en ncftp )
+endproto
+
+;*
+procedure Ug_Generer_Bat(Adresse_FTP,show)
+	;Génère le fichier BAT associé au fichier de commande
+	1 Adresse_Ftp A = " "
+	1 show L =sw_showminimized
+
+	1 idFic L
+	1 TE L
+
+beginp
+
+	;Ecriture du fichier de commande
+	idfic = ug_Creer_Fichier(nospaces(gettemppath) & "/" & Fic_BAT,false)
+	if idfic = 0
+		ug_log(32,nospaces(gettemppath) & "/" & Fic_BAT)
+	  	preturn
+	endif
+
+	winwritefile(idfic,"FTP -i -s:" & Fic_CMD & " " & nospaces(Adresse_Ftp) & $0d0a,TE)
+ 	if debugmode | winwritefile(idfic,"pause" & $0d0a,TE) | endif
+
+	winclosehandle(idfic)
+	
+	;winshellExecute("OPEN",nospaces(gettemppath) & "/" & Fic_BAT,"","",sw_showdefault)
+	exec(nospaces(gettemppath) & "/" & Fic_BAT,'',EXEC_GOSUB_WAIT,show)
+endp
+
+;*
+function int Ug_Commandes_EDI_communes_Debut(&idfic,User_Ftp,Pwd_Ftp,RepDistant,RepLocal)
+	;Génère le fichier de commandes EDI communes a l'import et l'export
+	1 idfic L
+	1 User_Ftp A = " "
+	1 Pwd_Ftp A = " "
+	1 RepDistant A = " "
+	1 RepLocal A = " "
+
+	1 TE L
+
+beginf
+
+	idfic = ug_Creer_Fichier(nospaces(gettemppath) & "/" & Fic_CMD,false)
+	if idfic = 0
+		ug_log(32,nospaces(gettemppath) & "/" & Fic_CMD)
+	  	freturn(1)
+	endif
+
+	winwritefile(idfic,nospaces(User_Ftp) & $0d0a,TE)
+	winwritefile(idfic,nospaces(Pwd_Ftp) & $0d0a,TE)
+
+	if RepLocal <> system.Esp
+		if seek_mchemin(RepLocal) <> 0
+			ug_log(33,RepLocal)
+			freturn(1)
+		endif
+		if right(nospaces(mchemin.chemin),1) in ("/","\")
+			mchemin.Chemin = left(mchemin.Chemin,length(mchemin.Chemin) - 1)
+		endif
+		winwritefile(idfic,'lcd "' & nospaces(mchemin.chemin) & '"' & $0d0a,TE)
+	endif
+
+	;if repdistant <> system.Esp
+		winwritefile(idfic,"cd " & nospaces(RepDistant) & $0d0a,TE)
+	;endif
+
+	freturn(0)
+
+endf
+
+;*
+procedure Ug_Commandes_EDI_Communes_Fin(&idfic,Adresse_Ftp,show)
+	;Génère le commandes EDI commune de fin et ferme le fichier
+	1 idfic L
+	1 Adresse_Ftp A = " "
+
+	1 TE L
+	1 show L =sw_showminimized
+beginp
+
+	winwritefile(idfic,"disconnect" & $0d0a,TE)
+	winwritefile(idfic,"quit" & $0d0a,TE)
+	winclosehandle(idfic)
+
+	Ug_Generer_Bat(Adresse_Ftp,show)
+
+endp
+
+;*
+public Procedure Ug_Reception_FTP(Adresse_Ftp,User_Ftp,Pwd_Ftp,RepDistant,RepLocal,AvecDelete,show)
+	;Lance la récupération des fichiers à partir du FTP par chemin harmony
+	1 Adresse_Ftp A = " "
+	1 User_Ftp A = " "
+	1 Pwd_Ftp A = " "
+	1 RepDistant A
+	1 RepLocal A
+	1 AvecDelete B = true
+	1 show L =sw_showminimized	;sw_showminimized
+	1 ncftp 1,0 = false ; 0 = par commande dos |1 = par ncftp
+	1 tout 1,0 = true ; 1 = recupére tout le repertoire | 0 = recupére le fichier passé en paramétre |Selement en mode ncftp
+	1 idFic L
+	1 TE L
+
+beginp
+	Ug_Commandes_EDI_communes_Debut(idfic,User_ftp,Pwd_Ftp,RepDistant,RepLocal)
+
+	winwritefile(idfic,"mget *.*" & $0d0a,TE)
+	
+	if AvecDelete
+		winwritefile(idfic,"mdel *.*" & $0d0a,TE)
+	endif
+
+	Ug_Commandes_EDI_Communes_Fin(idfic,Adresse_Ftp,show)	
+endp
+
+;*
+public Procedure Ug_Envoi_FTP(Adresse_Ftp,User_Ftp,Pwd_Ftp,RepDistant,RepLocal,show)
+	;Lance l'envoi des fichiers vers le FTP par chemin harmony
+	1 Adresse_Ftp A = " "
+	1 User_Ftp A = " "
+	1 Pwd_Ftp A = " "
+	1 RepDistant A
+	1 RepLocal A
+	1 show L =sw_showminimized	;sw_showminimized
+	1 idFic L
+	1 TE L
+beginp
+
+	Ug_Commandes_EDI_communes_Debut(idfic,User_ftp,Pwd_Ftp,RepDistant,RepLocal)
+
+	winwritefile(idfic,"mput *.*" & $0d0a,TE)
+
+	Ug_Commandes_EDI_Communes_Fin(idfic,Adresse_Ftp,show)
+
+
+endp
+	
+
+;*
+procedure Ecrire(Texte,&fic)
+;
+1 Texte A
+record * htdf fic
+beginp
+	hwrite(fic,Texte)
+endp
+;*
+Public Procedure ug_Installer_Ftp
+;
+record * htdf fic
+1 Fichier 50*6
+1 Rep 500
+1 vI 1,0
+1 ErrX X
+beginp
+	fic.Name="ugtm_baseStd.dhsp"
+	if Fopen(fic,"P")=0
+		FClose(fic)
+		Rep=FileNameBase(Fic.Name)
+		Fichier(1)="ncftp_exe.dhzi"
+		Fichier(2)="ncftpbatch_exe.dhzi"
+		Fichier(3)="ncftpbookmarks_exe.dhzi"
+		Fichier(4)="ncftpget_exe.dhzi"
+		Fichier(5)="ncftpls_exe.dhzi"
+		Fichier(6)="ncftpput_exe.dhzi"	
+		Fic.Name=WinGetWindowsDirectory & "\"  & Modify("_",".",FilenamenoExt(Fichier(1)))
+		if Fopen(fic,"P")<>0
+		 	For vI = 1 to 6
+				if FileUnCompress(Rep && "\NcFtp\" & Fichier(vI),WinGetWindowsDirectory & "\" & Modify("_",".",FilenamenoExt(Fichier(vI))),ErrX,True)<>0
+					ug_log("Installation FTP impossible")
+				endif
+			next
+		else
+			Fclose(fic)
+		endif
+	else
+		ug_log("Installation FTP impossible")
+	endif
+endp
+
+
+
+;*
+public procedure ug_Envoyer_un_Fichier_FTP(Serveur,User,Pass,Dossier,Fichier,Show,ncftp,port)
+; envoyer d'un fichier FTP 
+1 User 50	  ; Utilisateur
+1 Pass 30	  ; Mot de passe
+1 Fichier 500 ; Fichier "*" par ex
+1 Dossier 100 ; Repertoire distant
+1 Serveur 50  ; Serveur FTP
+1 Show 3,0 = SW_HIDE
+1 ncftp 1,0 = false ; 0 = par commande dos |1 = par ncftp
+1 port 5,0 = 21 ; port 21 par defaul <!> Uniquement par ncftp
+
+record * htdf fic
+record * htdf fic2
+1 Ip 50
+1 Lst L
+1 Sock L
+beginp
+
+	fic.Name = GetTempPath & "/" & "fichier.ftp"
+	Sock = SocketNew()
+	Ip = SocketGetHostByName(Left(Serveur))
+	if Ip = " " | Ip = Serveur | endif
+	if SocketConnect(sock,Ip,port) = TRUE
+		if ncftp = false
+			loop FOpen(fic,"P") <> 0
+				HCreateFile(fic.Name,"U")
+			endloop
+			HErase(fic)
+			Ecrire(User,fic)
+			Ecrire(Pass,fic)
+			Ecrire("cd " & Dossier,fic)
+			Ecrire("put " & Fichier,fic)
+			Ecrire("disconnect",fic)
+			Ecrire("quit",fic)
+			FClose(fic)
+			;
+			fic2.name = gettemppath & "/fichier.bat"
+			loop FOpen(fic2) <> 0
+				HCreateFile(fic2.Name,"U")
+			endloop
+			HErase(fic2)
+			;
+			Ecrire("FTP -i -s:" & fic.Name && " " & Serveur && " >> " & GetTempPath & "/log_ftp.txt",fic2)
+			FClose(fic2)
+		else ; gestion NCFTP
+			ug_Installer_Ftp
+
+			fic2.name = gettemppath & "/fichier.bat"
+			loop FOpen(fic2) <> 0
+				HCreateFile(fic2.Name,"U")
+			endloop
+			HErase(fic2)
+			;
+			Ecrire('ncftpput -u ' & nospaces(user) & ' -p ' & nospaces(pass) & ' -P ' & nospaces(port) & ' -d ' &  GetTempPath & "/log_ftp.txt " & nospaces(serveur) & ' ' & nospaces(dossier) & ' ' & nospaces(Fichier)  & $0d0a,fic2)
+			FClose(fic2)
+		endif
+		Exec(fic2.Name && $00, '',EXEC_GOSUB_WAIT,Show)
+		SocketClose(Sock)
+	endif
+
+endp
+
+;*
+public procedure ug_Envoyer_tout_Fichier_FTP(Serveur,User,Pass,Dossier,Dossier_local,Show,ncftp,port)
+; envoyer des fichiers d'un repertoire FTP 
+1 User 50   	; utilisateur
+1 Pass 30		; mot de passe
+1 Dossier_local 500	; Dossier où se trouve les fichier
+1 Dossier 500 ; Repertoire distant
+1 Serveur 50  ; Serveur FTP
+1 Show 3,0 = SW_HIDE
+1 ncftp 1,0 = false ; 0 = par commande dos |1 = par ncftp
+1 port 5,0 = 21 ; port 21 par defaul <!> Uniquement par ncftp
+
+record * htdf fic
+record * htdf fic2
+1 Ip 50
+1 Lst L
+1 Sock L
+beginp
+
+	fic.Name = GetTempPath & "/" & "fichier.ftp"
+	Sock = SocketNew()
+	Ip = SocketGetHostByName(Left(Serveur))
+	if Ip = " " | Ip = Serveur | endif
+	if SocketConnect(sock,Ip,port) = TRUE
+		if ncftp = false
+			loop FOpen(fic,"P") <> 0
+				HCreateFile(fic.Name,"U")
+			endloop
+			HErase(fic)
+			Ecrire(User,fic)
+			Ecrire(Pass,fic)
+			Ecrire("cd " & Dossier,fic)
+			Ecrire("mput " & nospaces(Dossier_local) & '\*',fic)
+			Ecrire("disconnect",fic)
+			Ecrire("quit",fic)
+			FClose(fic)
+			;
+			fic2.name = gettemppath & "/fichier.bat"
+			loop FOpen(fic2) <> 0
+				HCreateFile(fic2.Name,"U")
+			endloop
+			HErase(fic2)
+			;
+			Ecrire("FTP -i -s:" & fic.Name && " " & Serveur && " >> " & GetTempPath & "/log_ftp.txt",fic2)
+			FClose(fic2)
+		else
+			ug_Installer_Ftp
+
+			fic2.name = gettemppath & "/fichier.bat"
+			loop FOpen(fic2) <> 0
+				HCreateFile(fic2.Name,"U")
+			endloop
+			HErase(fic2)
+			;
+			Ecrire('ncftpput -u ' & nospaces(user) & ' -p ' & nospaces(pass) & ' -P ' & nospaces(port) & ' -d ' &  GetTempPath & "/log_ftp.txt " & nospaces(serveur) & ' ' & nospaces(dossier) & ' ' & nospaces(Dossier_local) & "\*"  & $0d0a,fic2)
+			FClose(fic2)
+		endif
+		Exec(fic2.Name && $00, '',EXEC_GOSUB_WAIT,Show)
+		SocketClose(Sock)
+	endif
+
+endp
+
+
+
+;*
+public procedure ug_Receptionner_Tous_Fichiers_FTP(Serveur,User,Pass,Dossier,DossierReception,Show,ncftp,port,supp,avec_rep,mode)
+;
+1 User 50		; utilisateur
+1 Pass 30		; mot de passe
+1 Dossier 50	; dossier distant
+1 Serveur 50	; Serveur FTP
+1 DossierReception 100 = " " ; Dossier de reception des fichiers
+1 Show 3,0 = SW_HIDE
+1 ncftp 1,0 = false ; Utilisé le mode ncftp ( doit etre installer sur le serveur en client leger, sur le poste en lourd )
+1 port 5,0 = 21 	; Port ( selement en ncftp ) 
+1 supp 1,0 = false ; Supprimer les fichiers du repertoire ( selement en ncftp en mode simple )
+1 avec_rep 1,0 = false ; Prend les sous répertoires ( selement en ncftp en mode simple )
+1 mode	1,0 = 1 ; 1 = simple , 2 = par listage
+
+record * htdf fic
+record * htdf fic2
+1 Ip 50
+1 Lst L
+1 RepDistant 550
+1 Sock L
+1 id_fic L
+1 fichier_liste 256
+1 nb_lue L
+1 fin_fichier L
+1 st L
+1 fichier_listage 256
+beginp
+
+	fic.Name = GetTempPath & "/" & "fichier.ftp"
+	Sock = SocketNew()
+	Ip = SocketGetHostByName(Left(Serveur))
+	if Ip = " " | Ip = Serveur | endif
+	if SocketConnect(sock,Ip,port) = TRUE
+		if ncftp = false
+			loop FOpen(fic,"P") <> 0
+				HCreateFile(fic.Name,"U")
+			endloop
+			HErase(fic)
+			Ecrire(User,fic)
+			Ecrire(Pass,fic)
+			Ecrire("cd " & Dossier,fic)
+			Ecrire("prompt off",fic)
+			Ecrire("lcd " & DossierReception,fic)
+			Ecrire("mget ",fic)
+			Ecrire("disconnect",fic)
+			Ecrire("quit",fic)
+			FClose(fic)
+			;
+			fic2.name = gettemppath & "/fichier.bat"
+			loop FOpen(fic2) <> 0
+				HCreateFile(fic2.Name,"U")
+			endloop
+			HErase(fic2)
+			;
+			Ecrire("FTP -i -s:" & fic.Name && " " & Serveur && " >> " & GetTempPath & "/log_ftp.txt",fic2)
+			FClose(fic2)
+			Exec(fic2.Name && $00, '',EXEC_GOSUB_WAIT,Show)
+		else
+			ug_Installer_Ftp
+
+			if mode = 1 
+				fic2.name = gettemppath & "/fichier.bat"
+				loop FOpen(fic2) <> 0
+					HCreateFile(fic2.Name,"U")
+				endloop
+				HErase(fic2)
+				;
+				if dossier = '' or dossier = '/'
+					dossier = '/*'
+				else
+					dossier = nospaces(dossier) & '/*'
+				endif
+				if supp = true	
+					if avec_rep = true	 
+						Ecrire("ncftpget -u " & nospaces(User) & " -p " & nospaces(Pass) & " -P " & nospaces(port) & " -DD -R " & ' -d ' &  GetTempPath & "/log_ftp.txt " & nospaces(Serveur)  & nospaces(DossierReception) & nospaces(Dossier) ,fic2)
+					else
+						Ecrire("ncftpget -u " & nospaces(User) & " -p " & nospaces(Pass) & " -P " & nospaces(port) & " -DD " & ' -d ' &  GetTempPath & "/log_ftp.txt " & nospaces(Serveur)  & nospaces(DossierReception) & nospaces(Dossier) ,fic2)
+					endif
+				else
+					if avec_rep = true
+						Ecrire("ncftpget -u " & nospaces(User) & " -p " & nospaces(Pass) & " -P " & nospaces(port) & ' -R -d ' &  GetTempPath & "/log_ftp.txt " & nospaces(Serveur) & ' ' & nospaces(DossierReception) & ' ' & nospaces(Dossier) ,fic2)
+					else
+			  			Ecrire("ncftpget -u " & nospaces(User) & " -p " & nospaces(Pass) & " -P " & nospaces(port) & ' -d ' &  GetTempPath & "/log_ftp.txt " & nospaces(Serveur) & ' ' & nospaces(DossierReception) & ' ' & nospaces(Dossier) ,fic2)
+					endif
+				endif
+				FClose(fic2)
+				Exec(fic2.Name && $00, '',EXEC_GOSUB_WAIT,Show)	 
+			else
+				fichier_listage = 'Liste_fichier' & nospaces(system.User) & '.txt'
+				ug_Lister_un_Repertoire_FTP(serveur,user,pass,dossier,'',nospaces(fichier_listage),false,true,port)
+				id_fic = WinCreateFile(GetTempPath() & nospaces(fichier_listage),GENERIC_READ,FILE_SHARE_WRITE,'',OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,'')
+				if id_fic > 0
+					do 
+						st = WinReadFileRecord(id_fic,fichier_liste,nb_lue,fin_fichier,0)
+					while	st = true and fin_fichier = false
+						ug_Receptionner_un_Fichiers_FTP(serveur,user,pass,dossier,nospaces(fichier_liste),DossierReception,false,true,port,supp)
+					wend
+				else
+					ug_log("Erreur lors de l'ouverture du fichier de listage |" & WinGetTextError(WinGetLastError()))
+				endif
+				WinCloseHandle(id_fic)
+			endif
+		endif
+		SocketClose(Sock)
+	endif
+
+endp
+
+;*
+public procedure ug_Receptionner_un_Fichiers_FTP(Serveur,User,Pass,Dossier,Fichier,DossierReception,Show,ncftp,port,supp)
+; Recuperer un fichier FTP
+1 User 50			; utilisateur
+1 Pass 30			; mot de passe
+1 Fichier 500		; nom du fichier à receptionner
+1 Dossier 50		; dossier distant
+1 Serveur 50		; Serveur FTP
+1 DossierReception 100 = " "	; Dossier de Reception 
+1 Show 3,0 = SW_HIDE
+1 ncftp 1,0 = false ; Utilisé le mode ncftp ( doit etre installer sur le serveur en client leger, sur le poste en lourd )
+1 port 5,0 = 21 	; Port ( selement en ncftp ) 
+1 supp 1,0 = false ; Supprimer les fichiers du repertoire ( selement en ncftp )
+record * htdf fic
+record * htdf fic2
+
+1 Ip 50
+1 Lst L
+1 RepDistant 550
+1 Sock L
+beginp
+
+	fic.Name = GetTempPath & "/" & "fichier.ftp"
+	Sock = SocketNew()
+	Ip = SocketGetHostByName(Left(Serveur))
+	if Ip = " " | Ip = Serveur | endif
+	if SocketConnect(sock,Ip,port) = TRUE
+		if ncftp = false
+			loop FOpen(fic,"P") <> 0
+				HCreateFile(fic.Name,"U")
+			endloop
+			HErase(fic)
+			Ecrire(User,fic)
+			Ecrire(Pass,fic)
+			Ecrire("cd " & Dossier,fic)
+			Ecrire("lcd " & DossierReception,fic)
+			Ecrire("get " & Fichier,fic)
+			Ecrire("disconnect",fic)
+			Ecrire("quit",fic)
+			FClose(fic)
+			;
+			fic2.name = gettemppath & "/fichier.bat"
+			loop FOpen(fic2) <> 0
+				HCreateFile(fic2.Name,"U")
+			endloop
+			HErase(fic2)
+			;
+			Ecrire("FTP -i -s:" & fic.Name && " " & Serveur && " >> " & GetTempPath & "/log_ftp.txt",fic2)
+			FClose(fic2)
+		else
+			ug_Installer_Ftp
+
+			fic2.name = gettemppath & "/fichier.bat"
+			loop FOpen(fic2) <> 0
+				HCreateFile(fic2.Name,"U")
+			endloop
+			HErase(fic2)
+			;
+			if supp = true	
+				Ecrire("ncftpget -u " & nospaces(User) & " -p " & nospaces(Pass) & " -P " & nospaces(port) & " -DD " & nospaces(Serveur) & " " & nospaces(DossierReception) & nospaces(Dossier) & "/" & nospaces(fichier)  ,fic2)
+			else
+				Ecrire("ncftpget -u " & nospaces(User) & " -p " & nospaces(Pass) & " -P " & nospaces(port) & " " & nospaces(Serveur) & " " & nospaces(DossierReception) & " " & nospaces(Dossier) & "/" & nospaces(fichier)  ,fic2)
+			endif
+			FClose(fic2)
+		endif
+		Exec(fic2.Name && $00, '',EXEC_GOSUB_WAIT,Show)
+		SocketClose(Sock)
+	endif
+
+endp
+
+;*
+public procedure ug_Supprimer_Tous_Fichiers_FTP(Serveur,User,Pass,Dossier,Show,ncftp,port)
+; Supprimer des fichiers sur le serveur FTP
+1 User 50			; utilisateur
+1 Pass 30			; mot de passe
+1 Dossier 50		; Dossier
+1 Serveur 50		; Serveur FTP
+1 Show 3,0 = SW_HIDE
+1 ncftp 1,0 = false ; 0 = par commande dos |1 = par ncftp
+1 port 5,0 = 21 ; port 21 par defaul <!> Uniquement par ncftp
+1 Ip 50
+1 Lst L
+
+1 Sock L
+record * htdf fic
+record * htdf fic2
+
+beginp
+
+	fic.Name = GetTempPath & "/" & "fichier.ftp"
+	Sock = SocketNew()
+	Ip = SocketGetHostByName(Left(Serveur))
+	if Ip = " " | Ip = Serveur | endif
+	if SocketConnect(sock,Ip,port) = TRUE
+		if ncftp = false 
+			loop FOpen(fic,"P") <> 0
+				HCreateFile(fic.Name,"U")
+			endloop
+			HErase(fic)
+			Ecrire(User,fic)
+			Ecrire(Pass,fic)
+			Ecrire("cd " & Dossier,fic)
+			Ecrire("mdel ",fic)
+			Ecrire("disconnect",fic)
+			Ecrire("quit",fic)
+			FClose(fic)
+			;
+			fic2.name = gettemppath & "/fichier.bat"
+			loop FOpen(fic2) <> 0
+				HCreateFile(fic2.Name,"U")
+			endloop
+			HErase(fic2)
+			;
+			Ecrire("FTP -i -s:" & fic.Name && " " & Serveur && " >> " & GetTempPath & "/log_ftp.txt",fic2)
+			FClose(fic2)
+		else
+			ug_Installer_Ftp
+
+			fic2.name = gettemppath & "/fichier.bat"
+			loop FOpen(fic2) <> 0
+				HCreateFile(fic2.Name,"U")
+			endloop
+			HErase(fic2)
+			;
+			Ecrire('ncftpget -u ' & nospaces(user) & ' -p ' & nospaces(pass) & ' -P ' & nospaces(port) & ' -R -DD -d ' &  GetTempPath & "/log_ftp.txt " & "ftp://" & nospaces(serveur) & '/' & nospaces(dossier) & $0d0a,fic2)
+			FClose(fic2)
+		endif
+		Exec(fic2.Name && $00, '',EXEC_GOSUB_WAIT,Show)
+		SocketClose(Sock)
+	endif
+
+endp
+
+
+
+;*
+public procedure ug_Supprimer_un_Fichier_FTP(Serveur,User,Pass,Dossier,Fichier,Show,ncftp,port)
+; Supprimer des fichiers sur le serveur FTP
+1 User 50			; utilisateur
+1 Pass 30			; mot de passe
+1 Dossier 50		; Dossier
+1 Serveur 50		; Serveur FTP
+1 Show 3,0 = SW_HIDE
+1 ncftp 1,0 = false ; 0 = par commande dos |1 = par ncftp
+1 port 5,0 = 21 ; port 21 par defaul <!> Uniquement par ncftp
+
+1 Fichier 500
+1 Ip 50
+1 Lst L
+1 Sock L
+record * htdf fic
+record * htdf fic2
+
+beginp
+
+	fic.Name = GetTempPath & "/" & "fichier.ftp"
+	Sock = SocketNew()
+	Ip = SocketGetHostByName(Left(Serveur))
+	if Ip = " " | Ip = Serveur | endif
+	if SocketConnect(sock,Ip,port) = TRUE
+		if ncftp = false
+			loop FOpen(fic,"P") <> 0
+				HCreateFile(fic.Name,"U")
+			endloop
+			HErase(fic)
+			Ecrire(User,fic)
+			Ecrire(Pass,fic)
+			Ecrire("cd " & Dossier,fic)
+			Ecrire("del " & Fichier,fic)
+			Ecrire("disconnect",fic)
+			Ecrire("quit",fic)
+			FClose(fic)
+			;
+			fic2.name = gettemppath & "/fichier.bat"
+			loop FOpen(fic2) <> 0
+				HCreateFile(fic2.Name,"U")
+			endloop
+			HErase(fic2)
+			;
+			WinDeleteFile(GetTempPath & "/log_ftp.txt")
+			Ecrire("FTP -i -s:" & fic.Name && " " & Serveur && " >> " & GetTempPath & "/log_ftp.txt",fic2)
+			FClose(fic2)
+		else
+			ug_Installer_Ftp
+
+			fic2.name = gettemppath & "/fichier.bat"
+			loop FOpen(fic2) <> 0
+				HCreateFile(fic2.Name,"U")
+			endloop
+			HErase(fic2)
+			;
+			Ecrire('ncftpget -u ' & nospaces(user) & ' -p ' & nospaces(pass) & ' -P ' & nospaces(port) & ' -R -DD -d ' &  GetTempPath & "/log_ftp.txt " & "ftp://" & nospaces(serveur) & '/' \
+			& nospaces(dossier) & '/' & nospaces(Fichier) & $0d0a,fic2)
+			FClose(fic2)
+		endif
+		Exec(fic2.Name && $00, '',EXEC_GOSUB_WAIT,Show)
+		SocketClose(Sock)
+	endif
+
+endp
+;*
+Procedure ug_Analyser_Fichier(nomfic,&FichierTrouve)
+;
+1 nomfic S
+1 fichierTrouve 500
+1 Buffer 500
+1 IdFic L
+1 NbLus L
+1 FinFichier  L = False
+1 Lst L
+1 LstFic L ; liste des fichiers
+1 RepDistant 550
+
+1 FichierListe 500
+
+record * htdf fic3
+
+beginp
+	fic3.Name=nomFic
+
+	Lstfic=ug_Liste("ug_Liste_Fichier_Ftp")
+	IdFic = WinCreateFile(NoSpaces(fic3.Name) & $00, GENERIC_READ,FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0)
+	Loop WinReadFileRecord(IdFic,Buffer,NbLus,FinFichier,0) = True And Not FinFichier
+		FichierTrouve = NoSpaces(Buffer)
+		; si fichier recu avec tabulation		
+		if Count($09,Buffer)>0
+			Lst=SplitList(Buffer,SeparateursNonRendus=$09)
+			ListBegin(Lst)
+			Loop ListNext(Lst,FichierListe)>0
+				if FichierListe not in (" ","./","../")
+					ListInsert(LstFic,FichierListe)			
+				endif
+			endloop
+			ListDestroy(Lst)
+		else
+			ListInsert(LstFic,buffer)
+		endif
+	endloop
+  	WinCloseHandle(idfic)
+endp
+
+
+;*
+public procedure ug_Lister_un_Fichier_FTP(Serveur,User,Pass,Dossier,Fichier,FichierListe,&FichierTrouve,Show,ncftp,port)
+; Liste un fichier  
+; une liste est fourni : ug_Liste_Fichier_Ftp
+1 User 50		; Utilsateur FTP
+1 Pass 30		; mot de passe PDF
+1 Fichier 500  ; nom du fichier à afficher "*" par ex
+1 Dossier 50	; dossier "/" par ex
+1 Ip 50
+1 Serveur 50	; serveur FTP
+1 FichierListe 500	; non du fichier
+1 ncftp 1,0 = false ; 0 = par commande dos |1 = par ncftp
+1 port 5,0 = 21 ; port 21 par defaul <!> Uniquement par ncftp
+1 Show 3,0 = SW_HIDE
+
+1 fichierTrouve 500
+record * htdf fic
+record * htdf fic2
+record * htdf fic3
+record * htdf fic4
+
+1 Lst L
+1 LstFic L ; liste des fichiers
+
+1 Sock L
+
+
+
+beginp
+
+	fic.Name = GetTempPath & "/" & "fichier.ftp"
+	fic3.Name = GetTempPath & "/" & FichierListe
+	Sock = SocketNew()
+	Ip = SocketGetHostByName(Left(Serveur))
+	if Ip = " " | Ip = Serveur | endif
+	if SocketConnect(sock,Ip,port) = TRUE
+		if ncftp = false
+			loop FOpen(fic3,"P") <> 0
+				HCreateFile(fic3.Name,"U")
+			endloop
+			HErase(fic3)
+			FClose(fic3)
+			loop FOpen(fic,"P") <> 0
+				HCreateFile(fic.Name,"U")
+			endloop
+			HErase(fic)
+			Ecrire(User,fic)
+			Ecrire(Pass,fic)
+			Ecrire("cd " & Dossier,fic)
+			Ecrire("ls " & NoSpaces(Fichier) & " " & NoSpaces(fic3.Name),fic)
+			Ecrire("disconnect",fic)
+			Ecrire("quit",fic)
+			FClose(fic)
+			;
+			fic2.name = gettemppath & "/fichier.bat"
+			loop FOpen(fic2) <> 0
+				HCreateFile(fic2.Name,"U")
+			endloop
+			HErase(fic2)
+			;
+			Ecrire("FTP -i -s:" & fic.Name && " " & Serveur && " >> " & GetTempPath & "/log_ftp.txt",fic2)
+			FClose(fic2)
+		else
+			ug_Installer_Ftp
+
+			fic2.name = gettemppath & "/fichier.bat"
+			loop FOpen(fic2) <> 0
+				HCreateFile(fic2.Name,"U")
+			endloop
+			HErase(fic2)
+			;
+			WinDeleteFile(GetTempPath & "/Liste_fichier.txt")
+			Ecrire('ncftpls -u ' & nospaces(user) & ' -p ' & nospaces(pass) & ' -P ' & nospaces(port) & ' -d ' &  GetTempPath & "/log_ftp.txt " & "ftp://" & nospaces(serveur) & '/' & nospaces(dossier) & '/' & nospaces(Fichier) \
+			& " >> " & nospaces(fic3.Name) & $0d0a,fic2)
+			FClose(fic2)	
+		endif
+		WinDeleteFile(fic3.Name)
+		Exec(fic2.Name && $00, '',EXEC_GOSUB_WAIT,Show)
+		SocketClose(Sock)
+	endif
+	
+	ug_Analyser_Fichier(fic3.Name,FichierTrouve)
+endp
+
+
+
+
+
+;*
+public procedure ug_Lister_un_Repertoire_FTP(Serveur,User,Pass,Dossier,Fichier,FichierListe,Show,ncftp,port)
+; lister un repertoire
+; une liste est fourni : ug_Liste_Fichier_Ftp
+record * htdf fic
+record * htdf fic2
+record * htdf fic3
+1 User 50
+1 Pass 30
+1 Dossier 50
+1 Ip 50
+1 Serveur 50
+1 FichierTrouve 500
+1 FichierListe 500
+1 Fichier 500
+1 Lst L
+1 RepDistant 550
+1 Sock L
+1 Show 3,0 = SW_HIDE
+1 ncftp 1,0 = false ; 0 = par commande dos |1 = par ncftp
+1 port 5,0 = 21 ; port 21 par defaul <!> Uniquement par ncftp
+
+beginp
+
+	fic.Name = GetTempPath & "/" & "fichier.ftp"
+	fic3.Name = GetTempPath & "/" & FichierListe
+	Sock = SocketNew()
+	Ip = SocketGetHostByName(Left(Serveur))
+	if Ip = " " | Ip = Serveur | endif
+	if SocketConnect(sock,Ip,port) = TRUE
+		if ncftp = false
+			loop FOpen(fic3,"P") <> 0
+				HCreateFile(fic3.Name,"U")
+			endloop
+			HErase(fic3)
+			FClose(fic3)
+			loop FOpen(fic,"P") <> 0
+				HCreateFile(fic.Name,"U")
+			endloop
+			HErase(fic)
+			Ecrire(User,fic)
+			Ecrire(Pass,fic)
+			Ecrire("cd " & Dossier,fic)
+			Ecrire("ls " & NoSpaces(Fichier) & " " & NoSpaces(fic3.Name),fic)
+			Ecrire("disconnect",fic)
+			Ecrire("quit",fic)
+			FClose(fic)
+			;
+			fic2.name = gettemppath & "/fichier.bat"
+			loop FOpen(fic2) <> 0
+				HCreateFile(fic2.Name,"U")
+			endloop
+			HErase(fic2)
+			;
+			Ecrire("FTP -i -s:" & fic.Name && " " & Serveur && " >> " & GetTempPath & "/log_ftp.txt",fic2)
+			FClose(fic2)
+		else
+			ug_Installer_Ftp
+
+			fic2.name = gettemppath & "/fichier.bat"
+			loop FOpen(fic2) <> 0
+				HCreateFile(fic2.Name,"U")
+			endloop
+			HErase(fic2)
+			;
+			WinDeleteFile(fic3.Name)
+			Ecrire('ncftpls -u ' & nospaces(user) & ' -p ' & nospaces(pass) & ' -P ' & nospaces(port) & ' -d ' &  GetTempPath & "/log_ftp.txt " & "ftp://" & nospaces(serveur) & '/' & nospaces(dossier) \
+			& " >> " & nospaces(fic3.Name) & $0d0a,fic2)
+			FClose(fic2)
+		endif
+		Exec(fic2.Name && $00, '',EXEC_GOSUB_WAIT,Show)
+		SocketClose(Sock)
+
+		ug_Analyser_Fichier(fic3.Name,FichierTrouve)
+	endif
+
+endp
+
+
+
+

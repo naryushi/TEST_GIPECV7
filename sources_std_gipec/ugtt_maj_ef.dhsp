@@ -1,0 +1,86 @@
+;*
+;*	Mise à jour des entree forcée orpheline
+;*
+
+module ugtm_tech.dhop
+
+public record a5dd.dhsd mz
+
+
+;*
+;*	 Procedure
+;*
+
+Procedure ug_MAJ_EF
+hfile gtfdd.dhsd gtfvtl gtfvtlEF
+hfile gtfdd.dhsd gtfvtl gtfvtlEFz
+hfile gtfdd.dhsd gtfvtl gtfvtlS
+record gtfdd.dhsd mvtl mvtlEF
+record gtfdd.dhsd mvtl mvtlEFz
+record gtfdd.dhsd mvtl mvtlS
+1 clemax > ddsys.dhsd cle
+1 clemaxS > ddsys.dhsd cle
+beginp
+	; lecture des entrée forcées
+	gtfvtlEF.key="E" & mz.dos
+	clemax = gtfvtlEF.key && $FF
+	Loop Hread(gtfvtlEF,mvtlEF)=0 and clemax > gtfvtlEF.key 
+		if Hseek(gtfvtlS,mvtlS,"D" & mz.dos & mvtlEF.vtlno)<>0 ; si vtl no retrouve avec la vtl associé
+			if Hseek(gtfvtlEFz,MvtlEFz,"M" & mz.dos & mvtlEF.vtlno)=0
+				mvtlEFz.ce2=" "
+				mvtlEFz.op="990"	
+
+				Hrewrite(gtfvtlEFz,mvtlEFz)
+			endif				
+		else
+
+
+			; s'il y a bien une sortie
+			if MvtlS.Nst<>MvtlEF.Nst or MvtlS.Lieu<>MvtlEF.Lieu or MvtlS.Depo<>MvtlEF.Depo or MvtlS.Serie<>MvtlEF.Serie
+				MvtlEF.Nst=MvtlS.Nst
+				MvtlEF.Lieu=MvtlS.Lieu
+				MvtlEF.Depo=MvtlS.Depo
+				MvtlEF.Serie=MvtlS.Serie
+				Hrewrite(gtfvtlEF,MvtlEF)
+			endif
+
+			; contrôle de la cohérence
+			GtfvtlS.Key="D" & mz.Dos & MvtlEF.VtlNo
+			ClemaxS="D" & mz.Dos & MvtlEF.VtlNo & $FF
+			Loop Hread(gtfvtlS,MvtlS)=0 and ClemaxS>gtfvtlS.Key
+				if MvtlS.Nst<>MvtlEF.Nst or MvtlS.Lieu<>MvtlEF.Lieu or MvtlS.Depo<>MvtlEF.Depo or MvtlS.Serie<>MvtlEF.Serie
+					MvtlS.Nst=MvtlEF.Nst
+					MvtlS.Lieu=MvtlEF.Lieu
+					MvtlS.Depo=MvtlEF.Depo
+					MvtlS.Serie=MvtlEF.Serie
+					Hrewrite(gtfvtlS,MvtlS)								
+				endif
+			endloop
+			
+		endif
+		if mvtlEF.deldt<>" " or mvtlEF.stres=2
+			mvtlEF.deldt=" "
+			mvtlEF.deldemdt=" "
+			mvtlEF.delaccdt=" "
+			mvtlEF.delrepdt=" "
+			mvtlEF.stres=1
+
+			hrewrite(gtfvtlEF,mvtlEF)
+		endif
+	endloop		
+
+endp
+
+;*
+;*	Programme Principal
+;*
+
+main
+
+if pingreceive("zechange",mz)<>0
+	ug_init(false,false)
+endif
+
+ug_Maj_EF
+
+Programgoto "xquit"

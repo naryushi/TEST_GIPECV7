@@ -1,0 +1,510 @@
+;*
+;*	Module pour les ug_seek_liste
+;*
+
+Public record A5dd.dhsd mz
+
+Public Structure ugs_PosLgTri
+	1 PosTri 		X * 10
+	1 LgTri 			8,0 * 10
+	1 AdrFonc		16
+	1 NbParam		2,0
+	1 NomFonction 	50
+	1 NomModule 	50
+	1 TabNo			> gtfdd.dhsd Tabno
+endStructure
+
+;*
+;*	Procedures
+;*
+
+Public function char ug_init_PosLgTri(*)
+;
+; Function pour Gerer le Tri
+;
+; Parametre 1 = Ptr(Enreg)
+; Parametre 2 = Ptr(Enreg.champ)
+; Parametre 3 = Size(Enreg.Champ)
+; Parametre 4 = Ptr(Enreg.Champ2)
+; Parametre 5 = Size(Enreg.champ2)
+; Etc ...
+
+recorddiva ugs_posLgTri Ptri
+1 Lst L
+1 Param L
+1 Taille L
+1 PtrEnreg L
+1 Indice 3,0=1
+beginf
+	init ptri.LgTri(*)=0
+	init ptri.PosTri(*)=0
+
+	Lst=ListParamGetId
+	ListBegin(Lst)
+	Loop ListNext(Lst,Param)<>0
+		if ListNumber(Lst)=1 
+			PtrEnreg=Param 
+		else
+			Ptri.PosTri(Indice)=Param-PtrEnreg+1
+			ListNext(Lst,Taille)
+			Ptri.LgTri(Indice) =Taille
+			Indice++
+		endif 	
+	endloop
+	freturn (ptri)
+endf
+;*
+Public function char ug_Get_NomListe(NomModule,NomFonction,Tabno)
+;
+1 NomModule   50													
+1 NomFonction 50
+1 Tabno		  > gtfdd.dhsd Tabno=" "
+
+beginf
+	NomFonction=fstring("U",NomFonction)
+	NomFonction=Modify("_KEY","",NomFonction )
+	NomFonction=Modify("NEXT_","SEEK_",NomFonction )
+	NomModule  =fstring("U",NomModule)
+
+	freturn ("ug_" & NomModule && "-" & NomFonction && "_Liste" & Condition(Tabno=0,"", Str("_" & Tabno)))
+endf
+
+
+
+;*
+function long ug_tri_PosLg(&a,&b)
+;
+Recorddiva ugs_PosLgTri a
+Recorddiva ugs_PosLgTri b
+1 A1 S
+1 B1 S
+beginf
+	A1=a.NomModule & a.NomFonction & a.TabNo
+	B1=b.NomModule & b.NomFonction & b.TabNo
+	freturn (SortCompare(A1,B1))
+endf
+
+
+;*
+function long ug_tri_liste(&a,&b)
+;
+1 a A
+1 b A
+1 A1 S
+1 B1 S
+1 LstTri L
+1 vI 3,0
+recorddiva ugs_PosLgTri PosLgTri
+beginf
+	LstTri=ListGetId("ug_Liste_Pos_Lg")
+	if ListCurrent(LstTri,PosLgTri)<>0
+		For vI=1 to PosLgTri.NbParam
+			A1 &=Mid(a,PosLgTri.PosTri(vI),PosLgTri.LgTri(vI))
+			B1 &=Mid(b,PosLgTri.PosTri(vI),PosLgTri.LgTri(vI))	
+		next
+	endif
+	freturn (SortCompare(A1,B1))
+endf
+;*
+Public Procedure ug_Init_Seek_Liste(NomModule,NomFonction,PosLgTri)
+;
+1 NomFonction 50
+1 NomModule 50
+1 Lst L
+1 LstTri L
+1 Adr 16
+1 AdrL L
+1 vI 2,0
+recorddiva ugs_PosLgTri	 PosLgTri  ; rempli obligatoirement le PosTri et LgTri
+beginp
+	; creation de la liste de pos et longueur
+	if ListExist("ug_Liste_Pos_Lg")=False
+		LstTri=ListGetId("ug_Liste_Pos_Lg")
+		ListErase(LstTri)
+		GetAdressFunction(" ","ug_tri_PosLg",Adr)
+		ListMode(LstTri,1,Adr)
+	endif
+	; insertion d'un element dans la liste
+	LstTri=ListGetId("ug_Liste_Pos_Lg")
+
+	NomFonction=fstring("U",NomFonction)
+	NomFonction=Modify("NEXT_","SEEK_",NomFonction )
+
+
+	PosLgTri.NomFonction	=fstring("U",NomFonction)
+	PosLgTri.NomModule	=fstring("U",NomModule)
+	For vI=1 To 10
+		if PosLgTri.LgTri(vI)=0	
+			PosLgTri.NbParam=vI-1
+			exitfor
+		endif
+	next
+	if PosLgTri.NbParam=0 | MessageBox("Aucun Parametre trouve dans les poslgtri","Erreur",mb_iconhand) | endif
+	if GetAdressFunction(NomModule,NomFonction,PosLgTri.AdrFonc)=0
+		AdrL=ListInsert(LstTri,PosLgTri)
+		ListSetAdresscurrent(LstTri,AdrL)
+	else
+		Messagebox("Fonction/Procedure " & Nomfonction && " non trouvé dans le Module " & NomModule,"Erreur",mb_iconstop)
+		Programexit 
+	endif
+	; creation de la liste pour la fonction
+	;Lst=ListGetId("ug_" & NomModule && "-" & NomFonction && "_Liste")
+	Lst=ListGetId(ug_Get_NomListe(NomModule,NomFonction))
+	ListErase(Lst)
+	GetAdressFunction(" ","ug_Tri_liste",Adr)
+	ListMode(Lst,1,Adr)
+	;
+endp
+;*
+Public Procedure ug_Init_Lectab_Liste(NomModule,NomFonction,TabNo,PosLgTri)
+;
+1 NomFonction 50
+1 NomModule 50
+1 TabNo > gtfdd.dhsd Tabno
+1 Lst L
+1 LstTri L
+1 Adr 16
+1 AdrL L
+1 vI 2,0
+recorddiva ugs_PosLgTri	 PosLgTri  ; rempli obligatoirement le PosTri et LgTri
+beginp
+	; creation de la liste de pos et longueur
+	if ListExist("ug_Liste_Pos_Lg")=False
+		LstTri=ListGetId("ug_Liste_Pos_Lg")
+		ListErase(LstTri)
+		GetAdressFunction(" ","ug_tri_PosLg",Adr)
+		ListMode(LstTri,1,Adr)
+	endif
+	; insertion d'un element dans la liste
+	LstTri=ListGetId("ug_Liste_Pos_Lg")
+	PosLgTri.NomFonction	=fstring("U",NomFonction)
+	PosLgTri.NomModule	=fstring("U",NomModule)
+	PosLgTri.TabNo			=TabNo
+	For vI=1 To 10
+		if PosLgTri.LgTri(vI)=0	
+			PosLgTri.NbParam=vI-1
+			exitfor
+		endif
+	next
+	if PosLgTri.NbParam=0 | MessageBox("Aucun Parametre trouve dans les poslgtri","Erreur",mb_iconhand) | endif
+	if GetAdressFunction(NomModule,NomFonction,PosLgTri.AdrFonc)=0
+		AdrL=ListInsert(LstTri,PosLgTri)
+		ListSetAdresscurrent(LstTri,AdrL)
+	else
+		Messagebox("Fonction/Procedure " & Nomfonction && " non trouvé dans le Module " & NomModule,"Erreur",mb_iconstop)
+		Programexit 
+	endif
+	; creation de la liste pour la fonction
+	;Lst=ListGetId("ug_" & NomModule && "-" & NomFonction && "_Liste_" & TabNo)
+	Lst=ListGetId(ug_Get_NomListe(NomModule,NomFonction,Tabno))
+	ListErase(Lst)
+	GetAdressFunction(" ","ug_Tri_liste",Adr)
+	ListMode(Lst,1,Adr)
+	;
+endp
+;*
+Public function char ug_Rechercher_Dernier_Module
+; Recherche du dernier module (Module d'appel)
+1 Modules 50
+1 ModulesAv 50
+1 Pile S
+1 Tag 100
+1 Valeur 100
+beginf
+	Pile=Fstring("U",GetStack)
+	Loop HmpRead(Pile,Tag,Valeur)=0
+		
+		if Tag="MODULE"
+			ModulesAv=Condition(Valeur=Modules,ModulesAv,Modules)
+			Modules=Valeur
+		endif
+	endloop
+	ModulesAv=Condition(ModulesAv=" ",Fstring("U",System.Znomprog),Modules)
+		
+	freturn (ModulesAv)
+endf
+
+;*
+Public function int ug_Seek_Lst(NomModule,NomFonction,Param,&Enreg,LectureFicForce,PartieFixePourCle,ug_RecordSql)
+;
+1 NomModule   50
+1 Nomfonction 50
+1 Param       256
+1 ParamSav 	  256
+1 LstTri L
+1 Lst L
+1 RetourA 1
+ 2 Retour 1,0=1
+1 LectureFicForce 1,0=false  ;force la lecture du fichier
+1 PartieFixePourCle 256=" " ; si Cas particulier pour Seek_Art_Key
+1 Ug_RecordSql 1,0=False	 ; c'est un Seek RecordSQL si oui=true et Appel ug_Seek_RecordSql(NomModule,NomFonction)
+
+1 Modules S
+
+1 VarSearch 5000
+1 Enreg A
+
+1 ParamFonc 256*10
+1 vI 2,0
+1 AdrFoncTrt 16
+recorddiva ugs_PosLgTri	 PosLgTri  ; rempli obligatoirement le PosTri et LgTri
+beginf
+	LstTri=ListGetId("ug_Liste_Pos_Lg")
+	PosLgTri.NomFonction	=fstring("U",NomFonction)
+	PosLgTri.NomModule	=fstring("U",NomModule)
+	ParamSav=Param
+
+	Lst=ListGetId(ug_Get_NomListe(NomModule,NomFonction));"ug_" & NomModule && "-" & NomFonction && "_Liste")
+	if ListSeek(LstTri,PosLgTri,PosLgTri)>0
+		; preparation du fonction call
+		For vI=1 to PosLgTri.NbParam
+			ParamFonc(vI) &=Left(Param,PosLgTri.LgTri(vI))
+			
+			Mid(VarSearch,PosLgTri.PosTri(vI),PosLgTri.LgTri(vI))= Left(Param,PosLgTri.LgTri(vI))
+			
+			Param=Mid(Param,PosLgTri.LgTri(vI)+1)
+			
+		next
+		if PartieFixePourCle<>" "
+		 	ParamFonc(1)=PartieFixePourCle
+		 	PosLgTri.NbParam=1	
+		endif
+		
+		; Lecture
+		
+		if ListSeek(Lst,Left(VarSearch,Size(Enreg)),Enreg)=0  or LectureFicForce=True
+			if ug_RecordSQL=False
+				switch PosLgTri.NbParam
+					case 1
+						Retour=FunctionCall(PosLgTri.AdrFonc,ParamFonc(1))	
+					case 2 
+						Retour=FunctionCall(PosLgTri.AdrFonc,ParamFonc(1),ParamFonc(2))
+					case 3
+						Retour=FunctionCall(PosLgTri.AdrFonc,ParamFonc(1),ParamFonc(2),ParamFonc(3))
+					case 4
+						Retour=FunctionCall(PosLgTri.AdrFonc,ParamFonc(1),ParamFonc(2),ParamFonc(3),ParamFonc(4))
+					case 5
+						Retour=FunctionCall(PosLgTri.AdrFonc,ParamFonc(1),ParamFonc(2),ParamFonc(3),ParamFonc(4),ParamFonc(5))
+					case 6
+						Retour=FunctionCall(PosLgTri.AdrFonc,ParamFonc(1),ParamFonc(2),ParamFonc(3),ParamFonc(4),ParamFonc(5) \ 
+																		,ParamFonc(6))
+					case 7
+						Retour=FunctionCall(PosLgTri.AdrFonc,ParamFonc(1),ParamFonc(2),ParamFonc(3),ParamFonc(4),ParamFonc(5) \
+																		,ParamFonc(6),ParamFonc(7))
+					case 8
+						Retour=FunctionCall(PosLgTri.AdrFonc,ParamFonc(1),ParamFonc(2),ParamFonc(3),ParamFonc(4),ParamFonc(5) \
+																		,ParamFonc(6),ParamFonc(7),ParamFonc(8))
+					case 9
+						Retour=FunctionCall(PosLgTri.AdrFonc,ParamFonc(1),ParamFonc(2),ParamFonc(3),ParamFonc(4),ParamFonc(5) \
+																		,ParamFonc(6),ParamFonc(7),ParamFonc(8),ParamFonc(9))
+					case 10
+						Retour=FunctionCall(PosLgTri.AdrFonc,ParamFonc(1),ParamFonc(2),ParamFonc(3),ParamFonc(4),ParamFonc(5) \
+																		,ParamFonc(6),ParamFonc(7),ParamFonc(8),ParamFonc(9),ParamFonc(10))
+				endswitch
+			else
+				Modules=ug_Rechercher_Dernier_Module
+				if GetAdressFunction(Modules,"ug_Seek_RecordSql",PosLgTri.AdrFonc)=0
+					Enreg=FunctionCall(PosLgTri.AdrFonc,Fstring("U",NomModule),Fstring("U",NomFonction),ParamSav)
+					Retour=Condition(Enreg=' ',1,0)
+				else
+					MessageBox("Fonction ug_Seek_RecordSql(NomModule,NomFonction,Param) non retrouvé dans le module" & Modules,"Erreur",mb_iconStop)
+				endif
+			endif			 
+			if Retour=0
+			 	ListInsert(Lst,Enreg)
+				if GetAdressProcedure("ug_Seek_Lst_Ap",mz.mtcle,AdrFoncTrt)=0
+					ProcedureCall(AdrFoncTrt,NomModule,NomFonction,Enreg)
+				endif
+			endif		
+		else
+			retour=0
+			if GetAdressProcedure("ug_Seek_Lst_Ap",mz.mtcle,AdrFoncTrt)=0
+				ProcedureCall(AdrFoncTrt,NomModule,NomFonction,Enreg)
+			endif
+
+		endif							
+	endif
+	freturn (Retour)
+endf
+;*
+Public Function long ug_ListSeek_Enreg(NomModule,NomFonction,EnregSearch,&Enreg,Tabno)
+; Recherche si l'element dans la liste Existe
+1 NomModule   50
+1 NomFonction 50
+1 EnregSearch A
+1 Enreg       A
+1 Tabno       > gtfdd.dhsd Tabno=0
+
+1 Lst L
+1 LstTri L
+recorddiva ugs_PosLgTri	 PosLgTri  ; rempli obligatoirement le PosTri et LgTri
+1 AdrL L=0
+beginf
+	; recherche le tri
+	LstTri=ListGetId("ug_Liste_Pos_Lg")
+	PosLgTri.NomFonction	=fstring("U",NomFonction)
+	PosLgTri.NomModule	=fstring("U",NomModule)
+	; recherche de la liste
+	Lst=ListGetId(ug_Get_NomListe(NomModule,NomFonction))
+	if ListSeek(LstTri,PosLgTri,PosLgTri)>0
+		AdrL=ListSeek(Lst,EnregSearch,Enreg)	
+	endif
+	freturn (AdrL)
+endf
+;*
+Public Function long ug_Ajouter_Element_Liste(NomModule,NomFonction,&Enreg,Tabno)
+; ajoute l'element dans la liste et contrôle si doublons
+; si doublons pas d'insertion
+1 NomModule   50
+1 Nomfonction 50
+1 TabNo		  > gtfdd.dhsd Tabno=" "
+1 Enreg 		  A
+1 EnregS		10000
+1 Lst L
+1 LstTri L
+1 AdrL L
+recorddiva ugs_PosLgTri	 PosLgTri  ; rempli obligatoirement le PosTri et LgTri
+beginf
+	Lst=ListGetId(ug_Get_NomListe(NomModule,NomFonction,TabNo))
+	LstTri=ListGetId("ug_Liste_Pos_Lg")
+	PosLgTri.NomFonction	=fstring("U",NomFonction)
+	PosLgTri.NomModule	=fstring("U",NomModule)
+	PosLgTri.TabNo			=Tabno
+
+	ListSeek(LstTri,PosLgTri,PosLgTri)
+	if (AdrL:=ListSeek(Lst,Enreg,EnregS))=0
+		AdrL=ListInsert(Lst,Enreg)	
+	endif
+	freturn (AdrL)
+endf
+;*
+Public function int ug_Lectab_Lst(NomModule,NomFonction,Tabno,Param,&Enreg,LectureFicForce)
+;
+1 NomModule   50
+1 Nomfonction 50
+1 Param       256
+1 ParamSecu   256
+1 Tabno > gtfdd.dhsd Tabno
+1 LstTri L
+1 Lst L
+1 RetourA 1
+ 2 Retour 1,0=1
+1 LectureFicForce 1,0=false  ;force la lecture du fichier
+1 AdrFoncTrt 16
+
+1 VarSearch 5000
+1 Enreg A
+
+1 ParamFonc 256*10
+1 vI 2,0
+recorddiva ugs_PosLgTri	 PosLgTri  ; rempli obligatoirement le PosTri et LgTri
+beginf	
+	LstTri=ListGetId("ug_Liste_Pos_Lg")
+	PosLgTri.NomFonction	=fstring("U",NomFonction)
+	PosLgTri.NomModule	=fstring("U",NomModule)
+	PosLgTri.TabNo			=Tabno
+	Lst=ListGetId("ug_" & NomModule && "-" & NomFonction && "_Liste_" & TabNo)
+	if ListSeek(LstTri,PosLgTri,PosLgTri)>0
+		; preparation du fonction call
+		ParamSecu=Param
+		For vI=1 to PosLgTri.NbParam
+			;ParamFonc(vI) &=Left(Param,PosLgTri.LgTri(vI))
+			
+			Mid(VarSearch,PosLgTri.PosTri(vI),PosLgTri.LgTri(vI))= Left(Param,PosLgTri.LgTri(vI))
+			
+			Param=Mid(Param,PosLgTri.LgTri(vI)+1)
+			
+		next
+		Param=ParamSecu
+		; Lecture
+		
+		if ListSeek(Lst,Left(VarSearch,Size(Enreg)),Enreg)=0  or LectureFicForce=True
+			Retour=FunctionCall(PosLgTri.AdrFonc,Tabno,Param)	
+			 
+			if Retour=0
+			 	ListInsert(Lst,Enreg)
+				if GetAdressProcedure("ug_Seek_Lst_Ap",mz.mtcle,AdrFoncTrt)=0
+					ProcedureCall(AdrFoncTrt,NomModule,NomFonction,Enreg)
+				endif
+
+			endif		
+		else
+		 	retour=0
+			if GetAdressProcedure("ug_Seek_Lst_Ap",mz.mtcle,AdrFoncTrt)=0
+				ProcedureCall(AdrFoncTrt,NomModule,NomFonction,Enreg)
+			endif
+
+		endif							
+	endif
+	freturn (Retour)
+endf
+;*
+Public Function Int ug_Lectab_Controle_Existance_Init(NomModule,NomFonction,Tabno)
+; controle l'existance d'un init_lectab_liste pour une fonction et module donne
+1 NomModule   50
+1 NomFonction 50
+1 Tabno       > gtfdd.dhsd TabNo
+1 Rep 1,0=True 
+1 st 1,0
+1 LstLg L
+
+recorddiva ugs_PosLgTri ug_Rech
+beginf
+	ug_Rech.NomModule=fstring("U",NomModule)
+	ug_Rech.NomFonction=fstring("U",NomFonction)
+	ug_Rech.TabNo=TabNo
+
+	if (st:=ListExist("ug_Liste_Pos_Lg"))=False or \
+		(st=True and (LstLg:=ListGetId("ug_Liste_Pos_Lg"))>0 and ListSeek(LstLg,ug_Rech,ug_Rech)=0)
+		Rep=True
+	else
+		Rep=False
+	endif
+	freturn (Rep)
+endf
+;*
+Public Function Int ug_Seek_Controle_Existance_Init(NomModule,NomFonction)
+; controle l'existance d'un init_seek_liste pour une fonction et module donne
+1 NomModule   50
+1 NomFonction 50
+1 Rep 1,0=True 
+1 st 1,0
+1 LstLg L
+
+recorddiva ugs_PosLgTri ug_Rech
+beginf
+	ug_Rech.NomModule=fstring("U",NomModule)
+	ug_Rech.NomFonction=fstring("U",NomFonction)
+	ug_Rech.TabNo=" "
+
+	if (st:=ListExist("ug_Liste_Pos_Lg"))=False or \
+		(st=True and (LstLg:=ListGetId("ug_Liste_Pos_Lg"))>0 and ListSeek(LstLg,ug_Rech,ug_Rech)=0)
+		Rep=True
+	else
+		Rep=False
+	endif
+	freturn (Rep)
+endf
+
+
+;*
+;*	Programme Principal
+;*
+
+;main
+;	Public record A5dd.dhsd mz
+;	public record gtfdd.dhsd Sart
+;	mz.dos=100
+;	Sart.Ref=714700
+;	Sart.Sref1="0"
+;
+;	ug_Init_Seek_Liste("GTPMFIC.DHOP","SEEK_SART",ug_init_PosLgTri(Ptr(Sart),Ptr(Sart.ref),Size(Sart.ref),Ptr(Sart.Sref1),Size(Sart.Sref1),Ptr(Sart.Sref2),Size(Sart.Sref2)))
+;	ug_Seek_Lst("GTPMFIC.DHOP","SEEK_SART",Sart.GrRef,Sart)
+;	Sart.Ref=434000
+;	Sart.Sref1="0"
+;	ug_Seek_Lst("GTPMFIC.DHOP","SEEK_SART",Sart.GrRef,Sart)
+;	Sart.Ref=714700
+;	Sart.Sref1="0"
+;	ug_Seek_Lst("GTPMFIC.DHOP","SEEK_SART",Sart.GrRef,Sart)
+;	Display SART
+;	

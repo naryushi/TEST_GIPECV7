@@ -1,0 +1,430 @@
+;* Appel a l'intégrateur GTFI
+
+OverWrittenBy ugut_integrationGtfi.dhop
+
+module gtpmpce.dhop
+Module ugtm_baseStd.dhop
+Module ugtm_Tech.dhop
+
+include "GTTCZ00.dhsp"
+
+Extern Record gtfdd.dhsd Ipar
+Extern Record gtfdd.Dhsd ent Ient
+Extern Record gtfdd.Dhsd ead iEad
+Extern Record gtfdd.Dhsd mouv IMouv
+Extern Record gtfdd.Dhsd mvtl Imvtl
+Extern record gtfdd.dhsd Itxt 
+
+Extern HtmpFile gtfdd.dhsd gtfi gtfi
+
+Protected record gtfdd.dhsd Art
+
+
+Extern hfile A5dd.dhsd A5fNote XXfnote "gtfnote.dhfi" noopen ; pour au cas ou charger les notes d'un autre module
+
+Public Structure ugs_Result_Gtfi
+	1 Ticod > gtfdd.dhsd Ticod
+	1 Picod > gtfdd.dhsd Picod
+	1 Pino  > gtfdd.dhsd Pino
+	1 Piref > gtfdd.dhsd Piref
+EndStructure
+
+;*
+
+Public Procedure ug_Ipar(Trait,Ticod,Picod,Pino,PiCodF,PinoF,Piref,Dos,Etb)
+;  Generation d'un ipar
+1 Trait  > gtfdd.dhsd Trait="C" ; C=création M=modification S=suppression T=validation totale V=validation partielle
+1 Ticod  > gtfdd.dhsd Ticod=" " ; Si vide mz.ticod
+1 Picod  > gtfdd.dhsd Picod=" " ; si Vide mz.picod
+1 Pino   > gtfdd.dhsd Pino=" "  ; Si Vide generation auto
+1 PiCodF > gtfdd.dhsd Picod=" " 
+1 PinoF  > gtfdd.dhsd PinoF=" "
+1 Piref  > gtfdd.dhsd Piref=" "
+1 Dos 	> gtfdd.dhsd Dos=" "	  ; si vide mz.dos
+1 Etb		> gtfdd.dhsd Etb=" "	  ; si vide mz.etb
+beginp
+	Dos=Condition(Dos=0,mz.Dos,Dos)
+	Etb=Condition(Etb=" ",mz.Etb,Etb)
+	init Ipar=" "
+	Ipar.Ce1="I"
+	Ipar.Dos=Dos
+	Ipar.Etb=Etb
+	Ipar.Trait=Trait
+	Ipar.TiCod=Condition(Ticod=" ",mz.TiCod,Ticod)
+	Ipar.PiCod=condition(Picod=" ",mz.PiCod,Picod)
+	Ipar.PiNo=Pino
+	Ipar.PiRef=Piref
+	Ipar.PicodF=PicodF
+	Ipar.PiNoF=PinoF
+
+	ug_Xmt_Call(harmony.Defpmodule,"UG_IPAR_WRITE_AV")
+
+	Hwrite(Gtfi,Ipar)
+endp
+;*
+Public Procedure ug_Efface_Gtfi
+; Effacement du fichier GTFI
+1 FicFermer 1,0=False
+beginp
+	if (Left(G3Xz.fic)=Left(Gtfi.Name) and GetSystemFileName(Gtfi)<>" ") 
+		G3Xz.fic=Gtfi.Name
+		fclose(gtfi)
+		FicFermer=True
+	endif
+	Herase(gtfi)
+	if FicFermer=True |fopen(gtfi,"P") | endif
+endp
+;*
+Public Function Long ug_Recup_Gtfi(Result)
+; ug_Liste_Recup_Gtfi est la liste de recuperation gtfi 
+; la structure est ugs_result_gtfi (Ticod,Picod,Pino,Piref)
+1 Result S
+1 Lst L
+1 TxtPce 100
+1 Tag 50
+recorddiva ugs_Result_Gtfi
+beginf
+	Lst = ug_Liste("ug_Liste_Recup_Gtfi")
+	Loop HmpRead(Result,Tag,TxtPce)=0
+		init ugs_Result_Gtfi=' '
+		ugs_result_Gtfi.Ticod=HmpSeek(TxtPce,"TICOD")		
+		ugs_result_Gtfi.Picod=HmpSeek(TxtPce,"PICOD")		
+		ugs_result_Gtfi.Pino =HmpSeek(TxtPce,"PINO")		
+		ugs_result_Gtfi.Piref=HmpSeek(TxtPce,"PIREF")		
+		ListAddEnd(Lst,ugs_Result_gtfi)
+	endloop
+	freturn (Lst)
+endf
+;*
+Public function Int Ug_Integration(&G3XZ)
+; G3XZ.FIC à remplir	 et fermer le fichier
+; si G3xZ.fic =" " on utilise le GTFI.name du module
+; Retour du numero de piece
+; Retour Resultat par Pinglocal ug_Resultat_GTFI  
+; Resultat = <PIREF>xxx<TICOD>x<PICOD>0<PINO>99999
+;
+; ug_Liste_Recup_Gtfi est la liste de recuperation gtfi 
+; la structure est ugs_result_gtfi (Ticod,Picod,Pino,Piref)
+
+record gtfdd.dhsd xz G3xz
+record gtfdd.dhsd gtpce 
+1 Result 5000
+1 FicFermer 1,0=false
+beginf
+	g3xz.motcle = 'UTIINT'
+	Ping ("Status",1)
+	
+
+	if G3XZ.Fic=" " or (Left(G3Xz.fic)=Left(Gtfi.Name) and GetSystemFileName(Gtfi)<>" ") 
+		G3Xz.fic=Gtfi.Name
+		Fclose(gtfi)
+		FicFermer=True
+	endif
+	Ping ("g3xz",g3xz)
+	Ping ("zechange",MZ)
+	Ping('ZECHANGE_GTPCE',GTPCE)
+	;ProgramCall ("GTPP150.DHOP",sw_HIDE,call_wait)
+	Tunnel_Integration_Piece(G3xz.Fic,True,True)
+	pongreceive("g3xz",g3xz)
+	pongreceive("Resultat",Result)
+	Pinglocal("ug_Resultat_GTFI",Result)
+	if FicFermer=True |Fopen(gtfi,"P") | endif
+	; recup resultat gtfi
+	ug_Recup_Gtfi(Result)
+
+	freturn (G3xz.pino)
+endf
+;*
+Public Procedure ug_Ent(Pidt,Tiers,Depo,Op,Piref,Ce4,HmpParam)
+;	UG_IENT_WRITE_AV appeler en fin de procedure	 harmony.defpmodule
+1 Pidt     > gtfdd.dhsd Pidt
+1 Tiers    > gtfdd.dhsd Tiers
+1 Depo     > gtfdd.dhsd Depo =" " ; si vide mz.dep
+1 Op       > gtfdd.Dhsd Op	  =" " ; si vide mz.op
+1 Piref    > gtfdd.dhsd Piref=" "
+1 Ce4      > gtfdd.dhsd Ce4="1"
+1 HmpParam A=" " ; <IENT.DOS>1 par exemple
+1 Param 50
+1 Valeur 100
+1 AdrDesc 120
+beginp
+	init Ient=" "
+	Ient.ce1="A"
+	Ient.dos=mz.dos
+	Ient.etb=mz.Etb
+	Ient.Ce4=Ce4
+	Ient.PiDt=Pidt
+	Ient.Tiers=Tiers
+	Ient.Depo=condition(depo=" ",mz.Depo,depo)
+	Ient.Op = condition(op=" ",mz.Op,op)
+	Ient.piref=Piref
+
+	if HmpParam<>" "
+		Loop HmpRead(HmpParam,Param,Valeur)=0
+			If datadescriptor(Param,AdrDesc)=0
+				DataValue(AdrDesc)=Valeur
+			endif	
+		endloop
+	endif
+	
+	ug_Xmt_Call(harmony.Defpmodule,"UG_IENT_WRITE_AV")
+
+	Hwrite(gtfi,Ient)				
+endp
+;*
+Public Procedure ug_Ead(Adrno,Nom,AdrCpl1,AdrCpl2,Rue,Loc,Vil,Pay,Cpostal,HmpParam)
+;	UG_IEAD_WRITE_AV	appele en fin de procedure	 harmony.defpmodule
+1 Adrno 		> gtfdd.dhsd AdrNo ; 1=Devis 2=Cde 3=Bl 4=Facture
+1 Nom     	> gtfdd.Dhsd Nom =" "		; Nom
+1 AdrCpl1 	> gtfdd.dhsd AdrCpl1=" " 	; Adresse complement 1
+1 AdrCpl2 	> gtfdd.dhsd AdrCpl2=" "	; Adresse complement 2
+1 Rue     	> gtfdd.dhsd Rue=" "			; rue
+1 Loc     	> gtfdd.dhsd Loc=" "			; Localite
+1 Vil     	> gtfdd.dhsd Vil=" "			; Ville
+1 Pay     	> gtfdd.dhsd Pay=" "			; Pays
+1 Cpostal 	> gtfdd.dhsd Cpostal=" "	; Code Postal
+1 HmpParam A=" " ; <IEAD.DOS>1 par exemple
+1 Param 50
+1 Valeur 100
+1 AdrDesc 120
+
+beginp
+	Init IEad=" "
+	iEad.Ce1		="B"
+	iEad.AdrNo	=AdrNo
+	iEad.Nom		=Nom
+	iEad.AdrCpl1=AdrCpl1
+	iEad.AdrCpl2=AdrCpl2
+	iEad.Rue		=Rue
+	iEad.Loc		=Loc
+	iEad.Vil		=Vil
+	iEad.Pay		=Pay
+	iEad.Cpostal=Cpostal
+
+	if HmpParam<>" "
+		Loop HmpRead(HmpParam,Param,Valeur)=0
+			If datadescriptor(Param,AdrDesc)=0
+				DataValue(AdrDesc)=Valeur
+			endif	
+		endloop
+	endif
+	
+	ug_Xmt_Call(harmony.Defpmodule,"UG_IEAD_WRITE_AV")
+
+	Hwrite(gtfi,IEad)
+endp
+;*
+Public Procedure ug_Mouv(Grref,DvQte,CdQte,BlQte,FaQte,Ce2,Enrno,Depo,Op,Pub,Venun,Refun,PcodTb,HmpParam)
+;	UG_IMOUV_WRITE_AV	appele en fin de procedure	 harmony.defpmodule
+1 Grref    > gtfdd.dhsd Grref
+1 Venun 	  > gtfdd.dhsd Venun=" " ; si vide alors Article
+1 Refun 	  > gtfdd.dhsd Refun=" " ; Si vide Alors Article
+1 Ce2      > gtfdd.dhsd Ce2="1"	; 1 pour mouvement 2 chapitre 3 postes
+1 Enrno    > gtfdd.dhsd Enrno=0
+1 Depo     > gtfdd.dhsd Depo=" " ; si vide repris celui de l'entete
+1 Op		  > gtfdd.dhsd Op=" "
+1 PcodTb	 5="11111"
+ 2 Pcod     1,0*5
+1 DvQte    > gtfdd.dhsd Dvqte=0
+1 CdQte    > gtfdd.dhsd Cdqte=0
+1 BlQte    > gtfdd.dhsd BLqte=0
+1 FaQte    > gtfdd.dhsd Faqte=0
+1 Pub      > gtfdd.dhsd Pub=0
+1 HmpParam A=" "	; <IMOUV.DOS>1 par exemple
+1 Param 50
+1 Valeur 100
+1 AdrDesc 120
+1 vI 3,0
+1 Pce 2*4="DVCDBLFA"
+
+beginp
+	Init IMouv=" "
+	Imouv.Ce1="C"
+	Imouv.Ce2=Ce2
+	Imouv.Depo=Depo
+	For vI = 1 to Index(iMouv.Pcod(),1)
+		Imouv.Pcod(vI)=PCod(vI)
+	Next
+	IMouv.GrRef=Grref
+	Imouv.VenUn=Venun
+	Imouv.RefUn=Refun
+	Imouv.EnrNo=Condition(Enrno=0," ",Str(Enrno))
+	if (Venun=" " or Refun=" ")
+		if Seek_Art(imouv.ref)=0
+		 	imouv.VenUn=Condition(Venun=" ",Condition(Ipar.TiCod='I',Art.Refun,Art.VenUn),Venun)
+			imouv.refUn=Condition(Refun=" ",Art.RefUn,Refun)
+		endif
+	endif
+	Imouv.DvQte=DvQte
+	Imouv.CdQte=CdQte
+	Imouv.BlQte=BlQte
+	Imouv.FaQte=FaQte
+	Imouv.op	  =Op
+	
+	if Ce2=1 and DataDescriptor("Imouv." & Pce(Condition(Ipar.PiCodF=0,Ipar.PiCod,Ipar.PiCodF)) & "Qte",AdrDesc)=0 
+		Convertir_Qte_Refqte(imouv.Ref,imouv.Sref1,Imouv.Sref1,DataValue(AdrDesc),Imouv.RefQte,Imouv.VenUn,Imouv.Refun)
+	endif
+
+	Imouv.Pub=pub
+
+	if HmpParam<>" "
+		Loop HmpRead(HmpParam,Param,Valeur)=0
+			If datadescriptor(Param,AdrDesc)=0
+				DataValue(AdrDesc)=Valeur
+			endif	
+		endloop
+	endif
+	
+	ug_Xmt_Call(harmony.Defpmodule,"UG_IMOUV_WRITE_AV")
+
+	Hwrite(gtfi,Imouv)
+endp
+;*
+Public Procedure ug_Mvtl(Qte,Lieu,Serie,Stdt,TiersStock,DelDemDt,DelAccDt,DelRepdt,TicketRes,HmpParam)
+;	UG_IMVTL_WRITE_AV	appele en fin de procedure	  harmony.defpmodule
+1 Qte   > gtfdd.dhsd Qte=0 ; si vide Mouv.Refqte
+1 Lieu  > gtfdd.dhsd Lieu=" "
+1 Serie > gtfdd.dhsd Serie=" "
+1 Stdt  > gtfdd.dhsd Stdt=" "
+1 HmpParam A=" "	; <IMVTL.DOS>1 par exemple
+1 DelDemdt > gtfdd.dhsd DelDemdt=" "
+1 DelAccdt > gtfdd.dhsd DelAccdt=" "
+1 DelRepdt > gtfdd.dhsd DelRepdt=" "
+1 TiersStock > gtfdd.dhsd TiersStock=" "
+1 TicketRes > gtfdd.dhsd TicketRes=" "
+1 AdrDesc 120
+1 Valeur 100
+1 Param 50
+beginp
+	init Imvtl=" "
+	imvtl.Ce1="V"
+
+	imvtl.lieu = Lieu
+	imvtl.serie = Serie
+	imvtl.qte = Qte			
+	if Imvtl.Qte=0
+		imvtl.RefQte=imouv.RefQte
+		Convertir_RefQte_Qte(imvtl.Qte,imouv.Ref,imouv.Sref1,Imouv.Sref2,Imouv.RefQte,Imouv.Venun,imouv.RefUn)
+	endif
+	Imvtl.DelDemDt=DelDemDt
+	Imvtl.DelAccDt=DelAccDt
+	Imvtl.DelRepDt=DelRepDt
+	Imvtl.PerempDt=Stdt
+	Imvtl.StDt=Stdt
+	Imvtl.tiersStock=TiersStock
+	Imvtl.TicketRes=TicketRes
+	if Imvtl.TicketRes>0
+		Imouv.Ce5='1'
+	endif
+	if HmpParam<>" "
+		Loop HmpRead(HmpParam,Param,Valeur)=0
+			If datadescriptor(Param,AdrDesc)=0
+				DataValue(AdrDesc)=Valeur
+			endif	
+		endloop
+	endif
+
+	ug_Xmt_Call(harmony.Defpmodule,"UG_IMVTL_WRITE_AV")
+
+	Hwrite(gtfi,IMvtl)
+endp
+;*
+Public Procedure ug_ITXT(TxtNat,TxtTyp,TxtTrait,Texte,NoteDepart,NoteBlob)
+; UG_ITXT_WRITE_AV	appele en fin de procedure	  harmony.defpmodule
+1 TxtNat     > gtfdd.dhsd TxtNat 	; 1 Txt 2 RTF
+1 TxtTyp     > gtfdd.dhsd TxtTyp	  	; 1=note en-tête 2=txt en-tête 3=txt pied 4=note ligne 5=texte ligne
+1 TxtTrait   > gtfdd.dhsd TxtTrait 	; 1 Nouveau 2 Remplacer
+1 Texte      S
+1 NoteDepart > gtfdd.dhsd Note=0 ; pour Duplication de Note
+1 NoteBlob 1,0=True	; gestion des notes blob à partir de la version 7.1b
+1 vI L  
+1 vMax L
+
+1 Clemax > ddsys.dhsd cle
+record A5dd.dhsd mn
+
+recordSql A5rsnote.dhoq NoteBloB NoteB 
+recordSql A5rsppnote.dhoq FicNote Note
+
+1 Rd_Sel L
+beginp
+	Init Itxt	=" "		
+	Itxt.Ce1		="T"
+	Itxt.TxtNat	=TxtNat ; 1 txt 2 Rtf
+	Itxt.TxtTyp	=TxtTyp
+	Itxt.TxtTrait=TxtTrait  ; 1 Nouveau 2 Remplacer
+
+	if NoteDepart >0
+		if NoteBlob=false	
+			; lecture de la note
+;			Hopen(XXfnote,"P")
+;			xxfnote.key	="A" & NoteDepart
+;			Clemax		=xxfnote.Key && $FF
+;			Loop Hread(XXfnote,Mn)=0 and clemax>xxfnote.key
+;				ITxt.Texte=Left(Mn.Tex,Mn.NoteTai)
+;				ITxt.TxtNat=Condition(Mn.TexSt=1,2,1)
+;	
+;				ug_Xmt_Call(harmony.Defpmodule,"UG_ITXT_WRITE_AV")
+;	
+;				Hwrite(gtfi,Itxt)	
+;			endloop
+;			Hclose(xxfnote)
+			Note.Init()
+			Note.Where.PK(mz.Applic,NoteDepart)			| Note.Where.AddCondition("PK")
+			Rd_Sel=Note.ReaderSelect()
+			Loop Note.ReaderNext(Rd_Sel)=1
+				ITxt.Texte=Left(Note.Tex,Note.NoteTai)
+				ITxt.TxtNat=Condition(Mn.TexSt=1,2,1)				
+				ug_Xmt_Call(harmony.Defpmodule,"UG_ITXT_WRITE_AV")
+	
+				Hwrite(gtfi,Itxt)	
+			endloop
+			Note.ReaderClose(Rd_Sel)
+		else
+			NoteB.Init()
+			NoteB.Where.PK(mz.Applic,NoteDepart)		| NoteB.Where.AddCondition("PK")
+			NoteB.OrderBy.Par_Note()
+			NoteB.Select()			
+
+			Texte=NoteB.NoteBlob
+			if Texte<>' '
+				;vMax=(Length(Texte)-(Modulo(Length(Texte),Size(ITxt.Texte)))/Size(ITxt.Texte))	
+				Truncate
+				vMax = Length(Texte) / Size(ITxt.Texte) T
+				For vI = 0 to vMax
+					ITxt.Texte=Mid(Texte,1+(vI*Size(ITxt.Texte)),Condition(vI=vMax,0,Size(Texte)))
+					ITxt.TxtNat=Condition(NoteB.TexSt=1,2,1)
+		
+					ug_Xmt_Call(harmony.Defpmodule,"UG_ITXT_WRITE_AV")
+		
+					Hwrite(gtfi,Itxt)	
+				Next
+				NoteB.Init()
+			elsif NoteB.GetCount()=0
+				ug_ITXT(TxtNat,TxtTyp,TxtTrait,Texte,NoteDepart,False)
+			endif
+		endif
+	else
+		iTxt.Texte=Texte
+
+		ug_Xmt_Call(harmony.Defpmodule,"UG_ITXT_WRITE_AV")
+
+		HWrite(gtfi,Itxt)
+	endif
+endp
+
+
+
+
+;*
+main
+
+	pingreceive("MZ",mz)
+	pingreceive("G3XZ",g3xz)
+
+
+
+
+	Ug_Integration(G3XZ)
+
+	pong("g3xz",g3xz)

@@ -1,0 +1,31 @@
+<DictionarySql DefaultDictionary=A5DD.dhsd DataBase=COMMUN>
+;*
+;*		Dictionnaire des définitions des RecordSQL du A5FDOS
+;*
+
+;*
+;*		Confidentialités - Confidentialite
+;*
+
+<RecordSql Name=ConfUtil Comment="Confidentialités utilisateur">
+<SELECT>
+	MCONFUSER.*,
+<FROM ReadOnly>
+	MCONFUSER
+<LEFTJOIN>
+	MCONFDET as MCONFDET
+		on MCONFUSER.CONFTYP=2 and MCONFUSER.CONF=MCONFDET.CONFGRP
+<WHERE>
+	Case Between_Conf(char ConfD, char ConfF)
+		MCONFUSER.Conf BETWEEN ConfD AND ConfF
+	Case Between_User(char UserD, char UserF)
+		MCONFUSER.Userx BETWEEN UserD AND UserF
+	Case PK(char User, char Conf, int ConfTyp)
+		MCONFUSER.Userx = User AND MCONFUSER.Conf = Conf AND MCONFUSER.ConfTyp = ConfTyp
+	Case ug_Confid(char Conf,Char user)
+		(MCONFUSER.USERX =User and MCONFDET.CONF=Conf) or (MCONFUSER.USERX =User and MCONFUSER.CONF=Conf)
+<ORDERBY>
+	Case Par_Utilisateur						"Par utilisateur"
+		MCONFUSER.Userx,
+		MCONFUSER.Conf,
+		MCONFUSER.ConfTyp

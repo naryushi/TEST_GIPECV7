@@ -1,0 +1,315 @@
+;* Zoom sur paramétrage des messages                    
+
+include "GTTCZ00.dhsp"
+
+;module a5pm000.dhop
+Module A5pmnotejoint.dhop
+module xzoom.dhop
+module ugtm_excel.dhop
+
+public record ugd_outils.dhsd uge_Mess
+
+;*
+procedure ug_Export
+	hfile ugd_outils.dhsd ugf_mess tdfmess
+	record ugd_outils.dhsd uge_mess enreg
+	1 Lig 5,0
+	
+beginp
+
+	ug_XL_Init_Export
+
+	lig = 1
+	ug_XL_Ecrire(lig,1,"Numéro",,true)
+	ug_XL_Ecrire(lig,2,"Message",,true)
+
+	loop iread(tdfmess,enreg,"UGI_NUMMESS") = 0
+		lig++
+		ug_XL_Ecrire(lig,1,enreg.ug_nummess)
+		ug_XL_Ecrire(lig,2,enreg.ug_libmess)
+	endloop
+
+endp
+
+;*
+procedure ug_Import
+	hfile ugd_outils.dhsd ugf_mess tdfmess
+	record ugd_outils.dhsd uge_mess enreg
+	1 Num > ugd_outils.dhsd ug_nummess
+	1 Lib > ugd_outils.dhsd ug_libmess
+	1 Lig 5,0
+
+beginp
+
+	ug_XL_Init
+
+	lig = 1
+	do
+		lig++
+		num = ug_XL_Lire(Lig,1)
+	while num <> 0
+
+		lib = ug_XL_Lire(lig,2)
+				
+		if iseek(tdfmess,enreg,"UGI_NUMMESS",num) = 0
+			enreg.ug_libmess = lib
+			irewrite(tdfmess,enreg)
+		else
+			init enreg = " "
+			enreg.ug_nummess = num
+			enreg.ug_libmess = lib
+			iwrite(tdfmess,enreg)
+		endif	
+	
+	wend
+	
+	ZoomReactualiserListe
+		
+endp
+
+;*
+Public Procedure Maj_Note(CeNote)
+	1 CeNote > GTFDD.dhsd	CENOTE
+
+BeginP
+
+	Switch ZOOM.ACTION
+
+		Case Vsw In (ZOOM_CREATION, ZOOM_DUPLICATION)
+			XmeToolBarSetButtonInfo(idOutilZoom, "NOTE", "<BITMAP>NOTE_N")
+			xmetoolbarenablebutton(idOutilZoom,'NOTE',True)
+	
+		Case ZOOM_MODIFICATION
+			XmeToolBarSetButtonInfo(idOutilZoom, "NOTE", Condition(CeNote = 2, "<BITMAP>NOTE"	,"<BITMAP>NOTE_N"))
+			xmetoolbarenablebutton(idOutilZoom,'NOTE',True)
+	
+		Default
+			XmeToolBarSetButtonInfo(idOutilZoom, "NOTE", Condition(CeNote = 2, "<BITMAP>NOTE"	,"<BITMAP>NOTE_N"))
+			xmetoolbarenablebutton(idOutilZoom,'NOTE', Condition(CeNote = 2, True, False))
+
+	EndSwitch
+
+EndP
+
+;*
+public procedure ZoomDebut 
+beginp
+
+	Init_Zoom(TitreFixe='Message',FicheNoBloc = 0)
+
+	seek_soc(MZ.DOS)
+
+	Note_Debut
+
+Endp
+
+;*
+procedure ZoomApresCleCreation
+beginp
+
+	Zoom.Cle = zoomGetKeyByName("UGI_NumMess") & uge_Mess.ug_NumMess
+	Zoom.Res = 'UGME' & uge_Mess.ug_NumMess
+
+endp
+
+;*
+public procedure ZoomCreation
+beginp
+	
+	init uge_Mess = " "
+ 
+endp
+
+;*
+procedure ZoomApresCreation
+beginp
+
+	Zoom.TitreVar = uge_Mess.ug_NumMess  
+
+endp
+
+;*
+public procedure ZoomDuplication 
+beginp
+	
+	init uge_Mess.ug_NumMess = " "
+
+endp
+
+;*
+public procedure ZoomCreationRes
+beginp
+
+	Note_Chargement_('DAV',0)
+
+endp
+
+;*
+public procedure ZoomAvantWrite 
+beginp
+	
+	uge_Mess.USERCR = SYSTEM.USER
+	uge_Mess.USERCRDH = time(7)
+	uge_Mess.NOTE = Note_Creation_('DAV')
+	if uge_Mess.NOTE = 0
+		uge_Mess.CENOTE = 1
+	else
+      uge_Mess.CENOTE = 2
+	endif
+
+endp
+
+;*
+public procedure ZoomModification
+beginp
+
+	Zoom.Res = "UGME" & uge_Mess.ug_NumMess
+
+endp
+
+;*
+public procedure ZoomModificationRes
+beginp
+	
+	Note_Chargement_ ('DAV',uge_Mess.NOTE)
+
+endp
+
+;*
+public procedure ZoomAvantRewrite 
+beginp
+
+   uge_Mess.USERMO	= SYSTEM.USER
+   uge_Mess.USERMODH = time(7)
+	uge_Mess.NOTE = Note_Modification_ ('DAV',uge_Mess.NOTE)
+	if uge_Mess.NOTE = 0
+		uge_Mess.CENOTE = 1
+	else
+		uge_Mess.CENOTE = 2
+	endif
+
+endp
+
+;*
+public procedure ZoomApresModification
+beginp
+
+	Zoom.TitreVar = uge_Mess.ug_NumMess 
+
+endp
+
+;*
+public procedure ZoomSuppression
+beginp
+	
+	Zoom.Res = "UGME" & uge_Mess.ug_NumMess
+
+endp
+
+
+;*
+public procedure ZoomAvantDelete 
+beginp
+
+	Note_Suppression_('DAV',uge_Mess.NOTE)
+
+endp
+
+;*
+public procedure ZoomAvantConsultFiche
+beginp
+
+	Maj_Note(uge_Mess.CENOTE)
+
+endp	
+
+;*
+public procedure ZoomAvantConsultListe
+beginp
+
+	Maj_Note(uge_Mess.CENOTE)
+
+endp
+
+;*
+public procedure ZoomConsultFiche
+beginp
+
+	switch System.Statin
+		case Statin_F7
+			Zoom_Call()
+		case Statin_SF6
+			Note_Consultation_ ('DAV',uge_Mess.NOTE)
+		case harmony.dataarret = 1001
+			ug_Export
+		case harmony.dataarret = 1002
+			ug_import
+	endswitch 
+
+endp
+
+;*
+public procedure ZoomConsultListe
+beginp
+
+	switch System.Statin
+		case Statin_F7
+			Zoom_Call()
+		case Statin_SF6
+			Note_Consultation_('DAV',uge_Mess.NOTE)
+		case harmony.dataarret = 1001
+			ug_Export
+		case harmony.dataarret = 1002
+			ug_import
+	endswitch 
+
+endp
+
+;*
+public procedure ZoomAvantInput
+beginp
+
+	Maj_Note(uge_Mess.CENOTE)
+
+endp
+
+;*
+public procedure ZoomArret
+beginp
+
+	switch system.statin
+		case Statin_F8
+			Zoom_Call(harmony.arret)
+		case Statin_SF6
+			Note_Saisie_('DAV',uge_mess.Note)
+			XmeToolBarSetButtonInfo(idOutilZoom, "NOTE", Condition(Not Note_Empty_('DAV'), "<BITMAP>NOTE"	,"<BITMAP>NOTE_N"))
+		case Statin_F7
+			Zoom_Call()
+		case Harmony.DataArret = 8002
+			if Harmony.Sourisbout = Right_Button
+				Zoom_Call()
+			elsif Harmony.Sourisclic = Double_Click
+				Harmony.Retour = Xmenext_Simulation_Touche
+				Harmony.Cplretour = C_F8
+			endif
+	endswitch
+
+endp
+ 
+;*
+public procedure ZoomApresCle1 
+beginp
+
+   zoom.clemin = zoomGetKeyByName("UGI_NumMess") 
+	Zoom.cle		= zoomGetKeyByName("UGI_NumMess") & uge_Mess.ug_NumMess
+   zoom.clemax = zoomGetKeyByName("UGI_NumMess") & $FF 
+
+endp
+
+;*
+public procedure ZoomApresRead1
+beginp
+
+	Zoom.TitreVar = uge_Mess.ug_NumMess
+
+endp

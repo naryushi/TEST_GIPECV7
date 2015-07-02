@@ -1,0 +1,17 @@
+xwin-projet        2.0
+[general]
+nom="test_gipecv7"
+progexec="divalto.dhop"
+date="20150622173115371699"
+util="ROOT"
+typetransport=3
+[profildefaut]
+[profil]
+nom="git"
+repobjet="/specifs/test_gipecv7/objets"
+implicites="test_gipecv7.txt"
+[sousprojets]
+fic="git.dhps"," "
+[projetsfusion]
+[fabricationmere]
+[autres]

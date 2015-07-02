@@ -1,0 +1,327 @@
+;*
+;*	Module pour la gestion et l'utilisation des fonctions VBS de windows
+;*
+
+Module ugtm_baseStd.dhop
+
+
+extern record * htdf fic 
+
+
+;*
+;*	Procedures
+;*
+
+public procedure ug_vbs_Write(&fic,Texte)
+;
+record * htdf fic
+1 Texte A
+beginp
+	Hwrite(fic,Left(Texte))	
+endp
+;*
+public procedure ug_powershell_Write(&fic,Texte)
+;
+record * htdf fic
+1 Texte A
+beginp
+	ug_vbs_Write(fic,Texte)
+endp
+;*
+Public Procedure ug_vbs_Debut_Fichier(&fic)
+; Génération du nom de fichier  si vide
+record * htdf fic
+beginp
+	fic.name=Condition(Fic.name=" ",wingetTemppath & "\" & system.user && Fstring("0",Rtime) && ".vbs",Fic.Name)
+	Loop fopen(fic,"P")<>0
+		Hcreatefile(fic.name,"U")		
+	endloop
+	herase(fic)
+endp
+;*
+function char ug_Lire_Fichier_powershell(NomFichier,SeparateurLigne)
+; Lecture d'un fichier
+; le separateur des lignes est $ODOA
+; Retour du Texte du fichier
+1 NomFichier A
+1 SeparateurLigne 1=$0d0a
+Record * htdf fic
+1 Texte S
+1 Ligne 10000
+beginf
+	fic.Name=Nomfichier
+	if hopen(fic,"P")=0
+		Loop Hread(fic,Ligne)=0
+			if Ligne <>" "
+				Texte &=Ligne && SeparateurLigne
+			endif
+		endloop
+		Texte=Left(Texte,Length(Texte)-1)
+		hclose(fic)
+	endif
+	freturn (Texte)
+endf
+;*
+Public Procedure ug_powershell_Debut_Fichier(&fic)
+; Génération du nom de fichier  si vide
+record * htdf fic
+beginp
+	fic.name=Condition(Fic.name=" ",wingetTemppath & "\" & system.user && Fstring("0",Rtime) && ".ps1",Fic.Name)
+	ug_vbs_Debut_Fichier(fic)
+endp
+;*
+Public Procedure ug_vbs_Fin_Fichier(&fic,ClientLeger)
+;
+record * htdf fic
+1 ClientLeger 1,0=True
+1 ug_NomFic 512
+beginp
+	Fclose(fic)	
+	if ClientLeger=True
+		ug_NomFic=LCWinGetTempPath & "\" & FileNameLastSegment(Fic.Name)
+		if LCWinDownload(Fic.Name,ug_NomFic,NePasModifierNomFichierArrivee=True)=false
+			Fic.Name=ug_NomFic
+		else
+			Messagebox(WinGetTextError(LCWinGetLastError),"Erreur",mb_iconexclamation)
+		endif
+	endif
+endp
+;*
+Public Procedure ug_Powershell_Fin_Fichier(&fic)
+;
+record * htdf fic
+beginp
+	ug_vbs_Fin_Fichier(fic)	
+endp
+;*
+Public Function char ug_vbs_Lancement(Fichier,Efface,ClientLeger)
+; Lance le fichier VBS 
+; et recupere les wscript.echo du fichier vbs
+1 Fichier A
+1 Efface 1,0=True
+1 ClientLeger 1,0=True
+record * htdf fic
+1 Retour S
+1 RetourFichier 100
+1 ug_NomficLog S
+1 ug_NomficLogS S	; cote serveur
+beginF
+	
+	if ClientLeger=False
+		ug_NomficLog=Modify("/","\",WinGetTempPath) & "\ug_Vbs" & Fstring('0',Rtime) & ".log"
+		Exec("Cmd",'/c cscript /nologo "' & Modify("/","\",fichier) & '" >"' & ug_NomFicLog,EXEC_GOSUB_WAIT,Condition(DebugMode=True,SW_ShowMinimized,Sw_Hide))
+	else
+		ug_NomficLog=Modify("/","\",LcWinGetTempPath) & "\ug_Vbs" & Fstring('0',Rtime) & ".log"
+		LcExec("Cmd",'/c cscript /nologo "' & Modify("/","\",fichier) & '" >"' & ug_NomFicLog,EXEC_GOSUB_WAIT,Condition(DebugMode=True,SW_ShowMinimized,Sw_Hide))
+
+		ug_NomficLogS=Modify("/","\",WinGetTempPath) & "\ug_Vbs" & Fstring('0',Rtime) & ".log"
+		LCWinUpload(ug_NomFicLog,ug_NomficLogS,ToujoursCreer=True)
+		ug_NomficLog=ug_NomficLogS
+	endif
+
+	fic.name=ug_NomFicLog
+	if FOpen(fic,'P')=0
+		Loop HRead(fic,RetourFichier)=0
+			Retour &= Condition(Retour<>' ','|','') & FromOemToAnsi(RetourFichier) && ""
+		endloop	
+		Fclose(fic)
+	endif
+
+	if Efface=True
+		if ClientLeger=False
+			WinDeleteFile(ug_NomFicLog)
+		 	WinDeleteFile(Fichier)
+		else
+			LcWinDeleteFile(ug_NomFicLog)
+		 	LcWinDeleteFile(Fichier)
+		endif
+	endif
+	freturn(Retour)
+endf
+;*
+
+Public procedure ug_vbs_SendKeys(Key,TempsAttente)
+; fonctionne comme le sendKey dans l'aide google
+;Backspace={BACKSPACE}, {BKSP} or {BS} ;Break={BREAK} ;Caps Lock={CAPSLOCK} ;Delete={DELETE} or {DEL} ;Down Arrow={DOWN} ;End={END}
+;Enter={ENTER} or ~ ;Escape={ESC} ;Help={HELP} ;Home={HOME} ;Insert={INSERT} or {INS} ;Left Arrow={LEFT} ;Num Lock={NUMLOCK}
+;Page Down={PGDN} ;Page Up={PGUP} ;Print Screen={PRTSC} ;Right Arrow={RIGHT} ;Scroll Lock={SCROLLLOCK} ;Tab={TAB} ;Up Arrow={UP}
+;F1={F1} ;F2={F2} ;F3={F3} ;F4={F4} ;F5={F5} ;F6={F6} ;F7={F7} ;F8={F8} ;F9={F9} ;F10={F10} ;F11={F11} ;F12={F12} ;F13={F13}
+;F14={F14} ;F15={F15} ;F16={F16}
+;
+;Key=Code ;Alt=% ;Ctrl=^ ;Shift Lock=+ 
+1 Key S	;  {ENTER} {TAB} "^" etc... ou LST=le numero de liste
+1 TempsAttente 5,0=0
+1 Execute 1,0=True
+1 Show 3,0=SW_HIDE
+1 Texte 500
+1 Lst L
+
+beginp
+	ug_vbs_Debut_Fichier(Fic)
+	
+	ug_vbs_Write(Fic,'set WshShell = WScript.CreateObject("WScript.Shell")')
+
+	ug_Xmt_Call(harmony.Defpmodule,"UG_VBS_SENDKEYS_AV")
+
+	
+	
+	if Count("LST=",Fstring('U',Key))>0
+		Lst=val(Modify('LST=','',Fstring('U',Key)))
+		if ListCount(Lst)>0
+			ListBegin(Lst)
+			Loop ListNext(Lst,Key)>0
+				Texte='wshshell.sendKeys "' & Key	 && '" ' 
+				ug_vbs_Write(Fic,Texte && "")
+				ug_vbs_Write(Fic,"wscript.Sleep " & val(TempsAttente))
+			endloop
+		endif
+	else
+		Texte='wshshell.sendKeys "' & Key	 && '"'
+		ug_vbs_Write(Fic,Texte && "")
+	endif
+
+	ug_Xmt_Call(harmony.Defpmodule,"UG_VBS_SENDKEYS_AP")
+
+	ug_vbs_Fin_Fichier(Fic)	
+
+	ug_vbs_Lancement(fic.Name)
+endp
+
+;*
+Public Function Char ug_vbs_Input_Box(Msg,Titre,Defaut,PosX,PosY)
+;
+1 Msg    A="Veuillez Saisir une Valeur"
+1 Titre  A="Titre"
+1 Defaut A=" "
+1 PosX   L=0
+1 PosY   L=0
+1 Texte S
+1 Retour S
+1 vI 3,0
+ 
+beginf
+	ug_vbs_Debut_Fichier(fic)
+	
+	ug_vbs_Write(fic,"Dim Result, WshShell") ;retour,retourA,Ahex")
+	ug_vbs_Write(fic,'set WshShell = WScript.CreateObject("WScript.Shell")')
+	ug_vbs_Write(fic,'Result=InputBox("' & Msg && '","' & Titre && '","' & Defaut && '"' && Condition(PosX>0,"," & Val(PosX),"") & Condition(PosY>0,',' & val(PosY),'') & ')')
+	ug_vbs_Write(fic,'wscript.echo Result')	
+
+	ug_vbs_Fin_Fichier(fic)
+
+	Texte=ug_vbs_Lancement(fic.Name,True)
+	freturn (Texte)
+endf
+;*
+Procedure ug_vbs_SendKeys_av
+;
+beginp
+	ug_vbs_Write(fic,'WshShell.Run "%windir%\notepad.exe"')
+	ug_vbs_write(fic,'Wscript.Sleep 2000')
+endp
+;*
+Public Function char ug_PowerShell_Lancement_Fic(Fichier,Efface)
+; Lance le fichier VBS 
+; et 
+1 Fichier A
+1 Efface 1,0=True
+record * htdf fic
+1 Retour S
+1 RetourFichier 100
+1 ug_NomficLog S
+1 Texte S
+beginF
+	ug_NomficLog=Modify("/","\"WinGetTempPath) & "\ug_powershell" & Fstring('0',Rtime) & ".log"
+	fic.Name=Fichier
+	if fopen(fic,'P')=0
+		Texte=ug_Lire_Fichier_powershell(fic.Name)
+		herase(fic)
+		Texte=Modify("ug_NomFicLog",ug_NomficLog,Texte)
+		Hwrite(fic,Texte)
+		Fclose(fic)
+	endif
+	
+	Exec("Cmd",'/c powershell /nologo "' & Modify("/","\",fichier) & '" ',EXEC_GOSUB_WAIT,Condition(DebugMode=True,SW_ShowMinimized,Sw_Hide))
+
+	fic.name=ug_NomFicLog
+	if FOpen(fic,'P')=0
+		Loop HRead(fic,RetourFichier)=0
+			Retour &= Condition(Length(Retour)<>0,'|','') & FromOemToAnsi(RetourFichier) && ""
+		endloop	
+		Fclose(fic)
+	endif
+
+	if Efface=True
+		WinDeleteFile(ug_NomFicLog)
+	 	WinDeleteFile(Fichier)
+	endif
+	freturn(Retour)
+endf
+
+;*
+Public Function char ug_Powershell_Lancement_Cmd(Commande,Efface)
+; Lance le fichier VBS 
+; et recupere les wscript.echo du fichier vbs
+1 Commande A ; entre $0a0d
+1 Efface 1,0=True
+record * htdf fic
+1 Retour S
+1 RetourFichier 100
+1 ug_NomficLog S
+1 ModeDebug 1,0=True
+beginF
+	ug_NomficLog=Modify("/","\"WinGetTempPath) & "\ug_PowerShell" & Fstring('0',Rtime) & ".log"
+	;Commande=Modify($0a0d,chr(13),Modify("ug_NomficLog",ug_NomficLog,Commande)) 
+
+
+
+	Exec("powershell", & Condition(ModeDebug=True," -noexit  -nologo","") & ' -command " & {' & Commande  && '"}',EXEC_GOSUB_WAIT,SW_ShowNormal) ;& '" >"' & ug_NomFicLog
+
+	fic.name=ug_NomFicLog
+	if FOpen(fic,'P')=0
+		Loop HRead(fic,RetourFichier)=0
+			Retour &= Condition(Length(Retour)<>0,'|','') & FromOemToAnsi(RetourFichier) && ""
+		endloop	
+		Fclose(fic)
+	endif
+
+	if Efface=True
+		WinDeleteFile(ug_NomFicLog)
+	endif
+	freturn(Retour)
+endf
+;*
+;Main
+;	Record * htdf ficA
+;
+;	MessageBox(ug_vbs_Input_Box(),'')
+;;	MessageBox(ug_vbs_Input_Box("Veuillez saisir l'information demandée","Titre de l'inputBox","C'est ça",500,250),'')
+;	
+;
+;;	ug_vbs_SendKeys("^+{ESC}") ; affichage du gestionnaire de tache
+;	1 Lst L
+;	Lst=ListGetId("ug_liste_sendkeys") | ListErase(Lst)
+;	harmony.Defpmodule=system.Znomprog
+;
+;	ListAddEnd(Lst,"B")
+;	ListAddEnd(Lst,"o")
+;	ListAddEnd(Lst,"n")
+;	ListAddEnd(Lst,"j")
+;	ListAddEnd(Lst,"o")
+;	ListAddEnd(Lst,"u")
+;	ListAddEnd(Lst,"r")
+;	ListAddEnd(Lst," c")
+;	ListAddEnd(Lst,"e")
+;	ListAddEnd(Lst,"c")
+;	ListAddEnd(Lst,"i")
+;	ListAddEnd(Lst," e")
+;	ListAddEnd(Lst,"s")
+;	ListAddEnd(Lst,"t")
+;	ListAddEnd(Lst," u")
+;	ListAddEnd(Lst,"n")
+;	ListAddEnd(Lst," t")
+;	ListAddEnd(Lst,"e")
+;	ListAddEnd(Lst,"s")
+;	ListAddEnd(Lst,"t")
+;	ug_vbs_SendKeys("LST=" & Val(Lst),300)
+;

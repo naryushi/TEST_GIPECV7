@@ -1,0 +1,455 @@
+;*
+;*	Programme de Copie de Base Divalto
+;*
+
+include ugtm_basestd.Dhsp
+
+1 Rep 1,0
+1 Chemin 50
+1 CheminDebut 	512
+1 CheminFin 	512
+1 CheminDebutSpe 	512
+1 CheminFinSpe 	512
+1 FlagAppli 2,0=0 
+1 Appli 3*10="gtfccfgafgrfrcfppfqufdofcofpvf"
+1 IdBarre L
+1 LstCC_Champs L
+1 LstCC L
+
+record A5dd.dhsd mz
+record ugd_outils.dhsd uge_cle_primaire
+record ugd_outils.dhsd uge_enreg uge_table
+
+Structure ug_rep	; repertoire + eltdir
+	1 Repertoire 512
+	record ddsys.Dhsd eltdir
+endStructure
+
+
+;*
+;*	Procedures
+;*
+
+Function Long ug_Recup_ListeFichier_Repertoire(Dossier,prefixe,Tri,TestAttributs,Attributs,MontrerFichierCaches,RecursifSousDossier)
+; Pour un Repertoire recupere chaque fichier
+; 
+; retour de la liste fichier
+1 Dossier       512
+1 prefixe       > ddsys.dhsd Prefixe="*"
+1 Tri           > ddsys.dhsd tri =4 ;1 = par nom  2 = inutilisé 3 = par date 4 = par taille
+1 TestAttributs > ddsys.dhsd TestAttributs=True
+1 Attributs     > ddsys.dhsd Attributs	=FILE_ATTRIBUTE_NORMAL ; FILE_ATTRIBUTE_READONLY - FILE_ATTRIBUTE_HIDDEN - FILE_ATTRIBUTE_SYSTEM - FILE_ATTRIBUTE_ARCHIVE -FILE_ATTRIBUTE_NORMAL - FILE_ATTRIBUTE_TEMPORARY 
+1 MontrerFichierCaches > ddsys.dhsd MontrerCaches=false
+1 RecursifSousDossier 1,0=false	; parcourt des sous dossiers
+record ddsys.dhsd OPDIR OP
+record ddsys.dhsd ELTDIR EL
+recorddiva ug_rep det
+1 st L
+1 Lst L
+beginf
+	Lst=ListGetId('ug_Liste_Repertoire')
+	init op=" "
+	op.Prefixe= prefixe
+	op.racine = Dossier 
+	op.MontrerCaches=MontrerFichierCaches
+	op.tri = tri
+	op.Attributs =  Attributs
+	op.TestAttributs = TestAttributs
+	; ouverture du repertoire
+	st = DirOpen(op)
+	if st
+	   MessageBox( "Erreur " & binhexa(ldx(st)) & " lors de l'ouverture du Repertoire '" & Dossier && "'" ,"Alerte",MB_ICONEXCLAMATION)
+	   Freturn(0)
+	endif
+	; Lecture du repertoire
+	loop DirRead(op,el) = 0
+		if RecursifSousDossier=True and el.Flagdir=true  
+		 	ug_Recup_ListeFichier_Repertoire(op.Racine & "/" & el.Nom,prefixe,tri,TestAttributs,Attributs,MontrerFichierCaches,RecursifSousDossier) 
+		elsif el.Flagdir=false 
+			init det=" "
+			det.eltdir=el
+			det.Repertoire=dossier
+			ListAddEnd(Lst,det)	
+		endif
+	endloop
+	; fermeture du repertoire
+	DirClose(op)
+
+	freturn (Lst)
+endf
+;*
+Procedure ug_Regenerer(Fichier,Reorganisation)
+;
+1 Fichier 512
+1 Reorganisation 1,0=false ; reorg ?
+record ddsys.dhsd hstat
+beginp
+	ping("XREOF_FICHIER",Fichier)
+	ping("XREOF_OPERATION",1)
+	ping("XREOF_MEMOIRE",65520)
+	ping("XREOF_MESSAGES",0)
+	ProgramCall("xreof.dhop",SW_HIDE)
+
+	if Reorganisation=true and Statfile(Fichier,Hstat)=0 and hstat.TypeF in ("N"," ")
+ 		ping("XREOF_FICHIER",fichier)
+		ping("XREOF_OPERATION",2)
+		ping("XREOF_MEMOIRE",65520)
+		ping("XREOF_MESSAGES",0)
+		ProgramCall("xreof.dhop",SW_HIDE)
+	endif 
+endp
+
+
+
+
+;*
+
+Procedure Ug_Copie_Base(BaseDepart,BaseFin,SpeFichierDepart,SpeFichierFin)
+;
+1 BaseDepart       512
+1 BaseFin          512
+1 SpeFichierDepart 512
+1 SpeFichierFin    512
+
+1 Lst L
+1 FicErr 1,0
+recorddiva ug_rep det ; detail
+record ddsys.dhsd hstat
+beginp
+	; recup liste fichier de la base
+	Lst=ug_Recup_ListeFichier_Repertoire(BaseDepart,Condition(FlagAppli=0,"*",Appli(FlagAppli)),4,False)
+	; Copie de la bases
+	ListBegin(Lst)
+	Loop ListNext(Lst,det)<>0
+		Display [=9 1 "|" Left(det.Nom,20) "|"]
+		HCopyFile(det.Repertoire && "/" & det.Nom ,BaseFin && "/" & det.Nom,false,'P',True,FicErr)	
+	endloop
+	; recopie du dossier
+	if Condition(FlagAppli=0,"*",Appli(FlagAppli)) in("gtf","*","ccf")
+		if Condition(FlagAppli=0,"*",Appli(FlagAppli)) in("*","gtf")
+			HCopyFile(det.Repertoire && "/gtfdos.dhfi" ,BaseFin && "/gtfdos.dhfi",false,'P',True,FicErr)	
+			HCopyFile(det.Repertoire && "/gtfdos.dhfd" ,BaseFin && "/gtfdos.dhfd",false,'P',True,FicErr)	
+		endif
+		if Condition(FlagAppli=0,"*",Appli(FlagAppli)) in("*","ccf")
+			HCopyFile(det.Repertoire && "/ccfdos.dhfi" ,BaseFin && "/ccfdos.dhfi",false,'P',True,FicErr)	
+			HCopyFile(det.Repertoire && "/ccfdos.dhfd" ,BaseFin && "/ccfdos.dhfd",false,'P',True,FicErr)	
+		endif
+	endif
+
+	ListErase(Lst)
+	; copie de fichier spe
+	if (FlagAppli>0 and MessageBox("Voulez vous copier les fichiers Spe","Alerte",mb_iconquestion+mb_yesno)=idyes) or FlagAppli=0
+		; recup liste fichier de la base
+		Lst=ug_Recup_ListeFichier_Repertoire(SpeFichierDepart,"*",4,False)
+		; Copie de la bases
+		ListBegin(Lst)
+		Loop ListNext(Lst,det)<>0
+			Display [=9 1 "|" Left(det.Nom,20) "|"]
+			HCopyFile(det.Repertoire && "/" & det.Nom ,SpeFichierFin && "/" & det.Nom,false,'P',True,FicErr)	
+		endloop
+	endif
+
+	; Controle de fichier base Std 
+	Lst=ug_Recup_ListeFichier_Repertoire(BaseFin,Condition(FlagAppli=0,"*",Appli(FlagAppli)),4,False)
+	; Copie de la bases
+	ListBegin(Lst)
+	Loop ListNext(Lst,det)<>0
+		Display [=9 1 "|" Left(det.Nom,20) "|"]
+		det.Nom=Fstring("l",det.Nom)
+		if Count(".dhfi",det.Nom)>0
+			if StatFile (det.Repertoire && "/" & Det.Nom , Hstat)=0 and Hstat.Locki=$01
+				ug_Regenerer(det.Repertoire && "/" & Det.Nom)
+			endif
+		endif
+	endloop
+	; Controle de fichier base Spe 
+	Lst=ug_Recup_ListeFichier_Repertoire(SpeFichierFin,Condition(FlagAppli=0,"*",Appli(FlagAppli)),4,False)
+	; Copie de la bases
+	ListBegin(Lst)
+	Loop ListNext(Lst,det)<>0
+		Display [=9 1 "|" Left(det.Nom,20) "|"]
+		det.Nom=Fstring("l",det.Nom)
+		if Count(".dhfi",det.Nom)>0
+			if StatFile (det.Repertoire && "/" & Det.Nom , Hstat)=0 and Hstat.Locki=$01
+				ug_Regenerer(det.Repertoire && "/" & Det.Nom)
+			endif
+		endif
+	endloop
+
+
+endp
+;*
+Function Long OuvreFerme_Dico(Dico,OuvreFerme)
+1 Dico 100
+1 iddico L
+1 Retour 5000
+1 OuvreFerme 1,0=False ; false = ouvre et true = ferme
+beginf
+	if OuvreFerme=True
+		ddinterface(dd_close,iddico," ",retour,1)					;Ferme un dictionnaire potentiellement ouvert
+	else
+		if DDInterface(DD_OPEN,IdDico,Dico,Retour,1) <> 0 
+			DDInterface(DD_GETERROR,IdDico," ",Retour,1)
+			Messagebox(hmpseek(Retour,"TexteErreur"),"Alerte",mb_iconexclamation)
+			programexit
+		endif
+	endif
+	freturn(IdDico)
+endf
+;*
+function char Charger_Champs(IdDico,Enreg,Champ)
+	;record ugd_outils.dhsd uge_champs erech
+	1 dim 5,0*4
+	1 Vi 5,0
+	1 vJ 5,0
+	1 vk 5,0
+	1 vL 5,0
+	1 Lect L
+	1 Champs > ugd_outils.dhsd champs
+	1 Zpack B = false
+	1 DebutDepack > ugd_outils.dhsd posd
+	1 Pas 9,0*4
+	1 PasTotal 9,0
+	1 Retour 5000
+	1 Enreg 100
+	1 Champ 100
+	1 IdDico L
+	record ugd_outils.dhsd uge_champs
+
+beginf
+	
+	if DDInterface(DD_TABLEFIND_DD,IdDico,enreg,Retour) = 0
+		uge_table.Enreg=hmpseek(Retour,"Nom")
+		uge_table.longueur=hmpseek(Retour,"LgTable")
+		uge_table.Lib70=hmpseek(Retour,"Libelle")
+		Lect = DDInterface(DD_DATAFIND,IdDico,Champ,Retour,1)	
+		if Lect = 0 
+		
+			if hmpSeek(Retour,"Virtuel") = " "
+				uge_champs.niveau = hmpseek(retour,"Niveau")
+				uge_champs.lib70 = hmpseek(retour,"Libelle")
+				uge_champs.type = hmpseek(retour,"Nature")
+				uge_champs.posd = hmpseek(retour,"position")
+				uge_champs.longueur = hmpseek(retour,"longueur")
+				
+				if not zPack
+					if val(hmpseek(retour,"DonneePack")) = 2
+						zPack = true
+						DebutDepack = uge_champs.posd - 1
+					endif
+				endif
+
+				uge_champs.Present_pack = condition(zPack,2,1)
+				if uge_champs.Present_pack = 2
+					uge_champs.posd -= DebutDepack
+				endif
+				
+				uge_champs.champs = hmpseek(retour,"Nom")
+					
+			endif
+
+		endif
+	endif
+	freturn(uge_champs)
+endf
+;*
+function int ug_Recherche_ClePrimaire(IdDico,Fichier,Enreg)
+;
+
+	record ugd_outils.dhsd uge_champs erech
+	1 Lect L
+	1 NomChamp > ugd_outils.dhsd champs
+	1 adr 16
+	1 retour 5000
+	1 IdDico L
+	1 Fichier 100
+	1 Enreg 100
+beginf
+
+	;Liste mémoire qui va contenir les champs de la clé
+;	LstCC = ListGetId("CHAMP_CLE")
+;	if getadressfunction(" ","Tri_champs_cle",adr) <> 0
+;		programexit
+;	endif
+;	listmode(LstCC,true,adr)
+
+	LstCC_Champs = ListGetId("CHAMP_CLE_DETAIL")
+	ListErase(LstCC_Champs)
+
+	init uge_Cle_Primaire = " "
+
+	if ddinterface(DD_FILEFIND,iddico,fichier,retour) = 0 and DDInterface(DD_TABLEFIND,IdDico,enreg,Retour) = 0
+
+		Lect = DDInterface(DD_KEYBEGIN,IdDico," ",Retour,1)
+		loop Lect = 0
+
+			if hmpseek(retour,"FlagClePrimaire") = true
+
+				uge_cle_primaire.cle_p = hmpseek(retour,"nom")
+				uge_cle_primaire.lib70 = hmpseek(retour,"libelle")
+				uge_cle_primaire.acces = hmpseek(retour,"cleounomdecle")
+				uge_cle_primaire.Type_Cle = condition(hmpseek(retour,"lettrecle")	= system.Esp,2,1)		;Si vide, clé nommé (2) sinon lettre cle (1)
+				uge_cle_primaire.cle_cebin = 1
+				uge_cle_primaire.cle_dos = 1
+
+				;Lecture des champs de l'index principal pour marquer dans le tableau
+;				lect = ddinterface(dd_datakeybegin,IdDico," ",retour,1)
+;				loop lect = 0
+;					
+;					init erech = " "
+;					erech.Champs = hmpseek(retour,"nom")
+;					erech.posd = hmpseek(retour,"position")	  			;20110406
+;					erech.longueur = hmpseek(retour,"longueur")			;20110406
+;					listInsert(LstCC_Champs,erech)
+;
+;					listinsert(LstCC,hmpseek(retour,"nom"))
+;
+;					if hmpseek(retour,"nom") = "DOS"
+;						uge_cle_primaire.cle_dos = 2
+;					endif
+;					if hmpseek(retour,"nom") = "CEBIN"
+;						uge_cle_primaire.cle_cebin = 2
+;					endif
+;
+;					lect = ddinterface(dd_datakeynext,iddico," ",retour,1)
+;
+;				endloop
+			endif
+
+			lect = DDInterface(DD_KEYNEXT,IdDico," ",Retour,1)	
+		endloop
+	endif
+
+
+	freturn (0)
+endf
+
+;*
+Procedure ug_Modif_NomDos(Dossier)
+;
+1 Dossier 512
+1 LstImp L
+1 IdDico L
+record ddsys.dhsd implicite imp
+record * htdf fic
+record ugd_outils.dhsd uge_champs
+record ugd_outils.dhsd uge_champs erech
+
+1 Enreg 10000
+1 LgVal 3,0
+beginp
+	; Recup et modif des implicites
+	LstImp=ListImplicitesGet	
+	ListErase(LstImp)
+	Imp.Path="/divalto/sys/"
+	ListAddEnd(LstImp,Imp)
+	Imp.Path=Dossier
+	ListAddEnd(LstImp,Imp)
+	ListImplicitesSet(LstImp)
+	; Changement du nom de dossier Achat Vente
+	fic.Name="gtfdos.dhfi"
+	if Fopen(fic,"P")=0
+		IdDico=OuvreFerme_Dico("gtfdd.dhsd")
+		uge_champs=Charger_Champs(IdDico,"SOC","NOM")
+		ug_Recherche_ClePrimaire(IdDico,"GTFDOS","SOC")
+		OuvreFerme_Dico("gtfdd.dhsd",True)
+		; constitution de la clef
+		fic.Key=condition(uge_cle_primaire.Type_Cle = 1,nospaces(uge_cle_primaire.Acces),getkeybyname(fic,uge_cle_primaire.Acces))
+		;
+
+		Loop Hread(fic,Enreg)=0
+			LgVal=Length(Mid(Enreg,uge_champs.posd,uge_champs.longueur))
+			Mid(Enreg,uge_champs.posd,uge_champs.longueur)="*****"  & Left(Mid(Enreg,uge_champs.posd, \
+										Condition((LgVal+10)>uge_champs.longueur,LgVal-((LgVal+10)-uge_champs.longueur),uge_champs.longueur) )) & "*****"
+												
+			Hrewrite(fic,Left(Enreg,uge_Table.longueur))
+		endloop
+	endif
+	; Changement du nom de dossier Comptabilite
+	fic.Name="ccfdos.dhfi"
+	if Fopen(fic,"P")=0
+		IdDico=OuvreFerme_Dico("ccfdd.dhsd")
+		uge_champs=Charger_Champs(IdDico,"CA","NOM")
+		ug_Recherche_ClePrimaire(IdDico,"CCFDOS","CA")
+		OuvreFerme_Dico("ccfdd.dhsd",True)
+		; constitution de la clef
+		fic.Key=condition(uge_cle_primaire.Type_Cle = 1,nospaces(uge_cle_primaire.Acces),getkeybyname(fic,uge_cle_primaire.Acces))
+		;
+
+		Loop Hread(fic,Enreg)=0
+			LgVal=Length(Mid(Enreg,uge_champs.posd,uge_champs.longueur))
+			Mid(Enreg,uge_champs.posd,uge_champs.longueur)="*****"  & Left(Mid(Enreg,uge_champs.posd, \
+										Condition((LgVal+10)>uge_champs.longueur,LgVal-((LgVal+10)-uge_champs.longueur),uge_champs.longueur) )) & "*****"
+												
+			Hrewrite(fic,Left(Enreg,uge_Table.longueur))
+		endloop
+	endif
+
+endp
+
+
+
+;*
+;*	Programme Principal
+;*
+
+Main
+	XmeTitle("Programme de copie de base")
+
+	mz.MeCle="hmenue.dhoe"
+	XmeLoad(Mz.mecle)
+
+	Display "Pour que la copie soit possible il faut avoir un chemin harmony sur le serveur"
+	Display "TEST et REEL"
+
+	if (rep:=GetTypeXlogf)=1 ; Local
+
+	elsif rep=2					 ; Serveur
+		Chemin=GetPathXlogf()	
+	endif
+	
+	if Messagebox("Voulez vous commencer la copie de base ?","Alerte",mb_iconinformation+mb_yesno)=idyes
+		CheminDebut=Chemin && "/REEL/FICHIERS/"
+		CheminFin  =Chemin && "/TEST/FICHIERS/"
+		CheminDebutSpe=Chemin && "/REEL/SPE/FICHIERS/"
+		CheminFinSpe  =Chemin && "/TEST/SPE/FICHIERS/"
+		Display "Chemin Base Depart  =" & CheminDebut
+		Display "Chemin Base Arrivée =" & CheminFin
+		Display "Chemin Spe fichiers Depart  =" & CheminDebutSpe
+		Display "Chemin Spe fichiers Arrivée =" & CheminFinSpe
+
+
+		if Messagebox("Voulez vous copier Uniquement les fichiers d'un Module ?","Alerte",mb_iconinformation+mb_yesno)=idyes
+			IdBarre=XmetoolbarGetId(mz.MeCle,"FENETRE",True)
+			XmeToolbarSetWindow(IdBarre,Mz.MeCle,1)
+			;"gtfccfgafgrfrcfppfqufdofcofpvf"
+			ug_Ajouter_Bouton(IdBarre,"UG_GTF",1001,"Achat Vente")
+			ug_Ajouter_Bouton(IdBarre,"UG_CCF",1002,"Comptabilité")
+			ug_Ajouter_Bouton(IdBarre,"UG_GAF",1003,"Affaire")
+			ug_Ajouter_Bouton(IdBarre,"UG_GRF",1004,"Relation Tiers")
+			ug_Ajouter_Bouton(IdBarre,"UG_RCF",1005,"Comptabilité")
+			ug_Ajouter_Bouton(IdBarre,"UG_PPF",1006,"Paye")
+			ug_Ajouter_Bouton(IdBarre,"UG_QUF",1007,"Qualité")
+			ug_Ajouter_Bouton(IdBarre,"UG_DOF",1008,"Documentation")
+			ug_Ajouter_Bouton(IdBarre,"UG_COF",1009,"Contrôle")
+			ug_Ajouter_Bouton(IdBarre,"UG_PVF",1010,"Point de Vente")
+
+			Loop 1
+				XmeDispv(mz.MeCle,1,Xme_Mode_Goto)
+
+				XmeConsult(mz.MeCle,1,Xme_Mode_Goto)			
+				if Harmony.Key=K_F9
+					exitloop
+				endif
+				if Harmony.Dataarret in(1000..1020)
+					FlagAppli=Harmony.DataArret-1000
+					exitloop
+				endif
+			Endloop
+			XmeRet
+		endif
+		Ug_Copie_Base(CheminDebut,CheminFin,CheminDebutSpe,CheminFinSpe)
+		ug_Modif_NomDos(CheminFin)
+	endif
+
+	Programgoto('xquit')

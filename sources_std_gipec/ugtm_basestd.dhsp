@@ -1,0 +1,1000 @@
+;*
+;*	Module de fonction de base Standard Gipec
+;*
+
+OverWrittenBy ugum_basestd.dhop 
+
+include zmapi.dhsp
+
+Include 	"Zrtf.dhsp"
+Module A5pm000.dhop
+Module ysystemex.dhop
+Module A5pmFlash.dhop
+Module A5pmNotejoint.dhop
+Module A5pmFic.dhop
+Module A5pmWin.dhop
+
+
+Extern Record A5dd.Dhsd m2
+Public record A5dd.Dhsd mz
+
+Public record A5dd.dhsd A1
+
+Extern Record a5dd.Dhsd mFlash
+Extern REcord A5dd.Dhsd mUser
+
+1 position L 
+1 Longueur L
+
+Public Structure ugs_Retour
+  	1 Retour 100 	; retour de la fonction 
+	1 P1 100	 		; parametre 1
+	1 P2 100	 		; parametre 2
+	1 P3 100	 		; parametre 3
+	1 P4 100	 		; parametre 4
+	1 P5 100	 		; parametre 5
+	1 P6 100	 		; parametre 6
+	1 P7 100	 		; parametre 7
+	1 P8 100	 		; parametre 8
+	1 P9 100	 		; parametre 9
+	1 P10 100 		; parametre 10
+EndStructure
+;*
+;*	Procedures
+;*
+Proto Function Char ug_Xmt_Call(Modules,Procedures)
+;	Xmt Call avec parametre du module
+1 Modules    50 ; nom du module 
+1 Procedures 50 ; nom de la procedure ou fonction
+EndProto
+;*
+public function char ug_Rechercher_Ini(Fichier,Section,Ligne)
+1 fichier 500
+1 Section 50
+1 Ligne 50
+record * htdf fic
+1 Valeur 500
+1 numfic 1
+1 ClientLeger 1,0=false
+beginf
+	fic.name=Fichier
+	if fopen(fic)=0
+		fichier = GetSystemFileName (fic)	 ; recherche le nom windows
+		fclose(fic)
+		if fichier<>" " | fic.name=fichier | endif
+		;hcopyfile(fic.name,"C:\" & filenamelastsegment(fic.name),NumeroFichierErreur=numfic)
+		hcopyfile(fic.name,WinGetTempPath & "\" & filenamelastsegment(fic.name),NumeroFichierErreur=numfic)
+		fic.name=WinGetTempPath & "\" & filenamelastsegment(fic.name)
+		Valeur=WinReadProfileString(Section,Ligne,fic.name)
+		Windeletefile(fic.name && $00)
+		freturn(Valeur)
+	endif
+	freturn(" ")
+endf
+;*
+public procedure ug_Envoi_Mail(sujet,Texte,Adresse,fichier,profil,mdpprofil,afferr,dialog,retour)
+; procedure d'envoi des email
+; Avant l'envoi appel de la fonction UG_ENVOI_MAIL_AV par mz.mtcle
+1 sujet S
+1 Texte 5000
+1 Adresse S
+1 i 3,0
+1 fichier 512
+1 profil A=" "
+1 MdpProfil A=" "
+1 AffErr 1,0=True
+1 Dialog 1,0=False 
+1 Retour 1,0=True
+
+beginp
+	i = MapiOpen
+	Texte=Modify("|",$0A & $0D,Texte)
+	;sujet = "Commande " & filenamelastSegment(g3xq.fic) & " Piece Rejeté"
+	;Texte = "Erreur sur commande " & filenamelastSegment(g3xq.fic) & $0d0a
+	;adresse = "guillaume@chocmod.com;n.deforche@chocmod.com"
+	;MapiOptions(profil,passe,afferr,dialog,retour)
+	MapiOptions(profil,mdpprofil ,AffErr,Dialog,Retour)
+
+	ug_Xmt_Call(mz.MtCle,"UG_ENVOI_MAIL_AV")
+
+	i	 = MapiSend(MAPI_MAIL  ,sujet,texte,adresse,fichier)
+	i = MapiClose
+endp
+;*
+;*
+Public Function long ug_Envoi_Mail_Complet(Sujet,Body,AdresseTo,AdresseCc,AdresseCci,Fichier,TypeMess)
+; Envoi d'email avec fonction mapi complete
+; Adresse CC,to, cci doivent etre separé par ";"
+; fichier separé aussi par ";"
+; ug_Envoi_Mail_Complet_av et ug_Envoi_Mail_Complet_ap sur mz.mtcle
+; Retour 0 = pas d'erreur
+
+1 Sujet      S
+1 Body       S
+1 AdresseTo  1000		 
+1 AdresseCc  1000=" "
+1 AdresseCci 1000=" "
+1 Fichier    S="" ; fichier 
+1 TypeMess 	2,0=MAPI_MAIL ; MAPI_FAX=3 MAPI_MAIL=4 MAPI_INTERNET=5 MAPI_AUTRE=6 MAPI_FAX2=7 MAPI_MAIL2=8 MAPI_INTERNET2=9 MAPI_AUTRE2=10 MAPI_DIRECT=11
+
+1 NewMess L
+1 Email 100
+1 UnFichier 1000
+1 Pos L=1
+1 i 1,0
+1 Retour 1,0
+beginf
+	i=MapiOpen
+
+	NewMess=MapiCreateMessage (Sujet,Body)	
+	; To
+	Pos=1
+	Loop (Email:=Split(AdresseTo,Pos,SeparateursNonRendus=";"))<>$00
+		MapiAppendAddress(NewMess,TypeMess,Email,MAPI_TO)
+	endloop
+	; cc
+	Pos=1
+	Loop (Email:=Split(AdresseCc,Pos,SeparateursNonRendus=";"))<>$00
+		MapiAppendAddress(NewMess,TypeMess,Email,MAPI_CC)
+	endloop
+	; cci
+	Pos=1
+	Loop (Email:=Split(AdresseCci,Pos,SeparateursNonRendus=";"))<>$00
+		MapiAppendAddress(NewMess,TypeMess,Email,MAPI_BCC)
+	endloop
+	; Fichier
+	Pos=1
+	Loop (UnFichier:=Split(Fichier,Pos,SeparateursNonRendus=";"))<>$00
+		MapiAppendFile(NewMess,UnFichier && $00)
+	endloop
+
+	Pinglocal("ug_newmess",newmess)
+	ug_Xmt_Call(mz.MtCle,"ug_Envoi_Mail_Complet_av")
+
+	Retour=MapiSendMessage(NewMess)
+
+	ug_Xmt_Call(mz.MtCle,"ug_Envoi_Mail_Complet_ap")
+
+	MapiDeleteMessage (NewMess)
+
+	MapiClose
+
+	Freturn(Retour)
+endf
+;*
+;*
+Public procedure ug_Envoi_Email_Blat(Adresse,sujet,Texte,Fichier,AdresseCc,AdresseBcc,AdresseFrom,Profil,mdpprofil,Show,GestionLog)
+; Procedure d'envoi des email avec le programme de BLAT
+; Avant l'envoi appel de la fonction UG_ENVOI_MAIL_BLAT_AV par mz.mtcle et PingLocal("ug_param",parametreblat)
+; pour la gestion des parametres
+; un fichier blat.ini peut être creer. S'il existe il servira pour l'install du poste
+; [EMAIL] et section 
+; Sender , SMTP_Port, SMTP_Server, Login, Mdp
+; Dans le dossier %temp% il y a le fichier blat.log 
+1 sujet     S		  	; Sujet du message
+1 Texte     S			; Texte ou Body du message	entre '|' pour chaque ligne
+1 Adresse   S			; Adresse TO du message	entre ","
+1 AdresseCc	S=" "		; Adresse CC du message	entre ","
+1 AdresseBcc S=" "	; Adresse BCC du message entre ","
+1 AdresseFrom S=" " 	; si vide c'est la cle registre qui est lue  HKLM\SoftWare\Public Domain\Blat et Sender
+1 Fichier   S=" "	 	; entre "," ou "|" si plusieurs
+1 Profil    20=" "		; Profil pour l'envoi d'email si besoin
+1 mdpprofil 20=" "		; Mdp Profil pour l'envoi si besoin
+1 Show 3,0=Sw_hide	; Affichage de la commande dos par defaut "NON"
+1 GestionLog 1,0=false
+
+1 AdresseBlat S
+1 StL L
+record * htdf fic
+
+1 FicL L
+1 FichierACopier 8*4="blat.exeblat.dllblat.libBlat.ini"
+1 vI 3,0
+1 Numfic 3,0
+1 PortSMTP 5,0
+1 ServerSMTP S
+1 Param S
+
+1 BlatReg S
+1 ErrDroit 1,0=False
+beginp
+	if WinRegReadString("HKEY_LOCAL_MACHINE\SOFTWare\Microsoft\Windows\CurrentVersion","ProgramFilesDir (x86)")=" "
+		BlatReg="HKEY_LOCAL_MACHINE\SoftWare\Public Domain\Blat"
+	else
+		BlatReg="HKEY_LOCAL_MACHINE\SoftWare\Wow6432Node\Public Domain\Blat"
+	endif
+	Const BlatC="\blat\"
+	
+
+	;Texte=Modify("|",$0A & $0D,Texte)
+	; copie du fichier blat pour etre sur de l'avoir pour le lancement
+	fic.Name="ugtm_baseStd.dhsp"
+	if Fopen(fic,"P")=0
+		
+		; on part du principe que le dossier Blat se trouve dans le dossier sources_std_gipec
+		AdresseBlat=Modify("/","\",WinGetTempPath) & BlatC
+		if (stL:=CreateDirectory(AdresseBlat)) not in(0,9)
+			AdresseBlat=modify("/","\",filenamebase(GetSystemFileName(fic))) & BlatC
+			ErrDroit=True
+		endif
+		Fclose(fic)
+		if (FicL:=WinCreateFile(AdresseBlat & "blat.exe",GENERIC_READ,FILE_SHARE_READ,0,OPEN_EXISTING,0,0))=-1
+			For vI = 1 to 3
+				HcopyFile(FileNameBase(Fic.Name) & BlatC & fichierAcopier(vI),AdresseBlat & FichierACopier(vI),0,'F',0,NumFic)
+			next
+		else
+			WinCloseHandle(FicL)
+		endif
+		
+		; on install si existant
+		if HcopyFile(FileNameBase(Fic.Name) & BlatC & fichierAcopier(4),AdresseBlat & FichierACopier(4),False,'F',0,NumFic)=0 or ErrDroit=True
+			if AdresseFrom=" " | AdresseFrom	=WinReadProfileString("Email","Sender",AdresseBlat & FichierACopier(4)) | endif
+			PortSMTP		=WinReadProfileString("Email","SMTP_Port",AdresseBlat & FichierACopier(4))
+			ServerSMTP	=WinReadProfileString("Email","SMTP_Server",AdresseBlat & FichierACopier(4))
+			if Profil=" " 		| Profil		=WinReadProfileString("Email","Login",AdresseBlat & FichierACopier(4)) 	| endif
+			if mdpprofil=" " 	| mdpprofil	=WinReadProfileString("Email","Mdp",AdresseBlat & FichierACopier(4))		| endif
+			if ErrDroit=False
+				HdeleteFile(AdresseBlat & FichierACopier(4),stL)
+			endif
+		endif
+		;if (WinRegReadString(BlatReg,"Sender"))=" "
+			; init donnees
+		AdresseFrom	=Condition(AdresseFrom=" ","test@test.fr",AdresseFrom)
+		PortSMTP		=Condition(PortSMTP=0,25,PortSMTP)
+		ServerSMTP	=Condition(ServerSMTP=" ","hermes.ate.tm.fr",ServerSMTP)
+		; Ecriture registre
+		WinRegWriteString(BlatReg,"Sender",AdresseFrom)
+		WinRegWriteString(BlatReg,"SMTP Server",ServerSMTP)
+		WinRegWriteString(BlatReg,"SMTP Port",Str(Val(PortSMTP)))
+		WinRegWriteString(BlatReg,"Login",Profil)
+		WinRegWriteString(BlatReg,"Pwd",mdpprofil)
+		WinRegWriteString(BlatReg,"Try","1")
+		;endif
+		AdresseFrom=Condition(AdresseFrom=" ",Condition(WinRegReadString(BlatReg,"Sender")=' ',WinReadProfileString('Email','Sender',AdresseBlat & "\Blat.ini"),WinRegReadString(BlatReg,"Sender")),AdresseFrom)
+		
+		Param &=" -server " & ServerSmtp && " -port " & val(PortSMTP) && " -f " & AdresseFrom && ""
+		
+		Param &=condition(Profil<>" "," -u " & Profil && "","") & Condition(MdpProfil<>" "," -pw " & MdpProfil && "","")
+
+		;Param &=Condition(AdresseFrom=" ","",' -from "' & AdresseFrom && '"')
+		; on lance les infos pour blat
+		
+		Param &=' -to "' & Adresse && '"'
+		Param &=' -subject "' & Modify('"',"",sujet) && '"' 
+
+		;if Texte<>" " ; 
+			; si le texte est un fichier
+			fic.Name=Texte
+			if Fopen(fic,"P")=0
+				Fclose(fic)
+				if hcopyfile(fic.Name,AdresseBlat & filenamelastsegment(fic.Name),0,'P',0,NumFic)=0
+					Param &= ' -BodyF "' & AdresseBlat && filenamelastsegment(fic.Name) && '"' 
+				else
+					Param &= ' -BodyF "' & fic.Name && '"'
+				endif
+			else
+			; si le texte est un texte
+				Param &= ' -Body "' & Modify($0d0a,"|",Modify('"','`',condition(Texte=" ",".",Texte))) && '"'
+			endif
+		;endif
+		; si Adresse CC
+		if AdresseCc <>" "
+			Param &= ' -cc "' & AdresseCC && '"' 
+		endif
+		; si Adresse Bcc
+		if AdresseBcc<>" "
+			Param &= ' -bcc "' & AdresseBcc && '"' 
+		endif
+		; si Fichier 
+		if Fichier<>" "
+			Fichier = Modify("|",",",modify("/","\",Fichier))
+			Param &= ' -attach "' & Fichier && '"'
+		endif
+		if GestionLog=True
+			Param &= ' >>"' & AdresseBlat & '\Blat.Log"'
+		endif
+
+		PingLocal("ug_Param",Param)
+		ug_Xmt_Call(mz.MtCle,"UG_ENVOI_MAIL_BLAT_AV")
+		if PinglocalReceiveAndDelete("ug_Param",Texte)=0
+			Param=Texte
+		endif
+		; lancement du programme blat
+		if DebugMode=True and Show=Sw_ShowNormal
+			Exec("CMD",' /K call "' & AdresseBlat & 'blat.exe" ' & Param && "",EXEC_GOSUB_WAIT,Show)
+		else
+			Exec("CMD",' /C call "' & AdresseBlat & 'blat.exe" ' & Param && "",EXEC_GOSUB_WAIT,Show)
+		endif
+	endif	
+	;		
+endp
+;*
+
+
+;*
+
+
+public procedure ug_Lance_Tri(Lst,NomTri,NomModule,Positionz,Longueurz)
+; pour faire le tri d'une Liste
+; si nomtri=" " desactivation du tri
+1 NomTri 50="Tri_Par_Pos"
+1 NomModule 50="ugtm_baseStd.dhop"
+1 Lst L
+1 Adr 16
+1 Positionz N=0
+1 longueurz N=0
+beginp
+	if NomTri<>" "
+		Position=Positionz
+		longueur=longueurz
+		GetAdressFunction(NomModule,NomTri,Adr)
+		ListMode(Lst,1,Adr)
+		ListSort(Lst,Adr)
+	else
+		ListMode(Lst,0,Adr)
+	endif
+endp
+;*
+public procedure ug_Lance_Tri_Tableau(Lst,NomTri,NomModule,Positionz,Longueurz)
+; pour faire le tri d'un tableau
+; si nomtri=" " desactivation du tri
+1 NomTri 50="Tri_Par_Pos"
+1 NomModule 50="ugtm_baseStd.dhop"
+1 Lst L
+1 Adr 16
+1 Positionz N=0
+1 longueurz N=0
+beginp
+	if NomTri<>" "
+		Position=Positionz
+		longueur=longueurz
+		GetAdressFunction(NomModule,NomTri,Adr)
+		XmeListMode(Lst,1,Adr)
+		XmeListSort(Lst,Adr)
+	else
+		XmeListMode(Lst,0,Adr)
+	endif
+endp
+
+;*
+function Long Tri_Par_Pos(&a,&b)
+1 a A
+1 b A
+beginf
+	freturn(SortCompare(Mid(a,Position,Longueur),Mid(b,Position,Longueur)))
+endf
+;*
+public function ptr ug_ConvertirMonFichierAuFormatPDF(ficorg,ficdest)
+;conversion des fichiers au formats
+1 	ficorg	A ; fichier d'origine
+1	ficdest  A ; fichier de destination
+1  i		x
+beginf
+ i = MapiOpen
+ if i <> 0 	
+ 	freturn 1		;erreur
+ endif
+
+ if MapiTestSiConvertPDF = 0
+	 i = MapiClose
+ 	 freturn 1			;le convertiseur prfmail n'est pas installer
+ endif
+
+ i = MapiConvertPDF(ficorg,ficdest) 
+
+ MapiClose
+ freturn i
+endf
+;*
+;Public Function Long ug_Lire_Note_LST(NoNote)
+;1	NoNote	>gtfdd.dhsd Note
+;1	i			X
+;1 	Res		X
+;1 	NbLign	X
+;1	FicRtf 	260
+;1	Id	      6,0
+;1	Ligne		1000 = ' '
+;1	Note		S
+;
+;1 Lst L
+;BeginF
+;
+;	Note_Chargement(0,NoNote)
+;	Lst=ListGetId('ug_Liste_Note')
+;	ListErase(Lst)
+;
+;	FicRtf = RTF_Name(0)
+;	Id = RTFOpen2(FicRtf,1000)
+;	
+;	NbLign = RTFLineCount(Id)
+;	For i = 1 To Nblign
+;		Res = RTFLineGet(Id,i,Ligne)
+;		If FString('A',Ligne) <> ''
+;			;Note = Note && Ligne
+;			ListAddEnd(Lst,Ligne)
+;		EndIf
+;	Next
+;	
+;	Res = RTFClose(Id)  ;ATTENTION le close est obligatoire
+;
+;	FReturn(Lst)
+;
+;EndF
+;*
+;*
+public Procedure ug_Ajouter_Bouton(idtoolbar,NomBtn,Arret,Libelle,Bulle,Bitmap,TypeBtn,IsEnabled,Visible,LieuBtn,BtnRefPourLieu,BtnStd,PoliceBtn,NomSelec)
+; Procedure pour Ajouter des bouton depuis un programme diva
+; il suffit de donner qq parametre et le bouton et crée
+1 idtoolbar L					  	; id de la toolbar
+1 NomBtn    50					  	; nom du bouton
+1 Bitmap    50=" "			  	; Nom de la bitmap
+1 Arret     5					  	; Point d'arret (si K_F5 mettre "#" & K_F5)
+1 Libelle   50="Generique"	  	; Nom d'affichage du bouton
+1 IsEnabled 1,0=true			  	; à la creation du bouton il sera active sinon false
+1 LieuBtn	3,0=TOOLBAR_LAST_ITEM ; a la fin par defaut
+1 BtnRefPourLieu 50=" "				 ; 
+1 BtnStd		50=" "				; si bouton standard non du bouton à saisir
+1 TypeBtn 	50="NORMAL"			; Possibilité CASE ; RADIO ; SEPARATEUR
+1 PoliceBtn 50=" "				; Polite du Bouton
+1 NomSelec	50=" "				; Nom Pour la selection 
+1 Bulle 		500=" "				; Bulle du Bouton
+1 Visible 	1,0=True				; Affichage ou non du bouton
+
+1 Param S
+beginp
+	if idtoolbar=0 | Preturn | endif
+	Param=Condition(BtnStd=" ","","<BOUTON>" & left(BtnStd)) & \
+			"<IDENT>" 	& NomBTN && \
+			"<TYPE>" 	& TypeBTN && \
+			"<LIBELLE>" & Libelle && \
+			"<POLICE>" 	& PoliceBtn && \
+			"<BITMAP>" 	& Bitmap && \
+			"<BULLE>"	& Modify(">","",Modify("<","",Bulle)) && \
+			Condition(isnum(Arret)=true,"<ARRET>","<CHAINE>") & Arret && ""
+	XmeToolbarAddButton(idtoolbar,param,LieuBtn,BtnRefPourLieu,False)
+	XmeToolbarValidateButton(idtoolbar,NomBTN,Visible,True)
+	XmeToolbarEnableButton(idtoolbar,NomBTN,IsEnabled)
+endp
+;*
+public Procedure ug_Ajouter_Menu(idMenu,NomBtn,Arret,Libelle,Bitmap,TypeBtn,IsEnabled,Visible,LieuBtn,BtnRefPourLieu,BtnStd,NomSelec)
+; Procedure pour Ajouter des Menus depuis un programme diva
+; il suffit de donner qq parametre et le menu et crée
+1 idMenu L					  		; id du menu
+1 NomBtn    50					  	; nom du menu
+1 Bitmap    50=" "			  	; Nom de la bitmap
+1 Arret     5					  	; Point d'arret
+1 Libelle   50="Generique"	  	; Nom d'affichage du menu
+1 IsEnabled 1,0=true			  	; à la creation du bouton il sera active sinon false
+1 LieuBtn	3,0=MENU_LAST_ITEM ; a la fin par defaut MENU_LAST_ITEM
+1 BtnRefPourLieu 50=" "				 ; 
+1 BtnStd		50=" "				; si bouton standard non du bouton à saisir
+1 TypeBtn 	50="NORMAL"			; Possibilité CASE ; RADIO ; SEPARATEUR; SOUS-MENU
+1 NomSelec	50=" "				; Nom Pour la selection 
+1 Visible 	1,0=True				; Affichage ou non du Menu
+
+1 Param S
+beginp
+	if idMenu=0 | Preturn | endif
+	Param=Condition(BtnStd=" ","","<BOUTON>" & left(BtnStd)) & \
+			"<IDENT>" 	& NomBTN && \
+			"<TYPE>" 	& TypeBTN && \
+			"<LIBELLE>" & Libelle && \
+			"<BITMAP>" 	& Bitmap && \
+			Condition(isnum(Arret)=true,"<ARRET>","<CHAINE>") & Arret && \
+			Condition(nomSelec<>" ","<NOMSELEC>" & NomSelec,"")
+	XmeMenuInsertItem(idMenu,param,LieuBtn,BtnRefPourLieu,false)
+	XmeMenuValidateItem(IdMenu,NomBTN,Visible,True)
+	XmeMenuEnableItem(idMenu,NomBTN,IsEnabled)
+endp
+;*
+Public Function Char ug_Xmt_Call(Modules,Procedures)
+;	Xmt Call avec parametre du module
+1 Modules    50 ; nom du module 
+1 Procedures 50 ; nom de la procedure ou fonction
+1 Adr 16
+1 Retour 50
+beginf
+	if fstring('U',FileNameExtension(Modules)) in("DHOE","DHOF")
+		XmeLoad(Modules)
+	endif
+
+	if GetAdressProcedure(Modules,Procedures,Adr)=0
+		ProcedureCall(Adr)		
+	elsif GetAdressFunction(Modules,Procedures,Adr)=0
+		Retour=FunctionCall(Adr)
+	endif
+
+	Freturn(Retour)
+endf
+;*
+Public Function Char ug_Xmt_Call_Param(Modules,Procedures,NbParam,P1,P2,P3,P4,P5,P6,P7,P8,P9,P10,RetourFonc)
+;	Xmt Call avec parametre du module
+; retour de la procedure ou fonction
+; ugs_retour structure publique
+1 Modules    50 ; nom du module 
+1 Procedures 50 ; nom de la procedure ou fonction
+1 Adr 16
+1 Retour 50
+1 NbParam N=1 ; Par Defaut (1)
+1 RetourFonc 1,0=1 ; Si uniquement retour de la fonction sinon retour ugs_retour
+1 P1 U=""
+1 P2 U=""
+1 P3 U=""
+1 P4 U=""
+1 P5 U=""
+1 P6 U=""
+1 P7 U=""
+1 P8 U=""
+1 P9 U=""
+1 P10 U=""
+recorddiva ugs_retour 
+
+beginf
+	if fstring('U',FileNameExtension(Modules)) in("DHOE","DHOF")
+		XmeLoad(Modules)
+	endif
+	if GetAdressProcedure(Modules,Procedures,Adr)=0
+		Switch NbParam
+			case 1
+				ProcedureCall(Adr,P1)
+			case 2
+				ProcedureCall(Adr,P1,P2)
+			case 3
+				ProcedureCall(Adr,P1,P2,P3)
+			case 4
+				ProcedureCall(Adr,P1,P2,P3,P4)
+			case 5
+				ProcedureCall(Adr,P1,P2,P3,P4,P5)
+			case 6
+				ProcedureCall(Adr,P1,P2,P3,P4,P5,P6)
+			case 7
+				ProcedureCall(Adr,P1,P2,P3,P4,P5,P6,P7)
+			case 8
+				ProcedureCall(Adr,P1,P2,P3,P4,P5,P6,P7,P8)
+			case 9
+				ProcedureCall(Adr,P1,P2,P3,P4,P5,P6,P7,P8,P9)
+			case 10
+				ProcedureCall(Adr,P1,P2,P3,P4,P5,P6,P7,P8,P9,P10)
+		endswitch
+				
+	elsif GetAdressFunction(Modules,Procedures,Adr)=0
+		Switch NbParam
+			case 1
+				Retour=FunctionCall(Adr,P1)
+			case 2
+				Retour=FunctionCall(Adr,P1,P2)
+			case 3
+				Retour=FunctionCall(Adr,P1,P2,P3)
+			case 4
+				Retour=FunctionCall(Adr,P1,P2,P3,P4)
+			case 5
+				Retour=FunctionCall(Adr,P1,P2,P3,P4,P5)
+			case 6
+				Retour=FunctionCall(Adr,P1,P2,P3,P4,P5,P6)
+			case 7
+				Retour=FunctionCall(Adr,P1,P2,P3,P4,P5,P6,P7)
+			case 8
+				Retour=FunctionCall(Adr,P1,P2,P3,P4,P5,P6,P7,P8)
+			case 9
+				Retour=FunctionCall(Adr,P1,P2,P3,P4,P5,P6,P7,P8,P9)
+			case 10
+				Retour=FunctionCall(Adr,P1,P2,P3,P4,P5,P6,P7,P8,P9,P10)
+		endswitch
+	endif
+	ugs_Retour.P1=P1
+	ugs_Retour.P2=P2
+	ugs_Retour.P3=P3
+	ugs_Retour.P4=P4
+	ugs_Retour.P5=P5
+	ugs_Retour.P6=P6
+	ugs_Retour.P7=P7
+	ugs_Retour.P7=P7
+	ugs_Retour.P8=P8
+	ugs_Retour.P9=P9
+	ugs_Retour.P10=P10
+	ugs_Retour.Retour=Retour
+
+	Freturn(Condition(RetourFonc=1,Left(Retour),ugs_Retour))
+endf
+;*
+Public Function int ug_Rechercher_Menu(FichierMenu,Mnemo)
+; Recherche l'enreg M2 du menu Mnemonique
+1 fichierMenu 20="G3F.DHFI"
+1 Mnemo > A5dd.dhsd mnemo
+hfile A5dd.Dhsd xmenuf GXF noopen
+hfile A5dd.Dhsd xmenuf GXFU noopen
+
+1 Trouve 1,0=false
+beginf
+	if mnemo=" " | freturn(1) | endif
+	; fichier G3FU
+	GXFU.Name=FileNameNoExt(FichierMenu) & "u.dhfi"
+	if Fopen(Gxfu,"P")=0 or Fopen(gxfu,"F")=0
+		if Hseek(gxfu,m2,"B" & Mnemo)=0
+			Trouve=True
+		endif
+		fclose(gxfu)
+	endif
+	; fichier Appli
+	GXF.Name=FichierMenu
+	if Trouve=False and (Fopen(gxf,"F")=0 or Fopen(gxf,"F")=0)
+	 	if Hseek(gxf,m2,"B" & mnemo)=0
+			Trouve=True
+		endif
+		Fclose(gxf)
+	endif
+	; 
+	if Trouve=False
+		m2=" "
+	endif
+	freturn(Condition(Trouve=false,1,0))
+endf
+;*
+;*
+Public Procedure ug_Tunnel_ProgramCall(Mnemo,mz,G3xqA,G3xzA,ModeAffichage,ModeAppel,FichierMenu,GTPCEA)
+; Lancement du programme avec les pings qui vont bien
+; Avant ProgrammeCall UG_TUNNEL_PROGRAMME_AV
+1 fichierMenu 20="G3F.DHFI"
+1 Mnemo > A5dd.dhsd mnemo
+1 ModeAffichage L=SW_Normal  ; Defaut=SW_Normal
+1 ModeAppel L=CALL_WAIT		  ; Defaut=CALL_WAIT
+record A5dd.dhsd mz
+record A5dd.dhsd mz ug_mz
+1 G3XQA A=" "
+1 G3XZA A=" "
+1 GTPCEA A=" "
+record gtfdd.dhsd xz G3xz
+record gtfdd.dhsd xq G3xq
+record gtfdd.dhsd gtpce
+beginp
+	G3XQ=Condition(G3XQA=" ",G3XQ,G3XQA)
+	G3XZ=Condition(G3XZA=" ",G3XZ,G3XZA)
+	GTPCE=condition(GTPCEA=" ",GTPCE,GTPCEA)
+	if ug_Rechercher_Menu(FichierMenu,Mnemo)=0
+		ug_mz=mz		
+		mz.Echange=m2.Echange
+		mz.Op=Condition(ug_mz.Op=" ",mz.Op,ug_mz.op)
+		mz.Opas=Condition(ug_mz.Opas=" ",mz.Opas,ug_mz.opas)
+		mz.Depo=ug_mz.Depo
+		mz.Dos =ug_mz.Dos
+		mz.Etb =ug_mz.Etb
+
+		G3xq.dos=mz.dos
+		G3xq.etb=mz.Etb
+		G3xq.echange=Condition(G3xq.echange=' ',m2.echange,G3XQ.echange)
+
+		Ping("UG_M2",m2)	
+		Ping("Zechange",mz)
+		Ping("G3XZ",G3XZ)
+		Ping("XQ",G3XQ)
+		Ping("Zechange_GTPCE",GTPCE)	
+
+		PingLocal("Zechange",mz)
+		PingLocal("G3XZ",G3XZ)
+		PingLocal("XQ",G3XQ)
+		PingLocal("Zechange_GTPCE",GTPCE)
+
+		ug_Xmt_Call(mz.mtcle,"UG_TUNNEL_PROGRAMME_AV")
+
+		Programcall(m2.Enchain,ModeAffichage,ModeAppel)	
+	else
+		Messagebox("Programme non trouvé","Alerte",mb_iconexclamation)	
+	endif
+endp
+;*
+;Public Procedure ug_remplacer_champ_specifique
+;;
+;1 AdrDesc 120
+;beginp
+;	if DataCompute(A1.EnregChampNom,A1.EnregChampContenu)=0
+;
+;	elsif DataDescriptor(A1.EnregChampNom,AdrDesc)=0
+;		A1.EnregChampContenu=DataValue(AdrDesc)
+;	Else
+;		A1.EnregChampContenu=" "		
+;	endif
+;endp
+;*
+Public Function char ug_Restituer_Champ_en_Donnee(Texte,mtcle)
+; Change les champs en donnée 
+; ex : [ART.REF] --> ALB0001
+; pour tous les champs non trouve il y a 
+; ug_Remplacer_Champ_Specifique dans le mz.mtcle
+; le Nom du champ est dans A1.EnregChampNom
+; la valeur du champ est dans A1.EnregChampContenu 
+1 Texte A
+1 mtCle 50=" " ; si vide mz.mtcle
+1 Adr 16
+
+1 Trouve 1,0=True
+1 Pos1 L
+1 Pos2 L
+
+1			StData	L
+1			StOdbc	L
+1			Valeur	1000
+1			ValeurOdbc	1000
+1			MsgObj		100000
+1			DerPos	5,0=1
+
+
+beginf
+	mtcle=condition(mtcle=" ",mz.MtCle,mtcle)
+	do while Trouve=True
+		Pos1 = String ('[',Texte,DerPos)
+		Pos2 = String (']',Texte,DerPos)
+		if Pos1 = 0 and Pos2 = 0
+			; Plus de champ
+			Trouve=False
+		elsif (Pos1=0 and Pos2<>0) or (Pos1<>0 and Pos2=0)	or (Pos1<>0 and Pos2<>0 and Pos1>Pos2)
+			Trouve=False
+		elsif Pos2>Pos1+1
+			; On vérifie le contenu
+			A1.EnregChampNom=mid(Texte,Pos1+1,Pos2-Pos1-1)
+			StOdbc=datacompute (A1.EnregChampNom,ValeurOdbc,1)
+			If StOdbc<>0
+				StData=datacompute (A1.EnregChampNom,Valeur)
+			Else
+				StData=1
+			Endif
+			If StOdbc<>0 and StData<>0
+				ug_Xmt_Call (mtcle,"ug_Remplacer_Champ_Specifique")
+			Else
+				If StOdbc=0
+					A1.EnregChampContenu=ValeurOdbc
+				Endif
+				If StData=0
+					A1.EnregChampContenu=Valeur
+				Endif
+			endif			
+			if derpos=1
+				if Pos1<>1
+					msgobj=left(Texte,Pos1-1) & left(A1.EnregChampContenu)
+				else
+					msgobj=left(A1.EnregChampContenu)
+				endif
+			else
+				msgobj=left(msgobj)&Mid(Texte,DerPos,Pos1-DerPos) & left(A1.EnregChampContenu)
+			endif
+		endif
+		if Trouve=True
+			DerPos=Pos2+1
+			if DerPos>=Length(Texte)
+				Trouve=False
+			endif
+		else
+			msgobj=left(msgobj) & mid(Texte,DerPos,Length(Texte)-Derpos+1)
+		endif
+	Wend				
+	freturn (Left(msgobj))
+endf
+;*
+Public Function int ug_Saisie_Page(Masque,page,mode,Seq,modules)
+; Procedure pour gerer les saisie des pages
+; procedure executer pour initialisation ug_Init_Saisie_Page
+; fonction executer pour Traiter les points d'arret ug_Traite_Saisie_Page ; le retour doit etre false si la saisie n'est pas fini
+1 Masque > ddsys.dhsd masque =" " ; si vide mz.mecle
+1 page   > ddsys.dhsd page =1
+1 mode   > ddsys.dhsd mode	=Xme_Mode_Gosub
+1 Seq    > ddsys.dhsd sequence=0
+1 Modules 50=' ' ; si vide mz.mtcle module pour se trouve les procedures pour lancer   
+
+1 Adr 16
+1 Adr_Arret 16
+1 Fini 1,0=False
+beginf
+	masque=Condition(masque=' ',mz.MeCle,masque)
+	modules=condition(modules=' ',mz.MtCle,modules)
+	if GetAdressProcedure(modules,'ug_Init_Saisie_Page',Adr)<>0 and GetAdressFunction(modules,'ug_Init_saisie_Page',Adr)<>0 | ADR=' ' | endif
+	if GetAdressFunction(modules,'ug_Traite_Saisie_Page',Adr_Arret)<>0 |Adr_Arret=' ' | endif
+
+	;XmeDispv(masque,page,mode)
+	
+	if Adr<>" " | ProcedureCall(Adr) |endif
+
+	XmeInput(masque,page,seq	,mode)
+	Loop Fini=False
+		if Adr_Arret<>" " | fini=FunctionCall(Adr_Arret) | endif	
+		if Harmony.Key in(K_F10,K_F9)
+			fini=True		
+		endif	
+		if Fini=False
+			XmeNext Harmony.Retour Harmony.Cplretour
+		endif	
+	endloop
+
+	if Mode=XME_MODE_GOSUB
+		XmeRet
+	Endif
+
+	freturn (Fini)
+endf
+;*
+Public function int ug_Saisie_Tableau(Idtab,&enreg,&Scrollbar,masque,page,mode,Priv,Selection,Perso,MessInhibes,Modules,Fini)
+; Saisie de Tableau
+; fonction d'initialisation av affichage ug_Init_saisie_Tableau(IdTab)  retour de fini idem ug_Traite_Arret_Tableau
+; Fonction lancer pour les DataArret  ug_Traite_Arret_Tableau(IdTab) 
+; Apres la fonction XmeListconsultDefault --> ug_ConsultDefault_Tableau_Ap(Idtab,StDef) retour idem ug_Traite_Arret_Tableau
+; StDef = Retour de XmeListConsultDefault
+; ug_Traite_Arret_Tableau(IdTab) si retour false 	lancement xmelistconsult 
+; ug_Traite_Arret_Tableau(IdTab) si retour true  	fin de la saisie du tableau
+; ug_Traite_Arret_Tableau(IdTab) si retour 2     	Pas de lancement xmelistconsult 
+1 IdTab L		  ; Id du Tableau
+1 Enreg A		  ; Enregistrement assicié au tableau
+1 masque 50=" "  ; si vide mz.mecle 
+1 page   3,0=1	  ; numero de page pour l'affichage
+1 mode   2,0=Xme_Mode_gosub ; mode pour l'affichage
+1 Selection 1,0=false ;	Selection Multiple
+1 Perso 1,0=false; Personnalisation
+1 MessInhibes 1,0=false ; Message Inhibé
+1 Modules 50=' ' ; si vide mz.mtcle 
+
+
+1 fini 1,0=false	; False=Saisie du Tableau True=Fin de Saisie 2=Pas de XmeListConsult
+1 Priv L=Zoom_Privilege_consultation	; Privilege l'accés au tableau
+1 AdrInit 16
+1 AdrArret 16
+1 AdrDef 16
+1 StDef 1,0
+
+record ddsys.dhsd scrollbar
+beginf
+	modules=condition(modules=' ',mz.mtcle,modules)
+	masque=Condition(masque<>" ",masque,mz.MeCle)
+	if GetAdressFunction(modules,'ug_Init_saisie_Tableau',AdrInit)<>0 | AdrInit=' ' | endif
+	if GetAdressFunction(modules,'ug_Traite_Arret_Tableau',AdrArret)<>0 |AdrArret=' ' | endif
+	if GetAdressFunction(modules,'ug_ConsultDefault_Tableau_Ap',AdrDef)<>0 |AdrDef=' ' | endif
+
+	XmeDispv(Masque,Page,Mode)
+
+	if AdrInit<>" "  | Fini=FunctionCall(AdrInit,IdTab) | endif
+
+	XmeListScrollbarInit(IdTab,Scrollbar)
+	XmeListEnableScrollBar(IdTab)
+
+
+	loop fini in(false,2)
+		if fini=false | xmelistconsult(idTab) | endif
+ 		if AdrArret<>" " | Fini=FunctionCall(AdrArret,IdTab) | endif
+		if Harmony.Key in(K_F9,K_F10)
+			Fini=True
+		endif
+		if Fini in(False,2)
+			switch harmony.key
+				default			;Defaut
+					stDef=xmelistconsultdefault(idtab,Enreg,ScrollBar, Priv,Selection,Perso,MessInhibes)
+					if AdrDef<>" " | Fini=FunctionCall(AdrDef,IdTab,stDef) | else |fini=false | endif
+			endswitch
+		endif
+	endloop
+
+	;xmeret
+	if harmony.page=page and Mode=XME_MODE_GOSUB
+		XmeRet
+	endif
+	freturn(fini)
+endf
+;*
+Public Function int Ug_A5_Flash_Envoi(FlashCod,Etb,Depo,mtcle)
+;Enregistre le mail dans le zoom spé par rapport à un flash
+; 0 Mail OK / 1 Flash non trouvé / 2 Pièce non trouvée / 3 Tiers inexistant
+;1 Dos > "a5dd.dhsd" Dos
+1 FlashCod > "a5dd.dhsd" FlashCod
+1 Etb > "a5dd.dhsd" Etb
+1 Depo > "a5dd.dhsd" Depo
+1 Mtcle 50 ; la restitution des champs
+
+1 AdresseTo S
+1 AdresseCC S
+1 AdresseCCI S
+1 ObjetMsg S
+1 Body S
+
+1 MsgTxt S
+1 Taille 4,0
+;1 TailA 1*2
+; 2 TailB B
+1 I 2,0
+
+1 DocJoint S
+
+1 fichiers S ; liste de fichier
+BeginF
+	Const Applic_Flash="COMMUN"
+
+	if a5pmflash.A5_Flash_Recherche_Flash(FlashCod,Etb,Depo)<>0
+		Freturn(1)
+	endif
+
+
+
+	;Destinataires En Copie Invisible
+	;>> CLIENT
+	if mFlash.DestTypI(44) = 2
+		AdresseCCI &=ug_Restituer_Champ_en_Donnee("[CLI.EMAIL]",mtcle) && ","
+	endif
+	;>> INTERNE
+	for i= 1 to 10
+		; bcc
+		if mflash.salcodI(i)<>' ' and Seek_Muser (mflash.salcodI(i)) = 0
+			if MUSER.Email <> ' '
+				AdresseCCI &= Condition(AdresseCCI<>" ",", ","") & Muser.Email && ""
+			elsif muser.Adrmes<>" "
+				AdresseCCI &= Condition(AdresseCCI<>" ",", ","") & Muser.Email && ""
+			endif
+		endif
+		; to
+		if mflash.SalCod(i)<>" " and Seek_muser(mflash.SalCod(i))=0
+			if MUSER.Email <> ' '
+				AdresseTo &= Condition(AdresseTo<>" ",", ","") & Muser.Email && ""
+			elsif muser.Adrmes<>" "
+				AdresseTo &= Condition(AdresseTo<>" ",", ","") & Muser.Email && ""
+			endif
+		endif
+		; cc
+		if mflash.SalCodC(i)<>" " and Seek_muser(mflash.SalCodC(i))=0
+			if MUSER.Email <> ' '
+				AdresseCC &=Condition(AdresseCC<>" ",", ","") & Muser.Email && ""
+			elsif muser.Adrmes<>" "
+				AdresseCC &=Condition(AdresseCC<>" ",", ","") &  Muser.Email && ""
+			endif
+		endif
+	Next
+	A5_xmt_call ('A5_Flash_Destinataire_ap')
+
+	If joint_init_suivant_(Applic_Flash,MFLASH.JOINT)=0
+		do while (docjoint:=joint_suivant_ (Applic_Flash,MFLASH.JOINT))<>' '
+			Fichiers &=Condition(Length(Fichiers)>0,",","") & docjoint && ""
+		wend
+	Endif
+	ObjetMsg = ug_Restituer_Champ_en_Donnee(mflash.MsgObj,mtcle)
+
+	
+
+;	TailA(1)=Left(mflash.MsgTxt,1)
+;	TailA(2)=Mid(mflash.MsgTxt,2,1)
+;	Taille=(TailB(1)*256) + TailB(2) 
+
+	if seek_muser(system.User)=0
+		if mFlash.Cenote=2 
+			MsgTxt=Note_Rechercher_Contenu(Applic_Flash,Mflash.Note)
+			Taille = Length(MsgTxt && "")
+		
+			Body=ug_Restituer_Champ_en_Donnee(Mid(MsgTxt,3,Taille),mtcle)
+		endif
+	
+		A1.msgobj=ObjetMsg
+		A1.msgtxt=Body
+	
+		A5_Xmt_call ('A5_Flash_Creation_Message_Av')
+
+
+		PingLocal("ug_Liste_Fichiers",Fichiers)
+		Pinglocal("mtcle",mz.mtcle)
+		mz.mtcle=mtcle
+
+		if A5_Xmt_Call ("A5_Flash_Envoi_Av")<>'N'
+
+			ObjetMsg=A1.msgobj
+			Body=A1.msgtxt
+			PinglocalReceiveAndDelete("ug_Liste_Fichiers",Fichiers)
+			ug_Envoi_Email_Blat(AdresseTo,ObjetMsg,Body,Fichiers,AdresseCc,AdresseCCI,muser.Email,show=Sw_ShowMinimized,True) ;condition(debugmode=true,sw_shownormal,Sw_ShowMinimized)
+			A5_Xmt_Call ("A5_Flash_Envoi_Ap")
+		endif
+		PinglocalReceiveAndDelete("mtcle",mz.mtcle)
+	endif
+
+	Freturn(0)
+EndF
+;*
+Public Procedure ug_Authentification_Serveur(Serveur,User,Mdp)
+; il faut lancer la procedure de fin une fois plus besoin de l'authentification
+1 Serveur S
+1 Partage S
+1 User    S
+1 Mdp     S
+beginp
+	Exec("Cmd",	' /C Net use "\\' & Serveur && '\IPC$" /delete',EXEC_GOSUB_WAIT,SW_HIDE)
+	Exec("Cmd", ' /C Net use "\\' & Serveur && '\IPC$"' &&  " /USER:" & User && " " & Mdp && "",EXEC_GOSUB_WAIT,SW_HIDE)
+	;Exec("Cmd", "/C Net use * /Delete",EXEC_GOSUB_WAIT,SW_MINIMIZE)			
+endp
