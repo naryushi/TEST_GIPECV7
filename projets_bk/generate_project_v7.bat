@@ -28,12 +28,12 @@ rem 		Création du sous-projet
 rem =========================================
 set "subproject_name=%WORKSPACE%\projets\jenkins.dhps"
 @echo xwin-sprojet       2.0						>  "%subproject_name%"
-@echo [general]										>> "%subproject_name%"
-@echo date="20150702183409311499"					>>  "%subproject_name%"
-@echo util="ROOT"									>>  "%subproject_name%"
-@echo typetransport=3								>>  "%subproject_name%"
-@echo [communs]										>>  "%subproject_name%"
-@echo [fichiers]									>>  "%subproject_name%"
+@echo [general]										>  "%subproject_name%"
+@echo date="20150702183409311499"					>  "%subproject_name%"
+@echo util="ROOT"									>  "%subproject_name%"
+@echo typetransport=3								>  "%subproject_name%"
+@echo [communs]										>  "%subproject_name%"
+@echo [fichiers]									>  "%subproject_name%"
 
 rem Ajout des fichiers dans le projet (sources std gipec + sources projet)
 for %%f in (..\sources\*.dhsp) do echo %%f

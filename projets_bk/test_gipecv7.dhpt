@@ -2,8 +2,9 @@ xwin-projet        2.0
 [general]
 nom="test_gipecv7"
 progexec="divalto.dhop"
-date="20150622173115371699"
+date="20150707188211312799"
 util="ROOT"
+modeweb=3
 typetransport=3
 [profildefaut]
 [profil]

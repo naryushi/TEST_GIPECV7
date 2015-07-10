@@ -1,0 +1,23 @@
+xwin-sprojet       2.0
+[general]
+date="20150707188215041699"
+util="ROOT"
+typetransport=3
+[communs]
+[fichiers]
+fic="dhopenssl.dhsp"," "
+fic="dhswebtools.dhsp"," "
+[includes]
+fic="gttc000.dhsp"
+fic="gttcz00.dhsp"
+fic="ugin_000.dhsp"
+fic="ugin_graph.dhsp"
+fic="ugtm_basestd.dhsp"
+fic="ugtm_tech.dhsp"
+fic="ugtm_zoomstd.dhsp"
+fic="zdiva.dhsp"
+fic="zmapi.dhsp"
+fic="zrtf.dhsp"
+fic="zygraph.dhsp"
+fic="zyoutlook.dhsp"
+[autres]

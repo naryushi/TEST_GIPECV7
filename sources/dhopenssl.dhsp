@@ -1,0 +1,57 @@
+module dhopenssl_.dhop		e
+
+function int DhOpenSSLOpen
+;
+1 ret 1,0
+beginf
+	ret = dhopenssl_.DhOpenSSLOpen()
+	freturn ret
+endf
+
+procedure DhOpenSSLClose
+;
+1 ret 1,0
+beginp
+	dhopenssl_.DhOpenSSLClose
+endp
+
+function int DhOpenSLLConfigFile(fichier)
+;
+1 fichier A
+1 ret     L
+beginf
+	
+	ret =  dhopenssl_.DhOpenSLLConfigFile(fichier)
+	freturn ret
+endf
+
+
+function int DhOpenSSLExecute(cmd,param1,param2,param3,param4,param5,param6,param7,param8,param9)
+;
+1 cmd    A
+1 param1 A = " "
+1 param2 A = " "
+1 param3 A = " "
+1 param4 A = " "
+1 param5 A = " "
+1 param6 A = " "
+1 param7 A = " "
+1 param8 A = " "
+1 param9 A = " "
+1 ret L
+beginf
+					 
+   ret = dhopenssl_.DhOpenSSLExecute(cmd,param1,param2,param3,param4,param5,param6,param7,param8,param9)
+	freturn ret
+endf									
+
+function int DhOpenSLLDefaultConfigFile
+;
+1 ret L 
+beginf
+	ret = dhopenssl_.DhOpenSLLDefaultConfigFile()
+	freturn ret
+endf
+
+
+									 
