@@ -1,3 +1,4 @@
+echo %IMPLICITES%
 @echo off
 rem Batch permettant la génération du projet
 
