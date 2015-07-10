@@ -6,6 +6,7 @@ rem 			Création du projet
 rem =========================================
 @echo off
 set "project_name=%WORKSPACE%\projets\projet_jenkins.dhpt"
+@echo %project_name% 
 >"%project_name%" (
 	@echo xwin-projet        2.0
 	@echo [general] 
