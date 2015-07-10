@@ -33,9 +33,9 @@ set "subproject_name=%WORKSPACE%\projets\jenkins.dhps"
 >>"%subproject_name%" echo util="ROOT"
 >>"%subproject_name%" echo typetransport=3
 >>"%subproject_name%" echo [communs]
->>"%subproject_name%" echo [fichiers]>"%subproject_name%"
+>>"%subproject_name%" echo [fichiers]
 rem Ajout des fichiers dans le projet (sources std gipec + sources projet)
->>"%subproject_name%" for %%f in (..\sources\*.dhsp) do echo %%f
->>"%subproject_name%" for %%f in (..\sources_std_gipec\*.dhsp) do echo %%f
+for %%f in (..\sources\*.dhsp) do (>>"%subproject_name%"  echo %%f)
+for %%f in (..\sources_std_gipec\*.dhsp) do (>>"%subproject_name%"  echo %%f)
 >>"%subproject_name%" echo [autres]
 
